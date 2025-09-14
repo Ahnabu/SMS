@@ -3,30 +3,25 @@ import { Router } from 'express';
 const router = Router();
 
 // Import route modules (will be added as we create them)
-// import { authRoutes } from '../modules/auth/auth.route';
-// import { organizationRoutes } from '../modules/organization/organization.route';
-// import { schoolRoutes } from '../modules/school/school.route';
-// import { userRoutes } from '../modules/user/user.route';
+import { organizationRoutes } from '../modules/organization/organization.route';
+import { schoolRoutes } from '../modules/school/school.route';
+import { userRoutes } from '../modules/user/user.route';
 // import { studentRoutes } from '../modules/student/student.route';
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
-  // {
-  //   path: '/auth',
-  //   route: authRoutes,
-  // },
-  // {
-  //   path: '/organizations',
-  //   route: organizationRoutes,
-  // },
-  // {
-  //   path: '/schools',
-  //   route: schoolRoutes,
-  // },
-  // {
-  //   path: '/users',
-  //   route: userRoutes,
-  // },
+  {
+    path: '/organizations',
+    route: organizationRoutes,
+  },
+  {
+    path: '/schools',
+    route: schoolRoutes,
+  },
+  {
+    path: '/users',
+    route: userRoutes,
+  },
   // {
   //   path: '/students',
   //   route: studentRoutes,
