@@ -7,26 +7,21 @@ import {
   getSchoolValidationSchema,
   deleteSchoolValidationSchema,
   getSchoolsValidationSchema,
-  resetAdminPasswordValidationSchema,
 } from './school.validation';
 import {
   createSchool,
-  getSchools,
-  getSchoolById,
+  getAllSchools,
+  getSchool,
   updateSchool,
   deleteSchool,
-  resetAdminPassword,
-  getSchoolsByOrganization,
+  getSchoolStats,
+  assignAdmin,
+  updateSchoolStatus,
+  regenerateApiKey,
+  getSystemStats,
 } from './school.controller';
 
 const router = express.Router();
-
-// Organization-specific routes
-router.get(
-  '/organization/:orgId',
-  requireSuperadmin,
-  getSchoolsByOrganization
-);
 
 // Superadmin-only routes
 router.post(
@@ -40,7 +35,7 @@ router.get(
   '/',
   requireSuperadmin,
   validateRequest(getSchoolsValidationSchema),
-  getSchools
+  getAllSchools
 );
 
 router.delete(
@@ -50,19 +45,12 @@ router.delete(
   deleteSchool
 );
 
-router.put(
-  '/:id/reset-password',
-  requireSuperadmin,
-  validateRequest(resetAdminPasswordValidationSchema),
-  resetAdminPassword
-);
-
 // Admin and Superadmin routes
 router.get(
   '/:id',
   requireSchoolAdmin,
   validateRequest(getSchoolValidationSchema),
-  getSchoolById
+  getSchool
 );
 
 router.put(
@@ -70,6 +58,37 @@ router.put(
   requireSchoolAdmin,
   validateRequest(updateSchoolValidationSchema),
   updateSchool
+);
+
+// Additional superadmin routes
+router.get(
+  '/:id/stats',
+  requireSuperadmin,
+  getSchoolStats
+);
+
+router.post(
+  '/:id/assign-admin',
+  requireSuperadmin,
+  assignAdmin
+);
+
+router.put(
+  '/:id/status',
+  requireSuperadmin,
+  updateSchoolStatus
+);
+
+router.post(
+  '/:id/regenerate-api-key',
+  requireSuperadmin,
+  regenerateApiKey
+);
+
+router.get(
+  '/system/stats',
+  requireSuperadmin,
+  getSystemStats
 );
 
 export const schoolRoutes = router;

@@ -32,7 +32,7 @@ export const authenticate = catchAsync(
     }
 
     if (!token) {
-      return next(new AppError('Access denied. No token provided.', 401));
+      return next(new AppError(401, 'Access denied. No token provided.'));
     }
 
     try {
@@ -40,24 +40,24 @@ export const authenticate = catchAsync(
       const decoded = jwt.verify(token, config.jwt_secret as string) as jwt.JwtPayload;
 
       if (!decoded || !decoded.id) {
-        return next(new AppError('Invalid token structure', 401));
+        return next(new AppError(401, 'Invalid token structure'));
       }
 
       // 3) Check if user still exists
       const user = await User.findById(decoded.id).select('+isActive');
       
       if (!user) {
-        return next(new AppError('The user belonging to this token no longer exists', 401));
+        return next(new AppError(401, 'The user belonging to this token no longer exists'));
       }
 
       // 4) Check if user is active
       if (!user.isActive) {
-        return next(new AppError('Your account has been deactivated. Please contact support.', 401));
+        return next(new AppError(401, 'Your account has been deactivated. Please contact support.'));
       }
 
       // 5) Check if password was changed after token was issued
       if (user.isPasswordChangedAfter && user.isPasswordChangedAfter(decoded.iat)) {
-        return next(new AppError('Password was recently changed. Please login again.', 401));
+        return next(new AppError(401, 'Password was recently changed. Please login again.'));
       }
 
       // 6) Attach user to request object
@@ -73,12 +73,12 @@ export const authenticate = catchAsync(
       next();
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
-        return next(new AppError('Invalid token', 401));
+        return next(new AppError(401, 'Invalid token'));
       }
       if (error instanceof jwt.TokenExpiredError) {
-        return next(new AppError('Token expired. Please login again.', 401));
+        return next(new AppError(401, 'Token expired. Please login again.'));
       }
-      return next(new AppError('Authentication failed', 401));
+      return next(new AppError(401, 'Authentication failed'));
     }
   }
 );
@@ -294,11 +294,11 @@ export const requireParent = (req: AuthenticatedRequest, res: Response, next: Ne
  */
 export const requireSuperadmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return next(new AppError('Authentication required', 401));
+    return next(new AppError(401, 'Authentication required'));
   }
 
   if (req.user.role !== 'superadmin') {
-    return next(new AppError('Superadmin access required', 403));
+    return next(new AppError(403, 'Superadmin access required'));
   }
 
   next();

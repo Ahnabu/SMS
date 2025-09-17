@@ -65,10 +65,33 @@ export const apiService = {
   // Superadmin routes
   superadmin: {
     getStats: () => api.get<ApiResponse>('/superadmin/stats'),
+    getSystemStats: () => api.get<ApiResponse>('/superadmin/system/stats'),
+    
+    // School management
     createSchool: (data: any) => api.post<ApiResponse>('/superadmin/schools', data),
-    getSchools: () => api.get<ApiResponse>('/superadmin/schools'),
+    getSchools: (params?: any) => api.get<ApiResponse>('/superadmin/schools', { params }),
+    getSchool: (id: string) => api.get<ApiResponse>(`/superadmin/schools/${id}`),
     updateSchool: (id: string, data: any) => api.put<ApiResponse>(`/superadmin/schools/${id}`, data),
+    deleteSchool: (id: string) => api.delete<ApiResponse>(`/superadmin/schools/${id}`),
+    updateSchoolStatus: (id: string, status: string) => api.put<ApiResponse>(`/superadmin/schools/${id}/status`, { status }),
+    
+    // School statistics and monitoring
+    getSchoolStats: (id: string) => api.get<ApiResponse>(`/superadmin/schools/${id}/stats`),
+    
+    // Admin management
+    assignAdmin: (schoolId: string, adminData: any) => api.post<ApiResponse>(`/superadmin/schools/${schoolId}/admin`, adminData),
     resetPassword: (id: string, data: any) => api.put<ApiResponse>(`/superadmin/schools/${id}/reset-password`, data),
+    
+    // API management
+    regenerateApiKey: (schoolId: string) => api.post<ApiResponse>(`/superadmin/schools/${schoolId}/regenerate-api-key`),
+    
+    // System settings
+    getSystemSettings: () => api.get<ApiResponse>('/superadmin/system/settings'),
+    updateSystemSettings: (settings: any) => api.put<ApiResponse>('/superadmin/system/settings', settings),
+    
+    // Additional methods for better compatibility
+    getAllSchools: (params?: any) => api.get<ApiResponse>('/superadmin/schools', { params }),
+    assignSchoolAdmin: (schoolId: string, adminData: any) => api.post<ApiResponse>(`/superadmin/schools/${schoolId}/admin`, adminData),
   },
 
   // Admin routes

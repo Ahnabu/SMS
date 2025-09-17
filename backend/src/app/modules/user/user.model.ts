@@ -17,15 +17,11 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
       required: function(this: IUserDocument) {
         return this.role !== 'superadmin';
       },
-      index: true,
     },
     role: {
       type: String,
-      enum: {
-        values: ['superadmin', 'admin', 'teacher', 'student', 'parent', 'accountant'],
-        message: 'Role must be one of: superadmin, admin, teacher, student, parent, accountant',
-      },
-      required: [true, 'User role is required'],
+      required: [true, 'Role is required'],
+      enum: Object.values(UserRole),
       index: true,
     },
     username: {
@@ -34,8 +30,8 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
       unique: true,
       trim: true,
       lowercase: true,
-      minlength: [3, 'Username must be at least 3 characters'],
-      maxlength: [30, 'Username cannot exceed 30 characters'],
+      minLength: [3, 'Username must be at least 3 characters'],
+      maxLength: [30, 'Username cannot exceed 30 characters'],
       match: [/^[a-z0-9_.-]+$/, 'Username can only contain lowercase letters, numbers, dots, hyphens, and underscores'],
       index: true,
     },

@@ -1,14 +1,16 @@
-import httpStatus from 'http-status';
-import { Request, Response } from 'express';
-import { catchAsync } from '../../utils/catchAsync';
-import { schoolService } from './school.service';
+import httpStatus from "http-status";
+import { Request, Response } from "express";
+import { Types } from "mongoose";
+import { catchAsync } from "../../utils/catchAsync";
+import { schoolService } from "./school.service";
+import { sendResponse } from "../../utils/sendResponse";
 
 const createSchool = catchAsync(async (req: Request, res: Response) => {
   const result = await schoolService.createSchool(req.body);
-
-  res.status(httpStatus.CREATED).json({
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
     success: true,
-    message: 'School created successfully',
+    message: "School created successfully",
     data: {
       school: result.school,
       adminCredentials: result.credentials,
@@ -16,79 +18,109 @@ const createSchool = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getSchools = catchAsync(async (req: Request, res: Response) => {
-  const result = await schoolService.getSchools(req.query as any);
-
-  res.status(httpStatus.OK).json({
+const getAllSchools = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.getAllSchools(req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'Schools fetched successfully',
-    data: result.schools,
-    pagination: {
-      totalCount: result.totalCount,
-      currentPage: result.currentPage,
-      totalPages: result.totalPages,
-      hasNextPage: result.hasNextPage,
-      hasPrevPage: result.hasPrevPage,
-    },
+    message: "Schools retrieved successfully",
+    data: result,
   });
 });
 
-const getSchoolById = catchAsync(async (req: Request, res: Response) => {
-  const school = await schoolService.getSchoolById(req.params.id);
-
-  res.status(httpStatus.OK).json({
+const getSchool = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.getSchoolById(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'School fetched successfully',
-    data: school,
+    message: "School retrieved successfully",
+    data: result,
   });
 });
 
 const updateSchool = catchAsync(async (req: Request, res: Response) => {
-  const school = await schoolService.updateSchool(req.params.id, req.body);
-
-  res.status(httpStatus.OK).json({
+  const result = await schoolService.updateSchool(req.params.id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'School updated successfully',
-    data: school,
+    message: "School updated successfully",
+    data: result,
   });
 });
 
 const deleteSchool = catchAsync(async (req: Request, res: Response) => {
   await schoolService.deleteSchool(req.params.id);
-
-  res.status(httpStatus.OK).json({
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'School deleted successfully',
+    message: "School deleted successfully",
     data: null,
   });
 });
 
-const resetAdminPassword = catchAsync(async (req: Request, res: Response) => {
-  await schoolService.resetAdminPassword(req.params.id, req.body.newPassword);
-
-  res.status(httpStatus.OK).json({
+const getSchoolStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.getSchoolStats(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'Admin password reset successfully',
-    data: null,
+    message: "School statistics retrieved successfully",
+    data: result,
   });
 });
 
-const getSchoolsByOrganization = catchAsync(async (req: Request, res: Response) => {
-  const schools = await schoolService.getSchoolsByOrganization(req.params.orgId);
-
-  res.status(httpStatus.OK).json({
+const assignAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.assignAdmin(req.params.id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
     success: true,
-    message: 'Organization schools fetched successfully',
-    data: schools,
+    message: "Admin assigned successfully",
+    data: result,
+  });
+});
+
+const updateSchoolStatus = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.updateSchoolStatus(
+    req.params.id, 
+    req.body.status,
+    req.body.updatedBy || new Types.ObjectId() // Temporary fallback
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "School status updated successfully",
+    data: result,
+  });
+});
+
+const regenerateApiKey = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.regenerateApiKey(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "API key regenerated successfully",
+    data: result,
+  });
+});
+
+const getSystemStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.getSystemStats();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "System statistics retrieved successfully",
+    data: result,
   });
 });
 
 export {
   createSchool,
-  getSchools,
-  getSchoolById,
+  getAllSchools,
+  getSchool,
   updateSchool,
   deleteSchool,
-  resetAdminPassword,
-  getSchoolsByOrganization,
+  getSchoolStats,
+  assignAdmin,
+  updateSchoolStatus,
+  regenerateApiKey,
+  getSystemStats,
 };

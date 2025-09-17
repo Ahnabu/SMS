@@ -9,12 +9,17 @@ import { userRoutes } from '../modules/user/user.route';
 import { authRoutes } from '../modules/auth/auth.route';
 import { StudentRoutes } from '../modules/student/student.route';
 import { TeacherRoutes } from '../modules/teacher/teacher.route';
+import { superadminRoutes } from '../modules/superadmin/superadmin.route';
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
   {
     path: '/auth',
     route: authRoutes,
+  },
+  {
+    path: '/superadmin',
+    route: superadminRoutes,
   },
   {
     path: '/organizations',

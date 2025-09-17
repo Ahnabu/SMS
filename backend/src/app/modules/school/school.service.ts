@@ -2,6 +2,7 @@ import httpStatus from 'http-status';
 import { Types } from 'mongoose';
 import { AppError } from '../../errors/AppError';
 import { Organization } from '../organization/organization.model';
+import { User } from '../user/user.model';
 import { School } from './school.model';
 import {
   ICreateSchoolRequest,
@@ -9,6 +10,8 @@ import {
   ISchoolResponse,
   ISchoolDocument,
   ISchoolCredentials,
+  ISchoolStatsResponse,
+  SchoolStatus,
 } from './school.interface';
 
 class SchoolService {
@@ -87,6 +90,8 @@ class SchoolService {
           username: credentials.username,
           password: credentials.password,
           tempPassword: credentials.password, // Same as password initially
+          apiKey: 'temp-api-key-' + newSchool._id,
+          apiEndpoint: '/api/school/' + newSchool._id,
         },
       };
     } catch (error) {
@@ -95,7 +100,7 @@ class SchoolService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to create school: ${error.message}`
+        `Failed to create school: ${(error as Error).message}`
       );
     }
   }
@@ -169,7 +174,7 @@ class SchoolService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch schools: ${error.message}`
+        `Failed to fetch schools: ${(error as Error).message}`
       );
     }
   }
@@ -197,7 +202,7 @@ class SchoolService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch school: ${error.message}`
+        `Failed to fetch school: ${(error as Error).message}`
       );
     }
   }
@@ -250,7 +255,7 @@ class SchoolService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to update school: ${error.message}`
+        `Failed to update school: ${(error as Error).message}`
       );
     }
   }
@@ -274,7 +279,7 @@ class SchoolService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete school: ${error.message}`
+        `Failed to delete school: ${(error as Error).message}`
       );
     }
   }
@@ -297,7 +302,7 @@ class SchoolService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to reset admin password: ${error.message}`
+        `Failed to reset admin password: ${(error as Error).message}`
       );
     }
   }
@@ -313,7 +318,7 @@ class SchoolService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch schools by organization: ${error.message}`
+        `Failed to fetch schools by organization: ${(error as Error).message}`
       );
     }
   }
@@ -334,7 +339,7 @@ class SchoolService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to validate admin credentials: ${error.message}`
+        `Failed to validate admin credentials: ${(error as Error).message}`
       );
     }
   }
@@ -342,23 +347,438 @@ class SchoolService {
   private formatSchoolResponse(school: any): ISchoolResponse {
     return {
       id: school._id?.toString() || school.id,
-      orgId: school.orgId?._id?.toString() || school.orgId,
       name: school.name,
+      slug: school.slug,
+      schoolId: school.schoolId,
+      establishedYear: school.establishedYear,
       address: school.address,
-      phone: school.phone,
-      email: school.email,
-      adminUsername: school.adminUsername,
+      contact: school.contact,
       status: school.status,
+      affiliation: school.affiliation,
+      recognition: school.recognition,
       settings: school.settings,
+      currentSession: school.currentSession,
+      apiEndpoint: school.apiEndpoint,
+      logo: school.logo,
+      images: school.images,
+      isActive: school.isActive,
+      stats: school.stats,
       createdAt: school.createdAt,
       updatedAt: school.updatedAt,
-      studentsCount: school.studentsCount || 0,
-      teachersCount: school.teachersCount || 0,
+      admin: school.adminUserId?.name ? {
+        id: school.adminUserId._id?.toString() || school.adminUserId.id,
+        username: school.adminUserId.username,
+        fullName: `${school.adminUserId.firstName} ${school.adminUserId.lastName}`,
+        email: school.adminUserId.email,
+        phone: school.adminUserId.phone,
+      } : undefined,
+      // Legacy support
+      orgId: school.orgId?.toString(),
+      adminUsername: school.adminUsername,
+      studentsCount: school.studentsCount || school.stats?.totalStudents || 0,
+      teachersCount: school.teachersCount || school.stats?.totalTeachers || 0,
       organization: school.orgId?.name ? {
         id: school.orgId._id?.toString() || school.orgId.id,
         name: school.orgId.name,
       } : undefined,
     };
+  }
+
+  // === SUPERADMIN SPECIFIC METHODS ===
+
+  /**
+   * Create a new school (modernized version for superadmin)
+   */
+  async createSchoolModern(
+    schoolData: ICreateSchoolRequest,
+    createdBy: Types.ObjectId
+  ): Promise<{ school: ISchoolResponse; credentials: ISchoolCredentials }> {
+    try {
+      // Create admin user first
+      const adminUser = new User({
+        role: 'admin',
+        username: schoolData.adminDetails.username,
+        passwordHash: schoolData.adminDetails.password,
+        firstName: schoolData.adminDetails.firstName,
+        lastName: schoolData.adminDetails.lastName,
+        email: schoolData.adminDetails.email,
+        phone: schoolData.adminDetails.phone,
+        isActive: true,
+      });
+
+      await adminUser.save();
+
+      // Generate unique identifiers
+      const schoolId = await School.generateUniqueSchoolId();
+      const slug = await School.generateUniqueSlug(schoolData.name);
+
+      // Create school
+      const newSchool = new School({
+        name: schoolData.name,
+        slug,
+        schoolId,
+        establishedYear: schoolData.establishedYear,
+        address: schoolData.address,
+        contact: schoolData.contact,
+        affiliation: schoolData.affiliation,
+        recognition: schoolData.recognition,
+        adminUserId: adminUser._id,
+        settings: schoolData.settings || {},
+        currentSession: {
+          ...schoolData.currentSession,
+          isActive: true,
+        },
+        status: SchoolStatus.PENDING_APPROVAL,
+        logo: schoolData.logo,
+        isActive: true,
+        createdBy,
+      });
+
+      // Set schoolId for admin user
+      adminUser.schoolId = newSchool._id;
+      await adminUser.save();
+
+      await newSchool.save();
+
+      // Generate API credentials
+      const apiEndpoint = newSchool.generateApiEndpoint();
+      const apiKey = newSchool.generateApiKey();
+      
+      newSchool.apiEndpoint = apiEndpoint;
+      newSchool.apiKey = apiKey;
+      await newSchool.save();
+
+      const credentials: ISchoolCredentials = {
+        username: adminUser.username,
+        password: schoolData.adminDetails.password,
+        tempPassword: schoolData.adminDetails.password,
+        apiKey,
+        apiEndpoint,
+      };
+
+      return {
+        school: this.formatSchoolResponse(await newSchool.populate('adminUserId')),
+        credentials,
+      };
+    } catch (error) {
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to create school: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Get all schools for superadmin dashboard
+   */
+  async getAllSchools(queryParams: {
+    page?: number;
+    limit?: number;
+    status?: SchoolStatus;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{
+    schools: ISchoolResponse[];
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  }> {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        status,
+        search,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+      } = queryParams;
+
+      const skip = (page - 1) * limit;
+      const query: any = {};
+
+      if (status) {
+        query.status = status;
+      }
+
+      if (search) {
+        query.$or = [
+          { name: { $regex: new RegExp(search, 'i') } },
+          { schoolId: { $regex: new RegExp(search, 'i') } },
+          { 'address.city': { $regex: new RegExp(search, 'i') } },
+          { affiliation: { $regex: new RegExp(search, 'i') } },
+        ];
+      }
+
+      const sort: any = {};
+      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+      const [schools, totalCount] = await Promise.all([
+        School.find(query)
+          .populate('adminUserId', 'username firstName lastName email phone')
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        School.countDocuments(query),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        schools: schools.map(school => this.formatSchoolResponse(school)),
+        totalCount,
+        currentPage: page,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      };
+    } catch (error) {
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to fetch schools: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Get school statistics for performance monitoring
+   */
+  async getSchoolStats(schoolId: string): Promise<ISchoolStatsResponse> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+      }
+
+      const school = await School.findById(schoolId).populate('adminUserId', 'firstName lastName');
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+      }
+
+      // Update stats
+      await school.updateStats();
+
+      return {
+        schoolId: school.schoolId,
+        schoolName: school.name,
+        totalStudents: school.stats?.totalStudents || 0,
+        totalTeachers: school.stats?.totalTeachers || 0,
+        totalParents: school.stats?.totalParents || 0,
+        totalClasses: school.stats?.totalClasses || 0,
+        totalSubjects: school.stats?.totalSubjects || 0,
+        attendanceRate: school.stats?.attendanceRate || 0,
+        enrollmentTrend: [], // TODO: Implement enrollment trend calculation
+        gradeDistribution: [], // TODO: Implement grade distribution calculation
+        lastUpdated: school.stats?.lastUpdated || new Date(),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get school stats: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Assign new administrator to a school
+   */
+  async assignAdmin(
+    schoolId: string,
+    adminData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      username: string;
+      password: string;
+    }
+  ): Promise<ISchoolResponse> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+      }
+
+      const school = await School.findById(schoolId);
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+      }
+
+      // Check if username already exists
+      const existingUser = await User.findOne({ username: adminData.username });
+      if (existingUser) {
+        throw new AppError(httpStatus.CONFLICT, 'Username already exists');
+      }
+
+      // Create new admin user
+      const newAdmin = new User({
+        role: 'admin',
+        schoolId: school._id,
+        username: adminData.username,
+        passwordHash: adminData.password,
+        firstName: adminData.firstName,
+        lastName: adminData.lastName,
+        email: adminData.email,
+        phone: adminData.phone,
+        isActive: true,
+      });
+
+      await newAdmin.save();
+
+      // Update old admin to inactive if exists
+      if (school.adminUserId) {
+        await User.findByIdAndUpdate(school.adminUserId, { isActive: false });
+      }
+
+      // Update school with new admin
+      school.adminUserId = newAdmin._id;
+      await school.save();
+
+      return this.formatSchoolResponse(await school.populate('adminUserId'));
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to assign admin: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Update school status (approve, suspend, etc.)
+   */
+  async updateSchoolStatus(
+    schoolId: string,
+    status: SchoolStatus,
+    updatedBy: Types.ObjectId
+  ): Promise<ISchoolResponse> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+      }
+
+      const school = await School.findByIdAndUpdate(
+        schoolId,
+        { 
+          status, 
+          lastModifiedBy: updatedBy,
+          isActive: status === SchoolStatus.ACTIVE 
+        },
+        { new: true, runValidators: true }
+      ).populate('adminUserId', 'username firstName lastName email phone');
+
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+      }
+
+      return this.formatSchoolResponse(school);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to update school status: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Get system-wide statistics
+   */
+  async getSystemStats(): Promise<{
+    totalSchools: number;
+    totalStudents: number;
+    totalTeachers: number;
+    totalParents: number;
+    activeSchools: number;
+    pendingSchools: number;
+    suspendedSchools: number;
+    recentActivity: {
+      schoolsCreated: number;
+      studentsEnrolled: number;
+      teachersAdded: number;
+    };
+  }> {
+    try {
+      const [
+        totalSchools,
+        activeSchools,
+        pendingSchools,
+        suspendedSchools,
+        schoolStats
+      ] = await Promise.all([
+        School.countDocuments({ isActive: true }),
+        School.countDocuments({ status: SchoolStatus.ACTIVE }),
+        School.countDocuments({ status: SchoolStatus.PENDING_APPROVAL }),
+        School.countDocuments({ status: SchoolStatus.SUSPENDED }),
+        School.find({ isActive: true }).select('stats').lean()
+      ]);
+
+      const totalStudents = schoolStats.reduce((sum, school) => sum + (school.stats?.totalStudents || 0), 0);
+      const totalTeachers = schoolStats.reduce((sum, school) => sum + (school.stats?.totalTeachers || 0), 0);
+      const totalParents = schoolStats.reduce((sum, school) => sum + (school.stats?.totalParents || 0), 0);
+
+      // Calculate recent activity (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const [recentSchools, recentStudents, recentTeachers] = await Promise.all([
+        School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        // TODO: Add student and teacher count queries when those collections are available
+        Promise.resolve(0),
+        Promise.resolve(0)
+      ]);
+
+      return {
+        totalSchools,
+        totalStudents,
+        totalTeachers,
+        totalParents,
+        activeSchools,
+        pendingSchools,
+        suspendedSchools,
+        recentActivity: {
+          schoolsCreated: recentSchools,
+          studentsEnrolled: recentStudents,
+          teachersAdded: recentTeachers,
+        },
+      };
+    } catch (error) {
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get system stats: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Generate new API key for school
+   */
+  async regenerateApiKey(schoolId: string): Promise<{ apiKey: string; apiEndpoint: string }> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+      }
+
+      const school = await School.findById(schoolId);
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+      }
+
+      const newApiKey = await school.regenerateApiKey();
+      
+      return {
+        apiKey: newApiKey,
+        apiEndpoint: school.apiEndpoint,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to regenerate API key: ${(error as Error).message}`
+      );
+    }
   }
 }
 

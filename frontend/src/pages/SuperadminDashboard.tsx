@@ -3,14 +3,15 @@ import { Routes, Route } from 'react-router-dom';
 import { 
   School, 
   Users, 
-  BookOpen,
-  TrendingUp, 
-  Building,
-  UserCheck,
-  Activity
+  Activity,
+  UserCheck
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import SchoolList from '@/components/superadmin/SchoolList';
+import SchoolForm from '@/components/superadmin/SchoolForm';
+import SchoolDetails from '@/components/superadmin/SchoolDetails';
+import SystemSettings from '@/components/superadmin/SystemSettings';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 
@@ -19,7 +20,6 @@ const SuperadminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -42,7 +42,6 @@ const SuperadminDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data');
       // Set demo data for testing
       setStats({
         totalStudents: 1250,
@@ -85,7 +84,14 @@ const SuperadminDashboard: React.FC = () => {
         />
         <Route path="/users" element={<div>User Management - Coming Soon</div>} />
         <Route path="/reports" element={<div>System Reports - Coming Soon</div>} />
-        <Route path="/settings" element={<div>System Settings - Coming Soon</div>} />
+        <Route 
+          path="/settings" 
+          element={
+            <SystemSettings 
+              onUpdate={loadDashboardData} 
+            />
+          } 
+        />
       </Routes>
     </DashboardLayout>
   );
@@ -249,32 +255,64 @@ const SuperadminHome: React.FC<{
 };
 
 // School Management Component
-const SchoolManagement: React.FC<{ schools: any[]; onUpdate: () => void }> = ({ schools, onUpdate }) => {
+const SchoolManagement: React.FC<{ schools: any[]; onUpdate: () => void }> = ({ onUpdate }) => {
+  const [selectedSchool, setSelectedSchool] = useState<any>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  const handleCreateSchool = () => {
+    setSelectedSchool(null);
+    setShowForm(true);
+  };
+
+  const handleEditSchool = (school: any) => {
+    setSelectedSchool(school);
+    setShowForm(true);
+  };
+
+  const handleViewSchool = (school: any) => {
+    setSelectedSchool(school);
+    setShowDetails(true);
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setSelectedSchool(null);
+    onUpdate(); // Refresh the school list
+  };
+
+  const handleDetailsClose = () => {
+    setShowDetails(false);
+    setSelectedSchool(null);
+  };
+
+  const handleSaveSchool = (_school: any) => {
+    // The form component handles the API call
+    onUpdate(); // Refresh the school list
+  };
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">School Management</h1>
-        <p className="text-gray-600">Manage all schools in the system</p>
-      </div>
+    <>
+      <SchoolList
+        onCreateSchool={handleCreateSchool}
+        onEditSchool={handleEditSchool}
+        onViewSchool={handleViewSchool}
+      />
       
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">School Management Interface</h3>
-            <p className="text-gray-500">
-              This section will contain comprehensive school management features including:
-            </p>
-            <ul className="mt-4 text-sm text-gray-500 space-y-1">
-              <li>• Create and manage schools</li>
-              <li>• Assign administrators</li>
-              <li>• Monitor school performance</li>
-              <li>• System-wide settings</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <SchoolForm
+        school={selectedSchool}
+        isOpen={showForm}
+        onClose={handleFormClose}
+        onSave={handleSaveSchool}
+      />
+      
+      <SchoolDetails
+        schoolId={selectedSchool?.id}
+        isOpen={showDetails}
+        onClose={handleDetailsClose}
+        onEdit={handleEditSchool}
+      />
+    </>
   );
 };
 
