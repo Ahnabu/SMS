@@ -38,15 +38,24 @@ export default {
   cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
 
   // Default superadmin credentials
-  superadmin_username: 'superadmin',
-  superadmin_password: 'super123',
+  superadmin_username: process.env.SUPERADMIN_USERNAME || 'superadmin',
+  superadmin_password: process.env.SUPERADMIN_PASSWORD || 'super123',
+  superadmin_email: process.env.SUPERADMIN_EMAIL || 'superadmin@schoolmanagement.com',
 
   // Application constants
   default_page_size: 20,
   max_page_size: 100,
   min_password_length: 6,
   max_photos_per_student: 20,
+  max_photos_per_teacher: parseInt(process.env.MAX_PHOTOS_PER_TEACHER || '20'),
   min_photos_per_student: 5,
+
+  // API Configuration
+  api_key: process.env.API_KEY || 'school-management-api-key-2025',
+  allowed_origins: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+  temp_upload_path: process.env.TEMP_UPLOAD_PATH || './temp',
+  max_periods_per_day: parseInt(process.env.MAX_PERIODS_PER_DAY || '8'),
+  attendance_lock_after_days: parseInt(process.env.ATTENDANCE_LOCK_AFTER_DAYS || '7'),
 
   // File constraints
   allowed_image_formats: ['jpg', 'jpeg', 'png'],

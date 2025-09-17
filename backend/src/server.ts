@@ -1,12 +1,11 @@
-import mongoose from 'mongoose';
 import app from './app';
 import config from './app/config';
+import { database } from './app/DB';
 
 async function main() {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(config.mongodb_uri as string);
-    console.log('✅ Connected to MongoDB successfully');
+    // Connect to MongoDB using our database singleton
+    await database.connect();
 
     // Start the server
     const server = app.listen(config.port, () => {
@@ -20,7 +19,7 @@ async function main() {
       console.log(`\n📤 Received ${signal}. Shutting down gracefully...`);
       server.close(async () => {
         try {
-          await mongoose.connection.close();
+          await database.disconnect();
           console.log('✅ Database connection closed');
           console.log('👋 Server shut down successfully');
           process.exit(0);

@@ -97,7 +97,7 @@ const login = catchAsync(async (req: Request, res: Response) => {
     message: 'Login successful',
     data: {
       user: result.user,
-      accessToken: result.accessToken,
+      token: result.accessToken, // Changed from accessToken to token
       tokenExpires: result.tokenExpires,
     },
   });
@@ -120,7 +120,7 @@ const logout = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getCurrentUser = catchAsync(async (req: Request, res: Response) => {
-  const user = await userService.getUserById(req.user.id);
+  const user = await userService.getUserById(req?.user.id);
 
   res.status(httpStatus.OK).json({
     success: true,

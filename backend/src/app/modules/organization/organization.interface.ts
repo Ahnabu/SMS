@@ -1,4 +1,4 @@
-import { Document, Types } from 'mongoose';
+import { Document, Types, Model } from 'mongoose';
 
 export interface IOrganization {
   name: string;
@@ -17,7 +17,7 @@ export interface IOrganizationMethods {
   activate(): Promise<IOrganizationDocument>;
 }
 
-export interface IOrganizationModel extends Document {
+export interface IOrganizationModel extends Model<IOrganizationDocument> {
   findByStatus(status: string): Promise<IOrganizationDocument[]>;
   findActiveOrganizations(): Promise<IOrganizationDocument[]>;
 }

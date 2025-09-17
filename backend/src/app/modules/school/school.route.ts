@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateRequest } from '../../middlewares/validateRequest';
-import { requireSuperadmin, requireAdmin } from '../../middlewares/auth';
+import { requireSuperadmin, requireSchoolAdmin } from '../../middlewares/auth';
 import {
   createSchoolValidationSchema,
   updateSchoolValidationSchema,
@@ -60,14 +60,14 @@ router.put(
 // Admin and Superadmin routes
 router.get(
   '/:id',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(getSchoolValidationSchema),
   getSchoolById
 );
 
 router.put(
   '/:id',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(updateSchoolValidationSchema),
   updateSchool
 );

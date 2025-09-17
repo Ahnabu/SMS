@@ -19,13 +19,13 @@ export const generateAccessToken = (user: IUserDocument): string => {
     schoolId: user.schoolId?.toString() || 'system',
   };
 
-  return jwt.sign(payload, config.jwt_secret, {
+  return jwt.sign(payload, config.jwt_secret as string, {
     expiresIn: config.jwt_expires_in,
   });
 };
 
 export const verifyToken = (token: string): JWTPayload => {
-  return jwt.verify(token, config.jwt_secret) as JWTPayload;
+  return jwt.verify(token, config.jwt_secret as string) as JWTPayload;
 };
 
 export const getTokenExpiration = (): Date => {

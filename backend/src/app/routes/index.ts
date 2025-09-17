@@ -6,10 +6,16 @@ const router = Router();
 import { organizationRoutes } from '../modules/organization/organization.route';
 import { schoolRoutes } from '../modules/school/school.route';
 import { userRoutes } from '../modules/user/user.route';
-// import { studentRoutes } from '../modules/student/student.route';
+import { authRoutes } from '../modules/auth/auth.route';
+import { StudentRoutes } from '../modules/student/student.route';
+import { TeacherRoutes } from '../modules/teacher/teacher.route';
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
+  {
+    path: '/auth',
+    route: authRoutes,
+  },
   {
     path: '/organizations',
     route: organizationRoutes,
@@ -22,10 +28,14 @@ const moduleRoutes = [
     path: '/users',
     route: userRoutes,
   },
-  // {
-  //   path: '/students',
-  //   route: studentRoutes,
-  // },
+  {
+    path: '/students',
+    route: StudentRoutes,
+  },
+  {
+    path: '/teachers',
+    route: TeacherRoutes,
+  },
 ];
 
 // Apply routes

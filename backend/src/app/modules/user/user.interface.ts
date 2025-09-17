@@ -1,6 +1,13 @@
-import { Document, Types } from 'mongoose';
+import { Document, Types, Model } from 'mongoose';
 
-export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent' | 'accountant';
+export enum UserRole {
+  SUPERADMIN = 'superadmin',
+  ADMIN = 'admin',
+  TEACHER = 'teacher',
+  STUDENT = 'student',
+  PARENT = 'parent',
+  ACCOUNTANT = 'accountant',
+}
 
 export interface IUser {
   schoolId: Types.ObjectId | null; // null for superadmin
@@ -29,7 +36,7 @@ export interface IUserMethods {
   updateLastLogin(): Promise<IUserDocument>;
 }
 
-export interface IUserModel extends Document {
+export interface IUserModel extends Model<IUserDocument> {
   findByUsername(username: string): Promise<IUserDocument | null>;
   findBySchool(schoolId: string): Promise<IUserDocument[]>;
   findByRole(role: UserRole): Promise<IUserDocument[]>;

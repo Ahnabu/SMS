@@ -209,9 +209,9 @@ userSchema.set('toJSON', {
   virtuals: true,
   transform: function (doc, ret) {
     ret.id = ret._id;
-    delete ret._id;
-    delete ret.__v;
-    delete ret.passwordHash; // Never expose password hash
+    delete (ret as any)._id;
+    delete (ret as any).__v;
+    delete (ret as any).passwordHash; // Never expose password hash
     return ret;
   },
 });
@@ -220,9 +220,9 @@ userSchema.set('toObject', {
   virtuals: true,
   transform: function (doc, ret) {
     ret.id = ret._id;
-    delete ret._id;
-    delete ret.__v;
-    delete ret.passwordHash; // Never expose password hash
+    delete (ret as any)._id;
+    delete (ret as any).__v;
+    delete (ret as any).passwordHash; // Never expose password hash
     return ret;
   },
 });

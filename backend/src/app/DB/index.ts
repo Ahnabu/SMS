@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import config from '../config';
+import { seedDatabase, validateSeeding } from '../utils/seeder';
 
 class Database {
   private static instance: Database;
@@ -20,15 +21,26 @@ class Database {
         maxPoolSize: 10, // Maintain up to 10 socket connections
         serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
         socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-        bufferMaxEntries: 0, // Disable mongoose buffering
         bufferCommands: false, // Disable mongoose buffering
       };
 
       await mongoose.connect(config.mongodb_uri, options);
 
       // Connection event handlers
-      mongoose.connection.on('connected', () => {
+      mongoose.connection.on('connected', async () => {
         console.log('✅ Mongoose connected to MongoDB');
+        
+        // Run database seeding after successful connection
+        try {
+          await seedDatabase();
+          const isValid = await validateSeeding();
+          if (!isValid) {
+            console.warn('⚠️ Seeding validation failed - some issues detected');
+          }
+        } catch (error) {
+          console.error('❌ Database seeding error:', error);
+          // Don't exit process, just log the error
+        }
       });
 
       mongoose.connection.on('error', (err) => {

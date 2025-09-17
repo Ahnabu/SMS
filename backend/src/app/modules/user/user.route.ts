@@ -2,9 +2,8 @@ import express from 'express';
 import { validateRequest } from '../../middlewares/validateRequest';
 import {
   requireSuperadmin,
-  requireAdmin,
-  requireStaff,
-  auth
+  requireSchoolAdmin,
+  authenticate
 } from '../../middlewares/auth';
 import {
   createUserValidationSchema,
@@ -14,7 +13,6 @@ import {
   getUsersValidationSchema,
   changePasswordValidationSchema,
   resetPasswordValidationSchema,
-  loginValidationSchema,
 } from './user.validation';
 import {
   createUser,
@@ -24,8 +22,6 @@ import {
   deleteUser,
   changePassword,
   resetPassword,
-  login,
-  logout,
   getCurrentUser,
   getUsersBySchool,
   getUsersByRole,
@@ -33,28 +29,16 @@ import {
 
 const router = express.Router();
 
-// Public authentication routes
-router.post(
-  '/auth/login',
-  validateRequest(loginValidationSchema),
-  login
-);
-
-router.post(
-  '/auth/logout',
-  logout
-);
-
 // Protected routes requiring authentication
 router.get(
   '/me',
-  auth(), // Any authenticated user can access their own profile
+  authenticate, // Any authenticated user can access their own profile
   getCurrentUser
 );
 
 router.put(
   '/:id/change-password',
-  auth(), // Users can change their own password
+  authenticate, // Users can change their own password
   validateRequest(changePasswordValidationSchema),
   changePassword
 );
@@ -62,48 +46,48 @@ router.put(
 // School-specific user routes
 router.get(
   '/school/:schoolId',
-  requireStaff,
+  requireSchoolAdmin,
   getUsersBySchool
 );
 
 router.get(
   '/role/:role',
-  requireAdmin,
+  requireSchoolAdmin,
   getUsersByRole
 );
 
 // Admin and Superadmin routes
 router.post(
   '/',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(createUserValidationSchema),
   createUser
 );
 
 router.get(
   '/',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(getUsersValidationSchema),
   getUsers
 );
 
 router.get(
   '/:id',
-  requireStaff,
+  requireSchoolAdmin,
   validateRequest(getUserValidationSchema),
   getUserById
 );
 
 router.put(
   '/:id',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(updateUserValidationSchema),
   updateUser
 );
 
 router.delete(
   '/:id',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(deleteUserValidationSchema),
   deleteUser
 );
@@ -111,7 +95,7 @@ router.delete(
 // Password reset (admin only)
 router.put(
   '/:id/reset-password',
-  requireAdmin,
+  requireSchoolAdmin,
   validateRequest(resetPasswordValidationSchema),
   resetPassword
 );

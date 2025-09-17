@@ -11,7 +11,9 @@
     "lint:fix": "eslint src --ignore-path .eslintignore --ext .ts --fix",
     "prettier": "prettier --write \"./src/**/*.+(ts|js|json)\"",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "seed": "ts-node ./src/app/scripts/seeder-cli.ts",
+    "seed:help": "ts-node ./src/app/scripts/seeder-cli.ts help"
   },
   "keywords": ["school", "management", "education", "api"],
   "author": "School Management Team",
@@ -51,6 +53,7 @@
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.0.0",
     "jest": "^29.7.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.26.1"
