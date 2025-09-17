@@ -10,12 +10,21 @@
 @layer base {
   /* Removed @apply from the universal selector as it's not supported */
   * {
-    border-color: var(--tw-border-opacity, 1) theme('colors.border');
+    border-color: var(--tw-border-opacity, 1) theme('colors.black');
   }
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
 }
 
 /* Custom component styles */
