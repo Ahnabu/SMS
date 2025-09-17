@@ -56,9 +56,10 @@ export const authenticate = catchAsync(
       }
 
       // 5) Check if password was changed after token was issued
-      if (user.isPasswordChangedAfter && user.isPasswordChangedAfter(decoded.iat)) {
-        return next(new AppError(401, 'Password was recently changed. Please login again.'));
-      }
+      // Note: This check is currently disabled as the User model doesn't implement isPasswordChangedAfter method
+      // if (user.isPasswordChangedAfter && user.isPasswordChangedAfter(decoded.iat)) {
+      //   return next(new AppError(401, 'Password was recently changed. Please login again.'));
+      // }
 
       // 6) Attach user to request object
       req.user = {
@@ -132,11 +133,11 @@ export const optionalAuth = catchAsync(
 export const authorize = (...allowedRoles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new AppError('Authentication required to access this resource', 401));
+      return next(new AppError(401, 'Authentication required to access this resource'));
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return next(new AppError('Access denied. Insufficient permissions.', 403));
+      return next(new AppError(403, 'Access denied. Insufficient permissions.'));
     }
 
     next();
@@ -150,7 +151,7 @@ export const authorize = (...allowedRoles: string[]) => {
 export const enforceSchoolIsolation = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new AppError('Authentication required', 401));
+      return next(new AppError(401, 'Authentication required'));
     }
 
     // Superadmin can access all schools
@@ -160,7 +161,7 @@ export const enforceSchoolIsolation = catchAsync(
 
     // All other users must have a schoolId
     if (!req.user.schoolId) {
-      return next(new AppError('No school association found for this user', 403));
+      return next(new AppError(403, 'No school association found for this user'));
     }
 
     // Add schoolId to request for queries to use
@@ -189,8 +190,8 @@ export const rateLimitLogin = (maxAttempts: number = 5, windowMs: number = 15 * 
         loginAttempts.delete(clientId);
       } else if (attempts.count >= maxAttempts) {
         return next(new AppError(
-          `Too many login attempts. Please try again in ${Math.ceil(windowMs / 60000)} minutes.`,
-          429
+          429,
+          `Too many login attempts. Please try again in ${Math.ceil(windowMs / 60000)} minutes.`
         ));
       }
     }
@@ -227,11 +228,11 @@ export const updateLoginAttempts = (req: Request, success: boolean) => {
  */
 export const requireSchoolAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return next(new AppError('Authentication required', 401));
+    return next(new AppError(401, 'Authentication required'));
   }
 
   if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-    return next(new AppError('Admin access required', 403));
+    return next(new AppError(403, 'Admin access required'));
   }
 
   next();
@@ -243,12 +244,12 @@ export const requireSchoolAdmin = (req: AuthenticatedRequest, res: Response, nex
  */
 export const requireTeacher = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return next(new AppError('Authentication required', 401));
+    return next(new AppError(401, 'Authentication required'));
   }
 
   const allowedRoles = ['teacher', 'admin', 'superadmin'];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError('Teacher access required', 403));
+    return next(new AppError(403, 'Teacher access required'));
   }
 
   next();
@@ -260,12 +261,12 @@ export const requireTeacher = (req: AuthenticatedRequest, res: Response, next: N
  */
 export const requireStudentAccess = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return next(new AppError('Authentication required', 401));
+    return next(new AppError(401, 'Authentication required'));
   }
 
   const allowedRoles = ['student', 'parent', 'teacher', 'admin', 'superadmin'];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError('Student access required', 403));
+    return next(new AppError(403, 'Student access required'));
   }
 
   next();
@@ -277,12 +278,12 @@ export const requireStudentAccess = (req: AuthenticatedRequest, res: Response, n
  */
 export const requireParent = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return next(new AppError('Authentication required', 401));
+    return next(new AppError(401, 'Authentication required'));
   }
 
   const allowedRoles = ['parent', 'admin', 'superadmin'];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError('Parent access required', 403));
+    return next(new AppError(403, 'Parent access required'));
   }
 
   next();
@@ -312,7 +313,7 @@ export const validateOwnership = (userIdField: string = 'userId') => {
   return catchAsync(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       if (!req.user) {
-        return next(new AppError('Authentication required', 401));
+        return next(new AppError(401, 'Authentication required'));
       }
 
       // Admins and superadmins can access any data
@@ -323,11 +324,11 @@ export const validateOwnership = (userIdField: string = 'userId') => {
       const resourceUserId = req.params[userIdField] || req.body[userIdField];
 
       if (!resourceUserId) {
-        return next(new AppError(`${userIdField} is required`, 400));
+        return next(new AppError(400, `${userIdField} is required`));
       }
 
       if (resourceUserId !== req.user.id) {
-        return next(new AppError('Access denied. You can only access your own data.', 403));
+        return next(new AppError(403, 'Access denied. You can only access your own data.'));
       }
 
       next();
@@ -343,13 +344,13 @@ export const authenticateApiKey = catchAsync(
     const apiKey = req.headers['x-api-key'] as string;
 
     if (!apiKey) {
-      return next(new AppError('API key required', 401));
+      return next(new AppError(401, 'API key required'));
     }
 
     // In a real application, you'd validate this against a database
     // For now, using a simple environment variable
     if (apiKey !== config.api_key) {
-      return next(new AppError('Invalid API key', 401));
+      return next(new AppError(401, 'Invalid API key'));
     }
 
     next();
