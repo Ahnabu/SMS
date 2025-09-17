@@ -4,9 +4,16 @@ import { Types } from "mongoose";
 import { catchAsync } from "../../utils/catchAsync";
 import { schoolService } from "./school.service";
 import { sendResponse } from "../../utils/sendResponse";
+import { AuthenticatedRequest } from "../../middlewares/auth";
 
-const createSchool = catchAsync(async (req: Request, res: Response) => {
-  const result = await schoolService.createSchool(req.body);
+const createSchool = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  // Add the authenticated user ID as createdBy
+  const schoolData = {
+    ...req.body,
+    createdBy: req.user?.id
+  };
+  
+  const result = await schoolService.createSchool(schoolData);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,

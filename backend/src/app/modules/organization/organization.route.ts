@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateRequest } from '../../middlewares/validateRequest';
-import { requireSuperadmin } from '../../middlewares/auth';
+import { authenticate, requireSuperadmin } from '../../middlewares/auth';
 import {
   createOrganizationValidationSchema,
   updateOrganizationValidationSchema,
@@ -29,6 +29,7 @@ router.get(
 // Protected routes (require superadmin access)
 router.post(
   '/',
+  authenticate,
   requireSuperadmin,
   validateRequest(createOrganizationValidationSchema),
   createOrganization
@@ -36,6 +37,7 @@ router.post(
 
 router.get(
   '/',
+  authenticate,
   requireSuperadmin,
   validateRequest(getOrganizationsValidationSchema),
   getOrganizations
@@ -43,6 +45,7 @@ router.get(
 
 router.get(
   '/:id',
+  authenticate,
   requireSuperadmin,
   validateRequest(getOrganizationValidationSchema),
   getOrganizationById
@@ -50,6 +53,7 @@ router.get(
 
 router.put(
   '/:id',
+  authenticate,
   requireSuperadmin,
   validateRequest(updateOrganizationValidationSchema),
   updateOrganization
@@ -57,6 +61,7 @@ router.put(
 
 router.delete(
   '/:id',
+  authenticate,
   requireSuperadmin,
   validateRequest(deleteOrganizationValidationSchema),
   deleteOrganization
@@ -64,6 +69,7 @@ router.delete(
 
 router.get(
   '/:id/stats',
+  authenticate,
   requireSuperadmin,
   validateRequest(getOrganizationValidationSchema),
   getOrganizationStats

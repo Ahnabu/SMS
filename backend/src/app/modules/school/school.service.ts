@@ -16,82 +16,86 @@ import {
 
 class SchoolService {
   async createSchool(
-    schoolData: ICreateSchoolRequest
+    schoolData: ICreateSchoolRequest & { createdBy: string }
   ): Promise<{ school: ISchoolResponse; credentials: ISchoolCredentials }> {
     try {
-      // Verify organization exists and is active
-      const organization = await Organization.findById(schoolData.orgId);
-      if (!organization) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Organization not found');
+      // Verify organization exists and is active (only if orgId is provided)
+      if (schoolData.orgId) {
+        const organization = await Organization.findById(schoolData.orgId);
+        if (!organization) {
+          throw new AppError(httpStatus.NOT_FOUND, 'Organization not found');
+        }
+
+        if (organization.status !== 'active') {
+          throw new AppError(
+            httpStatus.BAD_REQUEST,
+            'Cannot create school for inactive organization'
+          );
+        }
       }
 
-      if (organization.status !== 'active') {
-        throw new AppError(
-          httpStatus.BAD_REQUEST,
-          'Cannot create school for inactive organization'
-        );
-      }
-
-      // Check if school with same name already exists in this organization
+      // Check if school with same name already exists
       const existingSchool = await School.findOne({
-        name: { $regex: new RegExp(`^${schoolData.name}$`, 'i') },
-        orgId: schoolData.orgId,
+        name: { $regex: new RegExp(`^${schoolData.name}$`, 'i') }
       });
 
       if (existingSchool) {
         throw new AppError(
           httpStatus.CONFLICT,
-          `School with name '${schoolData.name}' already exists in this organization`
+          `School with name '${schoolData.name}' already exists`
         );
       }
 
-      // Create temporary school instance to generate credentials
-      const tempSchool = new School({
-        ...schoolData,
-        adminUsername: 'temp',
-        adminPasswordHash: 'temp',
-      });
+      // Generate school slug and ID first
+      const slug = schoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+      const schoolIdCounter = await School.countDocuments();
+      const schoolId = `SCH${String(schoolIdCounter + 1).padStart(3, '0')}`;
 
-      // Generate unique admin credentials
-      let credentials: { username: string; password: string };
-      let attempts = 0;
-      const maxAttempts = 10;
-
-      do {
-        credentials = tempSchool.generateCredentials();
-        const usernameExists = await School.findOne({
-          adminUsername: credentials.username,
-        });
-
-        if (!usernameExists) break;
-        attempts++;
-      } while (attempts < maxAttempts);
-
-      if (attempts >= maxAttempts) {
-        throw new AppError(
-          httpStatus.INTERNAL_SERVER_ERROR,
-          'Failed to generate unique admin username after multiple attempts'
-        );
-      }
-
-      // Create the school with generated credentials
+      // Create the school first with temporary adminUserId
+      const tempObjectId = new Types.ObjectId();
       const newSchool = await School.create({
         ...schoolData,
-        adminUsername: credentials.username,
-        adminPasswordHash: credentials.password,
+        slug,
+        schoolId,
+        adminUserId: tempObjectId, // Temporary ID
+        currentSession: {
+          ...schoolData.currentSession,
+          isActive: true
+        },
+        academicSessions: [{
+          ...schoolData.currentSession,
+          isActive: true
+        }],
+        apiEndpoint: `/api/schools/${schoolId}`,
+        apiKey: this.generateApiKey(),
+        isActive: true,
+        status: 'active'
       });
 
-      // Populate organization data
-      await newSchool.populate('orgId', 'name status');
+      // Now create the admin user with the school ID
+      const adminUser = await User.create({
+        role: 'admin',
+        username: schoolData.adminDetails.username,
+        passwordHash: schoolData.adminDetails.password, // This will be hashed by the User model
+        firstName: schoolData.adminDetails.firstName,
+        lastName: schoolData.adminDetails.lastName,
+        email: schoolData.adminDetails.email,
+        phone: schoolData.adminDetails.phone,
+        isActive: true,
+        schoolId: newSchool._id,
+      });
+
+      // Update the school with the real admin user ID
+      await School.findByIdAndUpdate(newSchool._id, { adminUserId: adminUser._id });
 
       return {
         school: this.formatSchoolResponse(newSchool),
         credentials: {
-          username: credentials.username,
-          password: credentials.password,
-          tempPassword: credentials.password, // Same as password initially
-          apiKey: 'temp-api-key-' + newSchool._id,
-          apiEndpoint: '/api/school/' + newSchool._id,
+          username: schoolData.adminDetails.username,
+          password: schoolData.adminDetails.password,
+          tempPassword: schoolData.adminDetails.password,
+          apiKey: newSchool.apiKey,
+          apiEndpoint: newSchool.apiEndpoint,
         },
       };
     } catch (error) {
@@ -103,6 +107,10 @@ class SchoolService {
         `Failed to create school: ${(error as Error).message}`
       );
     }
+  }
+
+  private generateApiKey(): string {
+    return 'sk_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
   }
 
   async getSchools(queryParams: {

@@ -1,10 +1,47 @@
 import { z } from 'zod';
 
+// Address validation schema
+const addressValidationSchema = z.object({
+  street: z.string().min(1, 'Street is required').max(200, 'Street cannot exceed 200 characters'),
+  city: z.string().min(1, 'City is required').max(100, 'City cannot exceed 100 characters'),
+  state: z.string().min(1, 'State is required').max(100, 'State cannot exceed 100 characters'),
+  country: z.string().min(1, 'Country is required').max(100, 'Country cannot exceed 100 characters'),
+  postalCode: z.string().min(1, 'Postal code is required').max(20, 'Postal code cannot exceed 20 characters'),
+  coordinates: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180)
+  }).optional()
+});
+
+// Contact validation schema
+const contactValidationSchema = z.object({
+  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
+  email: z.string().email('Invalid email format').toLowerCase(),
+  website: z.string().url('Invalid website URL').optional(),
+  fax: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid fax number format').optional()
+});
+
+// Admin details validation schema
+const adminDetailsValidationSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(50, 'First name cannot exceed 50 characters'),
+  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name cannot exceed 50 characters'),
+  email: z.string().email('Invalid email format').toLowerCase(),
+  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
+  username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username cannot exceed 50 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password cannot exceed 100 characters')
+});
+
+// Current session validation schema
+const currentSessionValidationSchema = z.object({
+  name: z.string().min(1, 'Session name is required'),
+  startDate: z.string().datetime('Invalid start date format'),
+  endDate: z.string().datetime('Invalid end date format')
+});
+
 const settingsValidationSchema = z.object({
   maxStudentsPerSection: z
     .number()
-    .min(10, 'Maximum students per section must be at least 10')
-    .max(60, 'Maximum students per section cannot exceed 60')
+    .min(1, 'Maximum students per section must be at least 1')
     .optional(),
   grades: z
     .array(z.number().min(1).max(12))
@@ -37,7 +74,8 @@ const createSchoolValidationSchema = z.object({
       .string({
         required_error: 'Organization ID is required',
       })
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid organization ID format'),
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid organization ID format')
+      .optional(), // Make optional for backward compatibility
     name: z
       .string({
         required_error: 'School name is required',
@@ -45,21 +83,15 @@ const createSchoolValidationSchema = z.object({
       .min(2, 'School name must be at least 2 characters')
       .max(100, 'School name cannot exceed 100 characters')
       .trim(),
-    address: z
-      .string()
-      .max(200, 'Address cannot exceed 200 characters')
-      .trim()
-      .optional(),
-    phone: z
-      .string()
-      .regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format')
-      .optional(),
-    email: z
-      .string()
-      .email('Invalid email format')
-      .toLowerCase()
-      .optional(),
+    establishedYear: z.number().min(1800).max(new Date().getFullYear()).optional(),
+    address: addressValidationSchema,
+    contact: contactValidationSchema,
+    adminDetails: adminDetailsValidationSchema,
+    currentSession: currentSessionValidationSchema,
     settings: settingsValidationSchema.optional(),
+    affiliation: z.string().max(100, 'Affiliation cannot exceed 100 characters').optional(),
+    recognition: z.string().max(200, 'Recognition cannot exceed 200 characters').optional(),
+    logo: z.string().url('Invalid logo URL').optional(),
   }),
 });
 
