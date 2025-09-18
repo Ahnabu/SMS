@@ -420,8 +420,10 @@ schoolSchema.methods.setActiveAcademicSession = async function (this: ISchoolDoc
     throw new Error('Academic session not found');
   }
   
-  // Deactivate current session
-  this.currentSession.isActive = false;
+  // Deactivate current session if it exists
+  if (this.currentSession) {
+    this.currentSession.isActive = false;
+  }
   
   // Set new active session
   session.isActive = true;
@@ -482,6 +484,12 @@ schoolSchema.statics.findByStatus = function (status: SchoolStatus): Promise<ISc
 
 schoolSchema.statics.findByApiKey = function (apiKey: string): Promise<ISchoolDocument | null> {
   return this.findOne({ apiKey, isActive: true });
+};
+
+schoolSchema.statics.findByOrganization = function (orgId: string): Promise<ISchoolDocument[]> {
+  return this.find({ orgId, isActive: true })
+    .populate('adminUserId', 'username firstName lastName email phone')
+    .sort({ name: 1 });
 };
 
 schoolSchema.statics.generateUniqueSchoolId = async function (): Promise<string> {

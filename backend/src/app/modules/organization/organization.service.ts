@@ -9,6 +9,13 @@ import {
   IOrganizationDocument,
 } from './organization.interface';
 
+// Helper function to safely get error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return getErrorMessage(error);
+  if (typeof error === 'string') return error;
+  return 'Unknown error occurred';
+};
+
 class OrganizationService {
   async createOrganization(
     organizationData: ICreateOrganizationRequest
@@ -35,7 +42,7 @@ class OrganizationService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to create organization: ${error.message}`
+        `Failed to create organization: ${getErrorMessage(error)}`
       );
     }
   }
@@ -98,7 +105,7 @@ class OrganizationService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch organizations: ${error.message}`
+        `Failed to fetch organizations: ${getErrorMessage(error)}`
       );
     }
   }
@@ -122,7 +129,7 @@ class OrganizationService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch organization: ${error.message}`
+        `Failed to fetch organization: ${getErrorMessage(error)}`
       );
     }
   }
@@ -170,7 +177,7 @@ class OrganizationService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to update organization: ${error.message}`
+        `Failed to update organization: ${getErrorMessage(error)}`
       );
     }
   }
@@ -194,7 +201,7 @@ class OrganizationService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete organization: ${error.message}`
+        `Failed to delete organization: ${getErrorMessage(error)}`
       );
     }
   }
@@ -206,7 +213,7 @@ class OrganizationService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch active organizations: ${error.message}`
+        `Failed to fetch active organizations: ${getErrorMessage(error)}`
       );
     }
   }
@@ -249,7 +256,7 @@ class OrganizationService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch organization stats: ${error.message}`
+        `Failed to fetch organization stats: ${getErrorMessage(error)}`
       );
     }
   }

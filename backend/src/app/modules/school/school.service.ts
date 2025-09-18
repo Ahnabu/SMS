@@ -297,12 +297,25 @@ class SchoolService {
         throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
       }
 
-      const school = await School.findById(id);
+      const school = await School.findById(id).populate('adminUserId');
       if (!school) {
         throw new AppError(httpStatus.NOT_FOUND, 'School not found');
       }
 
-      await school.updateAdminPassword(newPassword);
+      if (!school.adminUserId) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'School has no admin user assigned');
+      }
+
+      // Get the admin user and update password
+      const adminUser = await User.findById(school.adminUserId);
+      if (!adminUser) {
+        throw new AppError(httpStatus.NOT_FOUND, 'Admin user not found');
+      }
+
+      await adminUser.updatePassword(newPassword);
+      // Mark as first login so they'll be prompted to change password
+      adminUser.isFirstLogin = true;
+      await adminUser.save();
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -321,7 +334,7 @@ class SchoolService {
       }
 
       const schools = await School.findByOrganization(orgId);
-      return schools.map(school => this.formatSchoolResponse(school));
+      return schools.map((school: ISchoolDocument) => this.formatSchoolResponse(school));
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,

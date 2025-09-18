@@ -19,12 +19,13 @@ export interface IUser {
   email?: string;
   phone?: string;
   isActive: boolean;
+  isFirstLogin: boolean; // Track if user needs to change password
   lastLogin?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface IUserDocument extends IUser, Document {
+export interface IUserDocument extends IUser, Document, IUserMethods {
   _id: Types.ObjectId;
 }
 
@@ -34,6 +35,7 @@ export interface IUserMethods {
   getFullName(): string;
   canAccessSchool(schoolId: string): boolean;
   updateLastLogin(): Promise<IUserDocument>;
+  markFirstLoginComplete(): Promise<IUserDocument>;
 }
 
 export interface IUserModel extends Model<IUserDocument> {
@@ -79,6 +81,7 @@ export interface IUserResponse {
   email?: string;
   phone?: string;
   isActive: boolean;
+  isFirstLogin: boolean;
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -98,4 +101,5 @@ export interface ILoginResponse {
   accessToken: string;
   refreshToken?: string;
   tokenExpires: Date;
+  requiresPasswordChange?: boolean; // Indicate if password change is required
 }

@@ -8,7 +8,7 @@ import config from '../config';
  */
 const handleCastErrorDB = (err: mongoose.CastError): AppError => {
   const message = `Invalid ${err.path}: ${err.value}`;
-  return new AppError(message, 400);
+  return new AppError(400, message);
 };
 
 /**
@@ -17,7 +17,7 @@ const handleCastErrorDB = (err: mongoose.CastError): AppError => {
 const handleDuplicateFieldsDB = (err: any): AppError => {
   const duplicateFields = Object.keys(err.keyValue).join(', ');
   const message = `Duplicate field value(s): ${duplicateFields}. Please use different value(s)`;
-  return new AppError(message, 400);
+  return new AppError(400, message);
 };
 
 /**
@@ -31,20 +31,20 @@ const handleValidationErrorDB = (err: mongoose.ValidationError): AppError => {
     return el.toString();
   });
   const message = `Invalid input data: ${errors.join('. ')}`;
-  return new AppError(message, 400);
+  return new AppError(400, message);
 };
 
 /**
  * JWT Error Handler
  */
 const handleJWTError = (): AppError => 
-  new AppError('Invalid token. Please log in again!', 401);
+  new AppError(401, 'Invalid token. Please log in again!');
 
 /**
  * JWT Expired Error Handler
  */
 const handleJWTExpiredError = (): AppError =>
-  new AppError('Your token has expired! Please log in again.', 401);
+  new AppError(401, 'Your token has expired! Please log in again.');
 
 /**
  * Send Error Response for Development Environment
@@ -156,7 +156,7 @@ export const globalErrorHandler = (
  */
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
   const message = `Can't find ${req.originalUrl} on this server!`;
-  next(new AppError(message, 404));
+  next(new AppError(404, message));
 };
 
 /**
@@ -165,7 +165,7 @@ export const notFoundHandler = (req: Request, res: Response, next: NextFunction)
 export const timeoutHandler = (timeout: number = 30000) => {
   return (req: Request, res: Response, next: NextFunction) => {
     res.setTimeout(timeout, () => {
-      const err = new AppError('Request timeout', 408);
+      const err = new AppError(408, 'Request timeout');
       next(err);
     });
     next();
@@ -191,7 +191,7 @@ export const corsErrorHandler = (req: Request, res: Response, next: NextFunction
   const allowedOrigins = config.allowed_origins?.split(',') || ['http://localhost:3000'];
 
   if (origin && !allowedOrigins.includes(origin)) {
-    return next(new AppError(`CORS policy: Origin ${origin} is not allowed`, 403));
+    return next(new AppError(403, `CORS policy: Origin ${origin} is not allowed`));
   }
 
   next();

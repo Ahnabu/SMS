@@ -134,6 +134,7 @@ export interface ISchoolModel extends Model<ISchoolDocument> {
   findByAdmin(adminId: string): Promise<ISchoolDocument | null>;
   findByStatus(status: SchoolStatus): Promise<ISchoolDocument[]>;
   findByApiKey(apiKey: string): Promise<ISchoolDocument | null>;
+  findByOrganization(orgId: string): Promise<ISchoolDocument[]>;
   generateUniqueSchoolId(): Promise<string>;
   generateUniqueSlug(name: string): Promise<string>;
   search(query: string): Promise<ISchoolDocument[]>;

@@ -79,6 +79,10 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
       default: true,
       index: true,
     },
+    isFirstLogin: {
+      type: Boolean,
+      default: true,
+    },
     lastLogin: {
       type: Date,
     },
@@ -111,6 +115,12 @@ userSchema.methods.canAccessSchool = function (schoolId: string): boolean {
 userSchema.methods.updateLastLogin = function (): Promise<IUserDocument> {
   this.lastLogin = new Date();
   return this.save();
+};
+
+userSchema.methods.markFirstLoginComplete = async function (): Promise<IUserDocument> {
+  this.isFirstLogin = false;
+  this.lastLogin = new Date();
+  return await this.save();
 };
 
 // Static methods

@@ -161,14 +161,14 @@ export const validateUploadedFiles = (req: Request, res: Response, next: NextFun
   const files = req.files as Express.Multer.File[];
   
   if (!files || files.length === 0) {
-    return next(new AppError('No files uploaded', 400));
+    return next(new AppError(400, 'No files uploaded'));
   }
 
   // Validate each file
   for (const file of files) {
     const validation = FileUtils.validateImageFile(file);
     if (!validation.isValid) {
-      return next(new AppError(validation.error!, 400));
+      return next(new AppError(400, validation.error!));
     }
   }
 
@@ -190,7 +190,7 @@ export const validateOptionalFiles = (req: Request, res: Response, next: NextFun
   for (const file of files) {
     const validation = FileUtils.validateImageFile(file);
     if (!validation.isValid) {
-      return next(new AppError(validation.error!, 400));
+      return next(new AppError(400, validation.error!));
     }
   }
 
@@ -207,11 +207,11 @@ export const validateStudentPhotoCount = async (req: Request, res: Response, nex
     const studentId = req.params.id || req.body.studentId;
 
     if (!studentId) {
-      return next(new AppError('Student ID is required', 400));
+      return next(new AppError(400, 'Student ID is required'));
     }
 
     if (!files || files.length === 0) {
-      return next(new AppError('No photos uploaded', 400));
+      return next(new AppError(400, 'No photos uploaded'));
     }
 
     // Check existing photo count
@@ -219,7 +219,7 @@ export const validateStudentPhotoCount = async (req: Request, res: Response, nex
     const student = await Student.findById(studentId);
     
     if (!student) {
-      return next(new AppError('Student not found', 404));
+      return next(new AppError(404, 'Student not found'));
     }
 
     // Check if student can upload more photos
@@ -245,7 +245,7 @@ export const validateStudentPhotoCount = async (req: Request, res: Response, nex
 
     next();
   } catch (error) {
-    next(new AppError('Error validating photo count', 500));
+    next(new AppError(500, 'Error validating photo count'));
   }
 };
 
@@ -348,7 +348,7 @@ export const handleMulterError = (error: any, req: Request, res: Response, next:
         break;
     }
 
-    return next(new AppError(message, 400));
+    return next(new AppError(400, message));
   }
 
   next(error);

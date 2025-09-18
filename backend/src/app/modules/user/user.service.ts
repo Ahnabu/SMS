@@ -16,6 +16,13 @@ import {
 } from './user.interface';
 import config from '../../config';
 
+// Helper function to safely get error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Unknown error occurred';
+};
+
 class UserService {
   async createUser(userData: ICreateUserRequest): Promise<IUserResponse> {
     try {
@@ -68,7 +75,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to create user: ${error.message}`
+        `Failed to create user: ${getErrorMessage(error)}`
       );
     }
   }
@@ -136,7 +143,7 @@ class UserService {
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        users: users.map(user => this.formatUserResponse(user)),
+        users: users.map((user: IUserDocument) => this.formatUserResponse(user)),
         totalCount,
         currentPage: page,
         totalPages,
@@ -146,7 +153,7 @@ class UserService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch users: ${error.message}`
+        `Failed to fetch users: ${getErrorMessage(error)}`
       );
     }
   }
@@ -170,7 +177,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch user: ${error.message}`
+        `Failed to fetch user: ${getErrorMessage(error)}`
       );
     }
   }
@@ -199,7 +206,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to update user: ${error.message}`
+        `Failed to update user: ${getErrorMessage(error)}`
       );
     }
   }
@@ -223,7 +230,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete user: ${error.message}`
+        `Failed to delete user: ${getErrorMessage(error)}`
       );
     }
   }
@@ -250,13 +257,45 @@ class UserService {
 
       // Update password
       await user.updatePassword(passwordData.newPassword);
+      // Mark first login as complete if this was a first login
+      if (user.isFirstLogin) {
+        await user.markFirstLoginComplete();
+      }
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to change password: ${error.message}`
+        `Failed to change password: ${getErrorMessage(error)}`
+      );
+    }
+  }
+
+  async forcePasswordChange(
+    id: string,
+    newPassword: string
+  ): Promise<void> {
+    try {
+      if (!Types.ObjectId.isValid(id)) {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid user ID format');
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+      }
+
+      // Update password and mark first login as complete
+      await user.updatePassword(newPassword);
+      await user.markFirstLoginComplete();
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to change password: ${getErrorMessage(error)}`
       );
     }
   }
@@ -280,7 +319,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to reset password: ${error.message}`
+        `Failed to reset password: ${getErrorMessage(error)}`
       );
     }
   }
@@ -350,6 +389,7 @@ class UserService {
         user: this.formatUserResponse(user),
         accessToken,
         tokenExpires,
+        requiresPasswordChange: user.isFirstLogin, // Add this flag
       };
     } catch (error) {
       if (error instanceof AppError) {
@@ -357,7 +397,7 @@ class UserService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to login: ${error.message}`
+        `Failed to login: ${getErrorMessage(error)}`
       );
     }
   }
@@ -369,11 +409,11 @@ class UserService {
       }
 
       const users = await User.findBySchool(schoolId);
-      return users.map(user => this.formatUserResponse(user));
+      return users.map((user: IUserDocument) => this.formatUserResponse(user));
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch users by school: ${error.message}`
+        `Failed to fetch users by school: ${getErrorMessage(error)}`
       );
     }
   }
@@ -381,11 +421,11 @@ class UserService {
   async getUsersByRole(role: UserRole): Promise<IUserResponse[]> {
     try {
       const users = await User.findByRole(role);
-      return users.map(user => this.formatUserResponse(user));
+      return users.map((user: IUserDocument) => this.formatUserResponse(user));
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch users by role: ${error.message}`
+        `Failed to fetch users by role: ${getErrorMessage(error)}`
       );
     }
   }
@@ -402,6 +442,7 @@ class UserService {
       email: user.email,
       phone: user.phone,
       isActive: user.isActive,
+      isFirstLogin: user.isFirstLogin,
       lastLogin: user.lastLogin,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
