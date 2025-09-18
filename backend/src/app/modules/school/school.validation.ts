@@ -15,10 +15,10 @@ const addressValidationSchema = z.object({
 
 // Contact validation schema
 const contactValidationSchema = z.object({
-  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
+  phone: z.string().optional(),
   email: z.string().email('Invalid email format').toLowerCase(),
-  website: z.string().url('Invalid website URL').optional(),
-  fax: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid fax number format').optional()
+  website: z.string().url('Invalid website URL').optional().or(z.literal('').transform(() => undefined)),
+  fax: z.string().optional()
 });
 
 // Admin details validation schema
@@ -26,7 +26,7 @@ const adminDetailsValidationSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50, 'First name cannot exceed 50 characters'),
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name cannot exceed 50 characters'),
   email: z.string().email('Invalid email format').toLowerCase(),
-  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number format'),
+  phone: z.string().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username cannot exceed 50 characters'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password cannot exceed 100 characters')
 });
@@ -87,8 +87,6 @@ const createSchoolValidationSchema = z.object({
     address: addressValidationSchema,
     contact: contactValidationSchema,
     adminDetails: adminDetailsValidationSchema,
-    currentSession: currentSessionValidationSchema,
-    settings: settingsValidationSchema.optional(),
     affiliation: z.string().max(100, 'Affiliation cannot exceed 100 characters').optional(),
     recognition: z.string().max(200, 'Recognition cannot exceed 200 characters').optional(),
     logo: z.string().url('Invalid logo URL').optional(),

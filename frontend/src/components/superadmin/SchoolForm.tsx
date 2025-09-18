@@ -31,21 +31,6 @@ interface School {
     username: string;
     password: string;
   };
-  currentSession?: {
-    name: string;
-    startDate: string;
-    endDate: string;
-  };
-  settings?: {
-    maxStudentsPerSection: number;
-    grades: number[];
-    sections: string[];
-    academicYearStart: number;
-    academicYearEnd: number;
-    timezone: string;
-    language: string;
-    currency: string;
-  };
 }
 
 interface SchoolFormProps {
@@ -63,7 +48,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<School>({
     name: '',
-    establishedYear: new Date().getFullYear(),
+    establishedYear: 2000, // Set a valid default year
     address: {
       street: '',
       city: '',
@@ -72,9 +57,9 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       postalCode: '',
     },
     contact: {
-      phone: '',
+      phone: '', // Allow empty phone
       email: '',
-      website: '',
+      website: '', // Keep empty, we'll handle this in submit
     },
     affiliation: '',
     recognition: '',
@@ -82,24 +67,9 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       firstName: '',
       lastName: '',
       email: '',
-      phone: '',
+      phone: '', // Allow empty phone
       username: '',
       password: '',
-    },
-    currentSession: {
-      name: '2024-25',
-      startDate: '2024-04-01',
-      endDate: '2025-03-31',
-    },
-    settings: {
-      maxStudentsPerSection: 30,
-      grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      sections: ['A', 'B', 'C'],
-      academicYearStart: 4, // April
-      academicYearEnd: 3, // March
-      timezone: 'America/New_York',
-      language: 'English',
-      currency: 'USD',
     },
   });
 
@@ -113,7 +83,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       // Reset form for new school
       setFormData({
         name: '',
-        establishedYear: new Date().getFullYear(),
+        establishedYear: 2000,
         address: {
           street: '',
           city: '',
@@ -136,21 +106,6 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
           username: '',
           password: '',
         },
-        currentSession: {
-          name: '2024-25',
-          startDate: '2024-04-01',
-          endDate: '2025-03-31',
-        },
-        settings: {
-          maxStudentsPerSection: 30,
-          grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-          sections: ['A', 'B', 'C'],
-          academicYearStart: 4,
-          academicYearEnd: 3,
-          timezone: 'America/New_York',
-          language: 'English',
-          currency: 'USD',
-        },
       });
     }
   }, [school, isOpen]);
@@ -161,21 +116,6 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       [section]: {
         ...(prev[section as keyof typeof prev] as any),
         [field]: value,
-      },
-    }));
-  };
-
-  const handleArrayChange = (section: string, field: string, value: string) => {
-    const arrayValue = value.split(',').map(item => {
-      const trimmed = item.trim();
-      return field === 'grades' ? parseInt(trimmed) : trimmed;
-    }).filter(item => item);
-
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...(prev[section as keyof typeof prev] as any),
-        [field]: arrayValue,
       },
     }));
   };
@@ -199,14 +139,19 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       newErrors.state = 'State is required';
     }
 
-    if (!formData.contact.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    }
-
     if (!formData.contact.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.contact.email)) {
       newErrors.email = 'Invalid email format';
+    }
+
+    // Website validation - only validate if not empty
+    if (formData.contact.website?.trim()) {
+      try {
+        new URL(formData.contact.website);
+      } catch {
+        newErrors.website = 'Please enter a valid URL (starting with http:// or https://)';
+      }
     }
 
     if (!school && formData.adminDetails) {
@@ -240,18 +185,49 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
 
     setLoading(true);
     try {
+      // Clean up form data before sending
+      const cleanedFormData = {
+        ...formData,
+        // Remove empty website to avoid URL validation error
+        contact: {
+          ...formData.contact,
+          website: formData.contact.website?.trim() || undefined
+        }
+      };
+
+      console.log('Sending school data:', JSON.stringify(cleanedFormData, null, 2));
+
       if (school?.id) {
         // Update existing school
-        await apiService.superadmin.updateSchool(school.id, formData);
+        await apiService.superadmin.updateSchool(school.id, cleanedFormData);
       } else {
         // Create new school
-        await apiService.superadmin.createSchool(formData);
+        await apiService.superadmin.createSchool(cleanedFormData);
       }
       onSave(formData);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save school:', error);
-      setErrors({ submit: 'Failed to save school. Please try again.' });
+      console.error('Error response data:', error.response?.data);
+      
+      // Extract detailed validation errors
+      let errorMessage = 'Failed to save school. Please check the following errors:';
+      const validationErrors: Record<string, string> = {};
+      
+      if (error.response?.data?.errorSources) {
+        error.response.data.errorSources.forEach((err: any) => {
+          const path = Array.isArray(err.path) ? err.path.join('.') : err.path;
+          validationErrors[path] = err.message;
+        });
+        
+        // Create a readable error message
+        const errorList = Object.entries(validationErrors).map(([path, msg]) => `${path}: ${msg}`).join('\n');
+        errorMessage = `Validation errors:\n${errorList}`;
+      } else {
+        errorMessage = error.response?.data?.message || 'Failed to save school. Please try again.';
+      }
+      
+      setErrors({ submit: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -260,10 +236,10 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             {school ? 'Edit School' : 'Create New School'}
           </h2>
           <Button variant="outline" size="sm" onClick={onClose}>
@@ -271,7 +247,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -281,7 +257,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     School Name *
@@ -314,7 +290,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
                   <select
                     value={formData.affiliation}
                     onChange={(e) => setFormData(prev => ({ ...prev, affiliation: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   >
                     <option value="">Select affiliation</option>
                     <option value="CBSE">CBSE</option>
@@ -361,7 +337,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
                 {errors.street && <p className="text-red-500 text-xs mt-1">{errors.street}</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     City *
@@ -422,15 +398,15 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number *
+                    Phone Number
                   </label>
                   <Input
                     value={formData.contact.phone}
                     onChange={(e) => handleInputChange('contact', 'phone', e.target.value)}
-                    placeholder="+1-555-0123"
+                    placeholder="+1-555-0123 (optional)"
                     className={errors.phone ? 'border-red-500' : ''}
                   />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
@@ -453,13 +429,16 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Website
+                  Website (Optional)
                 </label>
                 <Input
                   value={formData.contact.website}
                   onChange={(e) => handleInputChange('contact', 'website', e.target.value)}
-                  placeholder="https://school.edu"
+                  placeholder="https://school.edu (optional)"
+                  className={errors.website ? 'border-red-500' : ''}
                 />
+                {errors.website && <p className="text-red-500 text-xs mt-1">{errors.website}</p>}
+                <p className="text-xs text-gray-500 mt-1">Enter a valid URL or leave blank</p>
               </div>
             </CardContent>
           </Card>
@@ -477,7 +456,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       First Name *
@@ -523,9 +502,10 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
                       Phone
                     </label>
                     <Input
+                      type="number"
                       value={formData.adminDetails?.phone || ''}
                       onChange={(e) => handleInputChange('adminDetails', 'phone', e.target.value)}
-                      placeholder="+1-555-0123"
+                      placeholder="+1-555-0124"
                     />
                   </div>
 
@@ -560,131 +540,38 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
             </Card>
           )}
 
-          {/* Academic Session */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Academic Session
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Session Name
-                  </label>
-                  <Input
-                    value={formData.currentSession?.name || ''}
-                    onChange={(e) => handleInputChange('currentSession', 'name', e.target.value)}
-                    placeholder="2024-25"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.currentSession?.startDate || ''}
-                    onChange={(e) => handleInputChange('currentSession', 'startDate', e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.currentSession?.endDate || ''}
-                    onChange={(e) => handleInputChange('currentSession', 'endDate', e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                School Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Students per Section
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.settings?.maxStudentsPerSection || 30}
-                    onChange={(e) => handleInputChange('settings', 'maxStudentsPerSection', parseInt(e.target.value))}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Timezone
-                  </label>
-                  <select
-                    value={formData.settings?.timezone || 'America/New_York'}
-                    onChange={(e) => handleInputChange('settings', 'timezone', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
-                    <option value="UTC">UTC</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Grades Offered (comma-separated)
-                  </label>
-                  <Input
-                    value={formData.settings?.grades?.join(', ') || '1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12'}
-                    onChange={(e) => handleArrayChange('settings', 'grades', e.target.value)}
-                    placeholder="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sections (comma-separated)
-                  </label>
-                  <Input
-                    value={formData.settings?.sections?.join(', ') || 'A, B, C'}
-                    onChange={(e) => handleArrayChange('settings', 'sections', e.target.value)}
-                    placeholder="A, B, C, D"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-6 border-t border-gray-200">
             {errors.submit && (
-              <p className="text-red-500 text-sm mr-auto">{errors.submit}</p>
+              <div className="text-red-500 text-sm w-full sm:mr-auto sm:max-w-md order-1 sm:order-none">
+                <div className="bg-red-50 border border-red-200 rounded p-3">
+                  <pre className="whitespace-pre-wrap text-xs">{errors.submit}</pre>
+                </div>
+              </div>
             )}
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex items-center gap-2">
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {loading ? 'Saving...' : (school ? 'Update School' : 'Create School')}
-            </Button>
+            <div className="flex space-x-3 w-full sm:w-auto">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={loading}
+                className="flex-1 sm:flex-none"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading} 
+                className="flex items-center justify-center gap-2 flex-1 sm:flex-none"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {loading ? 'Saving...' : (school ? 'Update School' : 'Create School')}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

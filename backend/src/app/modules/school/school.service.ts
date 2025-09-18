@@ -148,7 +148,6 @@ class SchoolService {
         query.$or = [
           { name: { $regex: new RegExp(search, 'i') } },
           { address: { $regex: new RegExp(search, 'i') } },
-          { adminUsername: { $regex: new RegExp(search, 'i') } },
         ];
       }
 
@@ -333,17 +332,8 @@ class SchoolService {
 
   async validateAdminCredentials(username: string, password: string): Promise<ISchoolDocument | null> {
     try {
-      const school = await School.findByAdminUsername(username);
-      if (!school) {
-        return null;
-      }
-
-      const isPasswordValid = await school.validateCredentials(password);
-      if (!isPasswordValid) {
-        return null;
-      }
-
-      return school;
+      // This method is deprecated - use User model authentication instead
+      return null;
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
@@ -380,9 +370,8 @@ class SchoolService {
         email: school.adminUserId.email,
         phone: school.adminUserId.phone,
       } : undefined,
-      // Legacy support
+      // Legacy support - remove adminUsername reference
       orgId: school.orgId?.toString(),
-      adminUsername: school.adminUsername,
       studentsCount: school.studentsCount || school.stats?.totalStudents || 0,
       teachersCount: school.teachersCount || school.stats?.totalTeachers || 0,
       organization: school.orgId?.name ? {
@@ -402,7 +391,46 @@ class SchoolService {
     createdBy: Types.ObjectId
   ): Promise<{ school: ISchoolResponse; credentials: ISchoolCredentials }> {
     try {
-      // Create admin user first
+      // Generate unique identifiers first
+      const schoolId = await School.generateUniqueSchoolId();
+      const slug = await School.generateUniqueSlug(schoolData.name);
+
+      // Create school first with a temporary adminUserId
+      const tempObjectId = new Types.ObjectId();
+      
+      const schoolCreateData: any = {
+        name: schoolData.name,
+        slug,
+        schoolId,
+        establishedYear: schoolData.establishedYear,
+        address: schoolData.address,
+        contact: schoolData.contact,
+        affiliation: schoolData.affiliation,
+        recognition: schoolData.recognition,
+        adminUserId: tempObjectId, // Temporary ID
+        settings: schoolData.settings || {},
+        status: SchoolStatus.PENDING_APPROVAL,
+        logo: schoolData.logo,
+        isActive: true,
+        createdBy,
+      };
+
+      // Only add currentSession if it exists
+      if (schoolData.currentSession) {
+        schoolCreateData.currentSession = {
+          ...schoolData.currentSession,
+          isActive: true,
+        };
+      }
+
+      const newSchool = new School(schoolCreateData);
+      
+      // Log the data being created for debugging
+      console.log('Creating school with data:', JSON.stringify(schoolCreateData, null, 2));
+      
+      await newSchool.save();
+
+      // Now create admin user with the school ID
       const adminUser = new User({
         role: 'admin',
         username: schoolData.adminDetails.username,
@@ -412,40 +440,13 @@ class SchoolService {
         email: schoolData.adminDetails.email,
         phone: schoolData.adminDetails.phone,
         isActive: true,
+        schoolId: newSchool._id, // Now we have the school ID
       });
 
       await adminUser.save();
 
-      // Generate unique identifiers
-      const schoolId = await School.generateUniqueSchoolId();
-      const slug = await School.generateUniqueSlug(schoolData.name);
-
-      // Create school
-      const newSchool = new School({
-        name: schoolData.name,
-        slug,
-        schoolId,
-        establishedYear: schoolData.establishedYear,
-        address: schoolData.address,
-        contact: schoolData.contact,
-        affiliation: schoolData.affiliation,
-        recognition: schoolData.recognition,
-        adminUserId: adminUser._id,
-        settings: schoolData.settings || {},
-        currentSession: {
-          ...schoolData.currentSession,
-          isActive: true,
-        },
-        status: SchoolStatus.PENDING_APPROVAL,
-        logo: schoolData.logo,
-        isActive: true,
-        createdBy,
-      });
-
-      // Set schoolId for admin user
-      adminUser.schoolId = newSchool._id;
-      await adminUser.save();
-
+      // Update school with the real admin user ID
+      newSchool.adminUserId = adminUser._id;
       await newSchool.save();
 
       // Generate API credentials

@@ -7,13 +7,12 @@ import { sendResponse } from "../../utils/sendResponse";
 import { AuthenticatedRequest } from "../../middlewares/auth";
 
 const createSchool = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  // Add the authenticated user ID as createdBy
-  const schoolData = {
-    ...req.body,
-    createdBy: req.user?.id
-  };
+  // Use the modern school creation method
+  const result = await schoolService.createSchoolModern(
+    req.body,
+    new Types.ObjectId(req.user?.id)
+  );
   
-  const result = await schoolService.createSchool(schoolData);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,

@@ -64,11 +64,11 @@ const addressSchema = new Schema<ISchoolAddress>({
 const contactSchema = new Schema<ISchoolContact>({
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
+    required: false,
     trim: true,
     validate: {
       validator: function (phone: string) {
-        return /^\+?[\d\s\-\(\)]+$/.test(phone);
+        return !phone || /^\+?[\d\s\-\(\)]+$/.test(phone);
       },
       message: 'Invalid phone number format'
     }
@@ -281,18 +281,6 @@ const schoolSchema = new Schema<ISchoolDocument, ISchoolModel, ISchoolMethods>(
       index: true
     },
     
-    // Legacy admin fields - keeping for backward compatibility
-    adminUsername: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      index: { sparse: true }
-    },
-    adminPasswordHash: {
-      type: String,
-      select: false
-    },
-    
     // Educational Details
     affiliation: {
       type: String,
@@ -311,10 +299,10 @@ const schoolSchema = new Schema<ISchoolDocument, ISchoolModel, ISchoolMethods>(
       default: () => ({})
     },
     
-    // Academic Sessions
+    // Academic Sessions - Optional for now
     currentSession: {
       type: academicSessionSchema,
-      required: [true, 'Current academic session is required']
+      required: false
     },
     academicSessions: {
       type: [academicSessionSchema],
@@ -375,30 +363,7 @@ const schoolSchema = new Schema<ISchoolDocument, ISchoolModel, ISchoolMethods>(
 
 // Instance methods
 
-// Legacy methods - keeping for backward compatibility
-schoolSchema.methods.checkIsActive = function (this: ISchoolDocument): boolean {
-  return this.status === SchoolStatus.ACTIVE;
-};
-
-schoolSchema.methods.generateCredentials = function (this: ISchoolDocument): { username: string; password: string } {
-  const schoolPrefix = this.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toLowerCase();
-  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  const username = `${schoolPrefix}admin${randomNum}`;
-  const password = Math.random().toString(36).slice(-8);
-  return { username, password };
-};
-
-schoolSchema.methods.validateCredentials = async function (this: ISchoolDocument, password: string): Promise<boolean> {
-  if (!this.adminPasswordHash) return false;
-  return await bcrypt.compare(password, this.adminPasswordHash);
-};
-
-schoolSchema.methods.updateAdminPassword = async function (this: ISchoolDocument, newPassword: string): Promise<ISchoolDocument> {
-  this.adminPasswordHash = await bcrypt.hash(newPassword, 12);
-  return await this.save();
-};
-
-// New enhanced methods
+// Enhanced methods
 schoolSchema.methods.generateApiEndpoint = function (this: ISchoolDocument): string {
   return `/api/attendance/${this.slug || this.schoolId}`;
 };
@@ -492,22 +457,7 @@ schoolSchema.methods.createGoogleDriveFolder = async function (this: ISchoolDocu
 
 // Static methods
 
-// Legacy methods - keeping for backward compatibility
-schoolSchema.statics.findByOrganization = function (orgId: string): Promise<ISchoolDocument[]> {
-  return this.find({ orgId }).populate('orgId', 'name status').sort({ name: 1 });
-};
-
-schoolSchema.statics.findActiveSchools = function (): Promise<ISchoolDocument[]> {
-  return this.find({ status: SchoolStatus.ACTIVE, isActive: true })
-    .populate('adminUserId', 'username firstName lastName email phone')
-    .sort({ name: 1 });
-};
-
-schoolSchema.statics.findByAdminUsername = function (username: string): Promise<ISchoolDocument | null> {
-  return this.findOne({ adminUsername: username.toLowerCase() }).select('+adminPasswordHash');
-};
-
-// New enhanced methods
+// Enhanced methods
 schoolSchema.statics.findBySlug = function (slug: string): Promise<ISchoolDocument | null> {
   return this.findOne({ slug: slug.toLowerCase() })
     .populate('adminUserId', 'username firstName lastName email phone')
@@ -622,7 +572,7 @@ schoolSchema.pre('save', async function (next) {
       this.apiKey = this.generateApiKey();
     }
     
-    // Set current session as active
+    // Set current session as active only if provided
     if (this.currentSession) {
       this.currentSession.isActive = true;
       this.academicSessions = [this.currentSession];
@@ -630,10 +580,8 @@ schoolSchema.pre('save', async function (next) {
   }
 
   // Hash password if it's being modified and not already hashed (legacy support)
-  if (this.isModified('adminPasswordHash') && this.adminPasswordHash && !this.adminPasswordHash.startsWith('$2a$')) {
-    this.adminPasswordHash = await bcrypt.hash(this.adminPasswordHash, 12);
-  }
-
+  // Note: This is for backward compatibility only - new schools use User model
+  
   // Normalize school name (title case)
   if (this.isModified('name')) {
     this.name = this.name.trim().replace(/\w\S*/g, (txt: string) =>
@@ -646,18 +594,13 @@ schoolSchema.pre('save', async function (next) {
     this.slug = await (this.constructor as ISchoolModel).generateUniqueSlug(this.name);
   }
 
-  // Ensure admin username is lowercase (legacy support)
-  if (this.isModified('adminUsername') && this.adminUsername) {
-    this.adminUsername = this.adminUsername.toLowerCase();
-  }
-
   // Update API endpoint if slug changed
   if (this.isModified('slug')) {
     this.apiEndpoint = this.generateApiEndpoint();
   }
 
-  // Validate academic session dates
-  if (this.currentSession) {
+  // Validate academic session dates only if currentSession exists
+  if (this.currentSession && this.currentSession.endDate && this.currentSession.startDate) {
     if (this.currentSession.endDate <= this.currentSession.startDate) {
       return next(new Error('Academic session end date must be after start date'));
     }
@@ -696,7 +639,6 @@ schoolSchema.set('toJSON', {
     ret.id = ret._id;
     delete (ret as any)._id;
     delete (ret as any).__v;
-    delete (ret as any).adminPasswordHash; // Never expose password hash
     return ret;
   }
 });
@@ -707,7 +649,6 @@ schoolSchema.set('toObject', {
     ret.id = ret._id;
     delete (ret as any)._id;
     delete (ret as any).__v;
-    delete (ret as any).adminPasswordHash; // Never expose password hash
     return ret;
   }
 });

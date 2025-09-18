@@ -88,8 +88,13 @@ const SchoolList: React.FC<SchoolListProps> = ({
       });
 
       if (response.data.success) {
-        setSchools(response.data.data);
-        // Use default pagination since API response structure varies
+        const responseData = response.data.data;
+        // Ensure schools is always an array
+        setSchools(Array.isArray(responseData.schools) ? responseData.schools : []);
+        setTotalPages(responseData.totalPages || 1);
+      } else {
+        // Handle unsuccessful response
+        setSchools([]);
         setTotalPages(1);
       }
     } catch (error) {

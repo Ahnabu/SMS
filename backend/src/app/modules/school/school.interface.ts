@@ -20,7 +20,7 @@ export interface ISchoolAddress {
 }
 
 export interface ISchoolContact {
-  phone: string;
+  phone?: string;
   email: string;
   website?: string;
   fax?: string;
@@ -67,10 +67,6 @@ export interface ISchool {
   status: SchoolStatus;
   adminUserId: Types.ObjectId; // Reference to admin user in User collection
   
-  // Legacy admin fields - keeping for backward compatibility
-  adminUsername?: string; // Deprecated: use adminUserId instead
-  adminPasswordHash?: string; // Deprecated: use User model instead
-  
   // Educational Details
   affiliation?: string; // e.g., "CBSE", "ICSE", "State Board"
   recognition?: string; // Government recognition details
@@ -79,7 +75,7 @@ export interface ISchool {
   settings: ISchoolSettings;
   
   // Academic Sessions
-  currentSession: IAcademicSession;
+  currentSession?: IAcademicSession;
   academicSessions: IAcademicSession[];
   
   // API Configuration for face recognition app
@@ -115,13 +111,7 @@ export interface ISchoolDocument extends ISchool, Document, ISchoolMethods {
 }
 
 export interface ISchoolMethods {
-  // Legacy methods - keeping for backward compatibility
-  checkIsActive(): boolean;
-  generateCredentials(): { username: string; password: string };
-  validateCredentials(password: string): Promise<boolean>;
-  updateAdminPassword(newPassword: string): Promise<ISchoolDocument>;
-  
-  // New enhanced methods
+  // Enhanced methods
   generateApiEndpoint(): string;
   generateApiKey(): string;
   regenerateApiKey(): Promise<string>;
@@ -138,12 +128,7 @@ export interface ISchoolMethods {
 }
 
 export interface ISchoolModel extends Model<ISchoolDocument> {
-  // Legacy methods - keeping for backward compatibility
-  findByOrganization(orgId: string): Promise<ISchoolDocument[]>;
-  findActiveSchools(): Promise<ISchoolDocument[]>;
-  findByAdminUsername(username: string): Promise<ISchoolDocument | null>;
-  
-  // New enhanced methods
+  // Enhanced methods
   findBySlug(slug: string): Promise<ISchoolDocument | null>;
   findBySchoolId(schoolId: string): Promise<ISchoolDocument | null>;
   findByAdmin(adminId: string): Promise<ISchoolDocument | null>;
@@ -166,11 +151,11 @@ export interface ICreateSchoolRequest {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string;
+    phone?: string;
     username: string;
     password: string;
   };
-  currentSession: Omit<IAcademicSession, 'isActive'>;
+  currentSession?: Omit<IAcademicSession, 'isActive'>;
   settings?: Partial<ISchoolSettings>;
   logo?: string;
   
@@ -203,7 +188,7 @@ export interface ISchoolResponse {
   affiliation?: string;
   recognition?: string;
   settings: ISchoolSettings;
-  currentSession: IAcademicSession;
+  currentSession?: IAcademicSession;
   apiEndpoint: string;
   logo?: string;
   images?: string[];
@@ -229,7 +214,6 @@ export interface ISchoolResponse {
   
   // Legacy fields for backward compatibility
   orgId?: string;
-  adminUsername?: string;
   studentsCount?: number;
   teachersCount?: number;
   organization?: {
