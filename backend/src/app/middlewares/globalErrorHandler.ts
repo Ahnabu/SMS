@@ -5,6 +5,7 @@ import { handleCastError } from '../errors/handleCastError';
 import { handleDuplicateError } from '../errors/handleDuplicateError';
 import { handleValidationError } from '../errors/handleValidationError';
 import { handleZodErrors } from '../errors/handleZodErrors';
+import { TErrorSources } from '../interface/error';
 
 const globalErrorHandler: ErrorRequestHandler = (
   err,
@@ -15,7 +16,7 @@ const globalErrorHandler: ErrorRequestHandler = (
   // Set default values
   let statusCode = 500;
   let message = 'Something went wrong!';
-  let errorSources = [
+  let errorSources: TErrorSources = [
     {
       path: '',
       message: 'Something went wrong!',

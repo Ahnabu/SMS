@@ -3,7 +3,7 @@ import { Attendance } from './attendance.model';
 import { Student } from '../student/student.model';
 import { Teacher } from '../teacher/teacher.model';
 import { Subject } from '../subject/subject.model';
-import AppError from '../../errors/AppError';
+import { AppError } from '../../errors/AppError';
 import { 
   ICreateAttendanceRequest, 
   IUpdateAttendanceRequest,
@@ -25,19 +25,19 @@ export class AttendanceService {
     // Validate teacher exists and is active
     const teacher = await Teacher.findById(teacherId).populate('schoolId userId');
     if (!teacher || !teacher.isActive) {
-      throw new AppError('Teacher not found or inactive', 404);
+      throw new AppError(404, 'Teacher not found or inactive');
     }
 
     // Validate subject exists and teacher is assigned to it
     const subject = await Subject.findById(attendanceData.subjectId);
     if (!subject) {
-      throw new AppError('Subject not found', 404);
+      throw new AppError(404, 'Subject not found');
     }
 
     // Check if teacher is assigned to this subject
-    const isAssigned = subject.teacherIds.some(id => id.toString() === teacherId);
+    const isAssigned = subject.teachers.some(id => id.toString() === teacherId);
     if (!isAssigned) {
-      throw new AppError('Teacher is not assigned to this subject', 403);
+      throw new AppError(403, 'Teacher is not assigned to this subject');
     }
 
     // Mark attendance
@@ -87,12 +87,12 @@ export class AttendanceService {
   ): Promise<IAttendanceResponse> {
     const attendance = await Attendance.findById(attendanceId);
     if (!attendance) {
-      throw new AppError('Attendance record not found', 404);
+      throw new AppError(404, 'Attendance record not found');
     }
 
     // Check if attendance can be modified
     if (!attendance.canBeModified()) {
-      throw new AppError('Attendance record is locked and cannot be modified', 403);
+      throw new AppError(403, 'Attendance record is locked and cannot be modified');
     }
 
     // Update the attendance record
@@ -156,7 +156,7 @@ export class AttendanceService {
       .populate('subjectId', 'name code');
 
     if (!attendance) {
-      throw new AppError('Attendance record not found', 404);
+      throw new AppError(404, 'Attendance record not found');
     }
 
     return this.formatAttendanceResponse([attendance])[0];
@@ -227,7 +227,7 @@ export class AttendanceService {
       .populate('schoolId', 'name');
 
     if (!student) {
-      throw new AppError('Student not found', 404);
+      throw new AppError(404, 'Student not found');
     }
 
     const attendanceRecords = await Attendance.find({
@@ -257,7 +257,7 @@ export class AttendanceService {
 
     return {
       studentId,
-      studentName: `${student.userId.firstName} ${student.userId.lastName}`,
+      studentName: `${(student.userId as any).firstName} ${(student.userId as any).lastName}`,
       rollNumber: student.rollNumber || 0,
       grade: student.grade,
       section: student.section,

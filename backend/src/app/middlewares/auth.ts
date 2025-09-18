@@ -23,12 +23,20 @@ export interface AuthenticatedRequest extends Request {
  */
 export const authenticate = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    // 1) Get token from headers
-    const authHeader = req.headers.authorization;
+    // 1) Get token from cookies first, then headers as fallback
     let token: string | undefined;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
+    
+    // Check for token in cookies (more secure)
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+    
+    // Fallback to Authorization header for API clients
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
     }
 
     if (!token) {
@@ -90,11 +98,18 @@ export const authenticate = catchAsync(
  */
 export const optionalAuth = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
     let token: string | undefined;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
+    
+    // Check for token in cookies first, then headers as fallback
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+    
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
     }
 
     if (!token) {

@@ -23,12 +23,12 @@ const handleDuplicateFieldsDB = (err: any): AppError => {
 /**
  * Validation Error Handler (Mongoose validation errors)
  */
-const handleValidationErrorDB = (err: mongoose.ValidationError): AppError => {
-  const errors = Object.values(err.errors).map(el => {
-    if (el instanceof mongoose.ValidatorError) {
+const handleValidationErrorDB = (err: any): AppError => {
+  const errors = Object.values(err.errors).map((el: any) => {
+    if (el && typeof el === 'object' && el.message) {
       return el.message;
     }
-    return el.toString();
+    return el ? el.toString() : 'Unknown validation error';
   });
   const message = `Invalid input data: ${errors.join('. ')}`;
   return new AppError(400, message);

@@ -117,16 +117,18 @@ const getStudentAttendanceValidationSchema = z.object({
       .string({
         required_error: 'End date is required',
       })
-      .datetime('Invalid end date format')
-      .refine((endDate, ctx) => {
-        const start = new Date(ctx.parent.startDate);
-        const end = new Date(endDate);
-        return end >= start;
-      }, 'End date must be after start date'),
+      .datetime('Invalid end date format'),
     subjectId: z
       .string()
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid subject ID format')
       .optional(),
+  }).refine((data) => {
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    return end >= start;
+  }, {
+    message: 'End date must be after start date',
+    path: ['endDate']
   }),
 });
 
@@ -148,14 +150,7 @@ const getAttendanceStatsValidationSchema = z.object({
       .string({
         required_error: 'End date is required',
       })
-      .datetime('Invalid end date format')
-      .refine((endDate, ctx) => {
-        const start = new Date(ctx.parent.startDate);
-        const end = new Date(endDate);
-        const maxDays = 365;
-        const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-        return end >= start && daysDiff <= maxDays;
-      }, 'Date range cannot exceed 365 days and end date must be after start date'),
+      .datetime('Invalid end date format'),
     grade: z
       .string()
       .regex(/^\d+$/, 'Grade must be a number')
@@ -166,6 +161,15 @@ const getAttendanceStatsValidationSchema = z.object({
       .string()
       .regex(/^[A-Z]$/, 'Section must be a single uppercase letter')
       .optional(),
+  }).refine((data) => {
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    const maxDays = 365;
+    const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+    return end >= start && daysDiff <= maxDays;
+  }, {
+    message: 'Date range cannot exceed 365 days and end date must be after start date',
+    path: ['endDate']
   }),
 });
 
