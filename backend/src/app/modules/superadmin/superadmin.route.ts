@@ -12,6 +12,7 @@ import {
   updateSchoolStatus,
   regenerateApiKey,
   getSystemStats,
+  resetAdminPassword,
 } from '../school/school.controller';
 import {
   createSchoolValidationSchema,
@@ -19,6 +20,7 @@ import {
   getSchoolValidationSchema,
   updateSchoolValidationSchema,
   deleteSchoolValidationSchema,
+  resetAdminPasswordValidationSchema,
 } from '../school/school.validation';
 
 const router = express.Router();
@@ -37,6 +39,7 @@ router.get('/schools/:id/stats', getSchoolStats);
 router.post('/schools/:id/assign-admin', assignAdmin);
 router.put('/schools/:id/status', updateSchoolStatus);
 router.post('/schools/:id/regenerate-api-key', regenerateApiKey);
+router.put('/schools/:id/reset-password', validateRequest(resetAdminPasswordValidationSchema), resetAdminPassword);
 
 // System-wide endpoints
 router.get('/stats', getSystemStats);

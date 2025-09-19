@@ -3,8 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { 
   School, 
   Users, 
-  Activity,
-  UserCheck
+  Activity
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -34,11 +33,21 @@ const SuperadminDashboard: React.FC = () => {
       ]);
 
       if (statsResponse.data.success) {
+        console.log('Stats API response:', statsResponse.data.data);
         setStats(statsResponse.data.data);
       }
 
       if (schoolsResponse.data.success) {
-        setSchools(schoolsResponse.data.data);
+        // Fix: Access the schools array correctly from API response
+        const schoolsData = schoolsResponse.data.data;
+        console.log('Schools API response structure:', schoolsData);
+        if (schoolsData.schools) {
+          console.log('Setting schools array with length:', schoolsData.schools.length);
+          setSchools(schoolsData.schools);
+        } else {
+          console.log('Fallback: Schools data does not have schools property, using entire data');
+          setSchools(schoolsData); // Fallback if structure is different
+        }
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -107,25 +116,25 @@ const SuperadminHome: React.FC<{
   const statCards = [
     {
       title: 'Total Schools',
-      value: schools?.length || 0,
+      value: stats?.totalSchools || schools?.length || 0,
       icon: School,
-      description: 'Schools in the system',
+      description: `${stats?.activeSchools || schools?.filter(s => s.status === 'active').length || 0} active, ${stats?.pendingSchools || schools?.filter(s => s.status === 'pending_approval').length || 0} pending`,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
+    },
+    {
+      title: 'Active Schools',
+      value: stats?.activeSchools || schools?.filter(s => s.status === 'active').length || 0,
+      icon: School,
+      description: 'Currently operational',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100'
     },
     {
       title: 'Total Students',
       value: stats?.totalStudents || 0,
       icon: Users,
       description: 'Enrolled students',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    {
-      title: 'Total Teachers',
-      value: stats?.totalTeachers || 0,
-      icon: UserCheck,
-      description: 'Teaching staff',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
@@ -190,11 +199,19 @@ const SuperadminHome: React.FC<{
                   <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{school.name || 'School Name'}</p>
-                      <p className="text-sm text-gray-500">{school.address || 'Location'}</p>
+                      <p className="text-sm text-gray-500">{school.address?.city || school.address || 'Location'}</p>
                     </div>
                     <div className="text-right">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        school.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : school.status === 'pending_approval'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {school.status === 'active' ? 'Active' : 
+                         school.status === 'pending_approval' ? 'Pending' : 
+                         school.status || 'Unknown'}
                       </span>
                       <p className="text-xs text-gray-400 mt-1">
                         {school.createdAt ? new Date(school.createdAt).toLocaleDateString() : 'N/A'}

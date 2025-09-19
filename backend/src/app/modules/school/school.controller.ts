@@ -118,6 +118,20 @@ const getSystemStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const resetAdminPassword = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  await schoolService.resetAdminPassword(id, newPassword);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Admin password reset successfully",
+    data: null,
+  });
+});
+
 export {
   createSchool,
   getAllSchools,
@@ -129,4 +143,5 @@ export {
   updateSchoolStatus,
   regenerateApiKey,
   getSystemStats,
+  resetAdminPassword,
 };
