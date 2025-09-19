@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
+import StudentList, { StudentListRef } from '../components/admin/StudentList';
+import StudentForm from '../components/admin/StudentForm';
+import TeacherList, { TeacherListRef } from '../components/admin/TeacherList';
+import TeacherForm from '../components/admin/TeacherForm';
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -23,7 +26,6 @@ const AdminDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -191,23 +193,140 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
 };
 
 // Placeholder components for other routes
-const StudentManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Student Management</h2>
-      <p className="text-gray-500">Student management interface will be implemented here.</p>
-    </div>
-  </div>
-);
+const StudentManagement: React.FC = () => {
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [showForm, setShowForm] = useState(false);
+  const studentListRef = useRef<StudentListRef>(null);
 
-const TeacherManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Teacher Management</h2>
-      <p className="text-gray-500">Teacher management interface will be implemented here.</p>
+  const handleCreateStudent = () => {
+    setSelectedStudent(null);
+    setShowForm(true);
+  };
+
+  const handleEditStudent = (student: any) => {
+    setSelectedStudent(student);
+    setShowForm(true);
+  };
+
+  const handleViewStudent = (student: any) => {
+    console.log('View student:', student);
+    // TODO: Implement student details view
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setSelectedStudent(null);
+  };
+
+  const handleSaveStudent = async () => {
+    // After student is saved successfully in StudentForm, just close the form
+    // The StudentList will be refreshed when needed
+  };
+
+  const handleStudentCreated = (student: any) => {
+    console.log('Student created optimistically:', student);
+  };
+
+  const handleStudentUpdated = (student: any) => {
+    console.log('Student updated optimistically:', student);
+  };
+
+  const handleStudentDeleted = (studentId: string) => {
+    console.log('Student deleted optimistically:', studentId);
+  };
+
+  return (
+    <div className="px-4 py-6 sm:px-0">
+      <StudentList
+        ref={studentListRef}
+        onCreateStudent={handleCreateStudent}
+        onEditStudent={handleEditStudent}
+        onViewStudent={handleViewStudent}
+        onStudentCreated={handleStudentCreated}
+        onStudentUpdated={handleStudentUpdated}
+        onStudentDeleted={handleStudentDeleted}
+      />
+      
+      <StudentForm
+        student={selectedStudent}
+        isOpen={showForm}
+        onClose={handleFormClose}
+        onSave={handleSaveStudent}
+      />
     </div>
-  </div>
-);
+  );
+};
+
+const TeacherManagement: React.FC = () => {
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [showForm, setShowForm] = useState(false);
+  const teacherListRef = useRef<TeacherListRef>(null);
+
+  const handleCreateTeacher = () => {
+    setSelectedTeacher(null);
+    setShowForm(true);
+  };
+
+  const handleEditTeacher = (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setShowForm(true);
+  };
+
+  const handleViewTeacher = (teacher: any) => {
+    console.log('View teacher:', teacher);
+    // TODO: Implement teacher details view
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setSelectedTeacher(null);
+  };
+
+  const handleSaveTeacher = async (teacherData: any) => {
+    try {
+      if (selectedTeacher?.id) {
+        teacherListRef.current?.updateTeacherOptimistically(teacherData);
+      } else {
+        teacherListRef.current?.addTeacherOptimistically(teacherData);
+      }
+    } catch (error) {
+      console.error('Failed to handle teacher save:', error);
+    }
+  };
+
+  const handleTeacherCreated = (teacher: any) => {
+    console.log('Teacher created optimistically:', teacher);
+  };
+
+  const handleTeacherUpdated = (teacher: any) => {
+    console.log('Teacher updated optimistically:', teacher);
+  };
+
+  const handleTeacherDeleted = (teacherId: string) => {
+    console.log('Teacher deleted optimistically:', teacherId);
+  };
+
+  return (
+    <div className="px-4 py-6 sm:px-0">
+      <TeacherList
+        ref={teacherListRef}
+        onCreateTeacher={handleCreateTeacher}
+        onEditTeacher={handleEditTeacher}
+        onViewTeacher={handleViewTeacher}
+        onTeacherCreated={handleTeacherCreated}
+        onTeacherUpdated={handleTeacherUpdated}
+        onTeacherDeleted={handleTeacherDeleted}
+      />
+      
+      <TeacherForm
+        teacher={selectedTeacher}
+        isOpen={showForm}
+        onClose={handleFormClose}
+        onSave={handleSaveTeacher}
+      />
+    </div>
+  );
+};
 
 const SubjectManagement: React.FC = () => (
   <div className="px-4 py-6 sm:px-0">

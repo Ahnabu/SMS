@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { 
   School, 
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import SchoolList from '@/components/superadmin/SchoolList';
+import SchoolList, { SchoolListRef } from '@/components/superadmin/SchoolList';
 import SchoolForm from '@/components/superadmin/SchoolForm';
 import SchoolDetails from '@/components/superadmin/SchoolDetails';
 import SystemSettings from '@/components/superadmin/SystemSettings';
@@ -77,7 +77,6 @@ const SuperadminDashboard: React.FC = () => {
           path="/schools" 
           element={
             <SchoolManagement 
-              schools={schools} 
               onUpdate={loadDashboardData} 
             />
           } 
@@ -255,10 +254,11 @@ const SuperadminHome: React.FC<{
 };
 
 // School Management Component
-const SchoolManagement: React.FC<{ schools: any[]; onUpdate: () => void }> = ({ onUpdate }) => {
+const SchoolManagement: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
   const [selectedSchool, setSelectedSchool] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const schoolListRef = useRef<SchoolListRef>(null);
 
   const handleCreateSchool = () => {
     setSelectedSchool(null);
@@ -286,17 +286,24 @@ const SchoolManagement: React.FC<{ schools: any[]; onUpdate: () => void }> = ({ 
     setSelectedSchool(null);
   };
 
-  const handleSaveSchool = (_school: any) => {
-    // The form component handles the API call
-    onUpdate(); // Refresh the school list
+  const handleSaveSchool = async () => {
+    // After school is saved successfully in SchoolForm, refresh the list
+    schoolListRef.current?.refreshSchools();
+  };
+
+  const handleSchoolDeleted = (schoolId: string) => {
+    // This will be called by SchoolList for optimistic updates
+    console.log('School deleted optimistically:', schoolId);
   };
 
   return (
     <>
       <SchoolList
+        ref={schoolListRef}
         onCreateSchool={handleCreateSchool}
         onEditSchool={handleEditSchool}
         onViewSchool={handleViewSchool}
+        onSchoolDeleted={handleSchoolDeleted}
       />
       
       <SchoolForm

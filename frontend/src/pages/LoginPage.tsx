@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
+import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
@@ -13,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, requiresPasswordChange } = useAuth();
 
   useEffect(() => {
     setError('');
@@ -30,17 +31,28 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    const success = await login({ username, password });
+    const result = await login({ username, password });
 
-    if (!success) {
+    if (!result.success) {
       setError('Invalid username or password');
     }
+    // If login is successful but requires password change, the modal will show automatically
 
     setIsLoading(false);
   };
 
-  // Redirect based on role after successful login
-  if (isAuthenticated && user) {
+  // Show password change modal if required
+  if (isAuthenticated && requiresPasswordChange) {
+    return (
+      <PasswordChangeModal
+        isOpen={true}
+        onClose={() => {}} // Cannot close until password is changed
+      />
+    );
+  }
+
+  // Redirect based on role after successful login and password change is complete
+  if (isAuthenticated && user && !requiresPasswordChange) {
     switch (user.role) {
       case 'superadmin':
         return <Navigate to="/superadmin" replace />;

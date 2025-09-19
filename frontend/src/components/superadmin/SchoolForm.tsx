@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Building, MapPin, Phone, Globe, Calendar } from 'lucide-react';
+import { X, Save, User, Building, MapPin, Phone } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -199,13 +199,25 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
 
       if (school?.id) {
         // Update existing school
-        await apiService.superadmin.updateSchool(school.id, cleanedFormData);
+        const response = await apiService.superadmin.updateSchool(school.id, cleanedFormData);
+        if (response.data.success) {
+          // Only call onSave after successful API response
+          onSave(response.data.data);
+          onClose();
+        } else {
+          throw new Error(response.data.message || 'Failed to update school');
+        }
       } else {
         // Create new school
-        await apiService.superadmin.createSchool(cleanedFormData);
+        const response = await apiService.superadmin.createSchool(cleanedFormData);
+        if (response.data.success) {
+          // Only call onSave after successful API response
+          onSave(response.data.data);
+          onClose();
+        } else {
+          throw new Error(response.data.message || 'Failed to create school');
+        }
       }
-      onSave(formData);
-      onClose();
     } catch (error: any) {
       console.error('Failed to save school:', error);
       console.error('Error response data:', error.response?.data);

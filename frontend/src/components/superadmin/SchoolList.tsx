@@ -59,19 +59,35 @@ interface SchoolListProps {
   onCreateSchool: () => void;
   onEditSchool: (school: School) => void;
   onViewSchool: (school: School) => void;
+  onSchoolDeleted?: (schoolId: string) => void;
 }
 
-const SchoolList: React.FC<SchoolListProps> = ({
+export interface SchoolListRef {
+  refreshSchools: () => void;
+}
+
+const SchoolList = React.forwardRef<SchoolListRef, SchoolListProps>(({
   onCreateSchool,
   onEditSchool,
   onViewSchool,
-}) => {
+  onSchoolDeleted,
+}, ref) => {
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  const [statusChangeLoading, setStatusChangeLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+
+  // Expose method to refresh schools after create/update/delete operations
+  React.useImperativeHandle(ref, () => ({
+    refreshSchools: () => {
+      loadSchools();
+    }
+  }));
 
   useEffect(() => {
     loadSchools();
@@ -194,11 +210,16 @@ const SchoolList: React.FC<SchoolListProps> = ({
   };
 
   const handleStatusChange = async (schoolId: string, newStatus: string) => {
+    setStatusChangeLoading(schoolId);
     try {
       await apiService.superadmin.updateSchoolStatus(schoolId, newStatus);
-      loadSchools();
+      // Refresh the schools list to get updated data from server
+      await loadSchools();
     } catch (error) {
       console.error('Failed to update school status:', error);
+      alert('Failed to update school status. Please try again.');
+    } finally {
+      setStatusChangeLoading(null);
     }
   };
 
@@ -207,11 +228,17 @@ const SchoolList: React.FC<SchoolListProps> = ({
       return;
     }
 
+    setDeleteLoading(schoolId);
     try {
       await apiService.superadmin.deleteSchool(schoolId);
-      loadSchools();
+      // Refresh the schools list to get updated data from server
+      await loadSchools();
+      onSchoolDeleted?.(schoolId);
     } catch (error) {
       console.error('Failed to delete school:', error);
+      alert('Failed to delete school. Please try again.');
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -372,9 +399,14 @@ const SchoolList: React.FC<SchoolListProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteSchool(school.id)}
+                      disabled={deleteLoading === school.id}
                       className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      {deleteLoading === school.id ? (
+                        <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
                     </Button>
                   </div>
 
@@ -383,17 +415,27 @@ const SchoolList: React.FC<SchoolListProps> = ({
                       <Button
                         size="sm"
                         onClick={() => handleStatusChange(school.id, 'active')}
+                        disabled={statusChangeLoading === school.id}
                         className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
                       >
-                        Approve
+                        {statusChangeLoading === school.id ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          'Approve'
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleStatusChange(school.id, 'suspended')}
+                        disabled={statusChangeLoading === school.id}
                         className="h-7 px-2 text-xs text-red-600 hover:bg-red-50"
                       >
-                        Reject
+                        {statusChangeLoading === school.id ? (
+                          <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          'Reject'
+                        )}
                       </Button>
                     </div>
                   )}
@@ -428,6 +470,8 @@ const SchoolList: React.FC<SchoolListProps> = ({
       )}
     </div>
   );
-};
+});
+
+SchoolList.displayName = 'SchoolList';
 
 export default SchoolList;
