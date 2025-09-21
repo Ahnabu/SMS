@@ -1,4 +1,4 @@
-# School Management System - Frontend# School Management System - Frontend# School Management System - Frontend# Getting Started with Create React App
+# School Management System - Frontend# School Management System - Frontend# School Management System - Frontend# School Management System - Frontend# Getting Started with Create React App
 
 
 
@@ -30,390 +30,805 @@ A modern, responsive React-based frontend for the School Management System built
 
 - [API Integration](#-api-integration)
 
-- [Styling & UI](#-styling--ui)- [Project Structure](#-project-structure)## 📋 Table of Contents## Available Scripts
+- [Recent Updates](#-recent-updates)- [Project Structure](#-project-structure)## 📋 Table of ContentsA modern, responsive React-based frontend for the School Management System built with TypeScript, Tailwind CSS, and Vite. This application provides comprehensive school management capabilities with role-based dashboards and real-time updates.
 
-- [Recent Bug Fixes](#-recent-bug-fixes)
+- [Development Guidelines](#-development-guidelines)
 
-- [Development Guidelines](#-development-guidelines)- [Installation](#-installation)
+- [Build & Deployment](#-build--deployment)- [Installation](#-installation)
 
-- [Build & Deployment](#-build--deployment)
+- [Support](#-support)
 
-- [Support](#-support)- [Environment Configuration](#-environment-configuration)
+- [Environment Configuration](#-environment-configuration)
 
+## 🚀 Features
 
+- [Running the Application](#-running-the-application)
 
-## 🚀 Features- [Running the Application](#-running-the-application)
+### Core Functionality
 
+- **Multi-role Dashboard System**: Tailored interfaces for each user role (Superadmin, Admin, Teacher, Student, Parent, Accountant)- [User Roles & Dashboards](#-user-roles--dashboards)- [Features](#-features)
 
+- **School Management**: Complete school administration for superadmins with API key management
 
-### Core Functionality- [User Roles & Dashboards](#-user-roles--dashboards)- [Features](#-features)In the project directory, you can run:
+- **Student Management**: Registration, profiles, academic tracking with automatic credential generation- [Components Overview](#-components-overview)
 
-- **Multi-role Dashboard System**: Tailored interfaces for each user role
+- **Teacher Management**: Teacher profiles, subject assignments, schedules
 
-- **School Management**: Complete school administration for superadmins- [Components Overview](#-components-overview)
-
-- **Student Management**: Registration, profiles, academic tracking
-
-- **Teacher Management**: Teacher profiles, subject assignments, schedules- [Authentication Flow](#-authentication-flow)- [Tech Stack](#-tech-stack)
-
-- **Class Management**: Automated class creation and student assignment
-
-- **Homework & Assignment System**: Create, assign, and track homework- [API Integration](#-api-integration)
-
-- **Exam Management**: Schedule exams and record grades
-
-- **Attendance System**: Real-time attendance tracking with multiple status options- [Styling & UI](#-styling--ui)- [Project Structure](#-project-structure)### `npm start`
+- **Attendance System**: Real-time attendance tracking with multiple status options- [Authentication Flow](#-authentication-flow)- [Tech Stack](#-tech-stack)
 
 - **Grade Management**: Grade recording and academic progress tracking
 
-- **Parent Portal**: Child monitoring and communication features- [Error Handling](#-error-handling)
+- **Parent Portal**: Child monitoring and communication features- [API Integration](#-api-integration)
 
 - **Financial Management**: Fee tracking and payment management
 
-- [Development Guidelines](#-development-guidelines)- [Installation](#-installation)
+- [Styling & UI](#-styling--ui)- [Project Structure](#-project-structure)## 📋 Table of Contents## Available Scripts
 
 ### User Experience
 
-- **Responsive Design**: Mobile-first approach with responsive layouts- [Current Status & Known Issues](#-current-status--known-issues)
+- **Responsive Design**: Mobile-first approach with responsive layouts- [Recent Bug Fixes](#-recent-bug-fixes)
 
 - **Real-time Updates**: Live data updates without page refresh
 
-- **Intuitive Navigation**: Role-based navigation menus- [Changelog](#-changelog)- [Environment Configuration](#-environment-configuration)Runs the app in the development mode.\
+- **Intuitive Navigation**: Role-based navigation menus- [Development Guidelines](#-development-guidelines)- [Installation](#-installation)
 
 - **Form Validation**: Client-side validation with user-friendly error messages
 
-- **Loading States**: Proper loading indicators and skeleton screens- [Support](#-support)
+- **Loading States**: Proper loading indicators and skeleton screens- [Build & Deployment](#-build--deployment)
 
 - **Error Handling**: Graceful error handling with user feedback
 
-- **Accessibility**: WCAG compliant components and navigation- [Running the Application](#-running-the-application)Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **Accessibility**: WCAG compliant components and navigation- [Support](#-support)- [Environment Configuration](#-environment-configuration)
 
 
 
-### Technical Features## 🚀 Features
+### Technical Features
 
 - **TypeScript**: Full type safety and better development experience
 
-- **Component Library**: Reusable UI components with consistent design- [User Roles & Dashboards](#-user-roles--dashboards)
+- **Component Library**: Reusable UI components with consistent design## 🚀 Features- [Running the Application](#-running-the-application)
 
 - **HTTP-only Cookies**: Secure authentication token storage
 
-- **File Upload**: Support for documents and images### Core Functionality
+- **File Upload**: Support for documents and images
 
 - **Export Functionality**: Data export capabilities
 
-- **Print Support**: Print-friendly layouts for reports- **Multi-role Dashboard System**: Tailored interfaces for each user role- [Components Overview](#-components-overview)The page will reload if you make edits.\
+- **Print Support**: Print-friendly layouts for reports### Core Functionality- [User Roles & Dashboards](#-user-roles--dashboards)- [Features](#-features)In the project directory, you can run:
 
 
 
-## 🛠 Tech Stack- **School Management**: Complete school administration for superadmins
+## 🛠 Tech Stack- **Multi-role Dashboard System**: Tailored interfaces for each user role
 
 
 
-- **Framework**: React 18 with TypeScript- **Student Management**: Registration, profiles, academic tracking- [Authentication Flow](#-authentication-flow)You will also see any lint errors in the console.
+- **Framework**: React 18 with TypeScript- **School Management**: Complete school administration for superadmins- [Components Overview](#-components-overview)
 
 - **Build Tool**: Vite
 
-- **Styling**: Tailwind CSS- **Teacher Management**: Teacher profiles, subject assignments, schedules
+- **Styling**: Tailwind CSS- **Student Management**: Registration, profiles, academic tracking
 
 - **Icons**: Lucide React
 
-- **HTTP Client**: Axios- **Attendance System**: Real-time attendance tracking with multiple status options- [API Integration](#-api-integration)
+- **HTTP Client**: Axios- **Teacher Management**: Teacher profiles, subject assignments, schedules- [Authentication Flow](#-authentication-flow)- [Tech Stack](#-tech-stack)
 
 - **Routing**: React Router DOM
 
-- **State Management**: React Context API + useState/useReducer- **Grade Management**: Grade recording and academic progress tracking
+- **State Management**: React Context API + useState/useReducer- **Class Management**: Automated class creation and student assignment
 
 - **Form Handling**: Custom form components with validation
 
-- **Development**: ESLint, TypeScript compiler- **Parent Portal**: Child monitoring and communication features- [Styling & UI](#-styling--ui)### `npm test`
+- **Development**: ESLint, TypeScript compiler- **Homework & Assignment System**: Create, assign, and track homework- [API Integration](#-api-integration)
 
+- **Testing**: React Testing Library, Jest (planned)
 
+- **Exam Management**: Schedule exams and record grades
 
-## 📁 Project Structure- **Financial Management**: Fee tracking and payment management
+## 📁 Project Structure
 
-
-
-```- [State Management](#-state-management)
-
-frontend/
-
-├── public/                        # Static assets### User Experience
-
-│   ├── favicon.ico               # App favicon
-
-│   ├── logo192.png              # App logo (192x192)- **Responsive Design**: Mobile-first approach with responsive layouts- [Routing](#-routing)Launches the test runner in the interactive watch mode.\
-
-│   ├── logo512.png              # App logo (512x512)
-
-│   ├── manifest.json            # PWA manifest- **Real-time Updates**: Live data updates without page refresh
-
-│   └── robots.txt               # SEO robots file
-
-├── src/- **Intuitive Navigation**: Role-based navigation menus- [Error Handling](#-error-handling)See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-│   ├── components/              # Reusable components
-
-│   │   ├── admin/               # Admin-specific components- **Form Validation**: Client-side validation with user-friendly error messages
-
-│   │   │   ├── StudentForm.tsx  # Student creation/editing form
-
-│   │   │   ├── StudentList.tsx  # Student listing and management- **Loading States**: Proper loading indicators and skeleton screens- [Performance Optimizations](#-performance-optimizations)
-
-│   │   │   ├── TeacherForm.tsx  # Teacher creation/editing form
-
-│   │   │   └── TeacherList.tsx  # Teacher listing and management- **Error Handling**: Graceful error handling with user feedback
-
-│   │   ├── layout/              # Layout components
-
-│   │   │   └── DashboardLayout.tsx # Main dashboard layout- **Accessibility**: WCAG compliant components and navigation- [Development Guidelines](#-development-guidelines)### `npm run build`
-
-│   │   ├── superadmin/          # Superadmin-specific components
-
-│   │   │   ├── SchoolForm.tsx   # School creation/editing form
-
-│   │   │   ├── SchoolList.tsx   # School listing and management
-
-│   │   │   └── SchoolDetails.tsx # School details view### Technical Features- [Testing](#-testing)
-
-│   │   └── ui/                  # Base UI components
-
-│   │       ├── Button.tsx       # Reusable button component- **TypeScript**: Full type safety and better development experience
-
-│   │       ├── Card.tsx         # Card component with variants
-
-│   │       └── Input.tsx        # Input component with validation- **Component Library**: Reusable UI components with consistent design- [Build & Deployment](#-build--deployment)Builds the app for production to the `build` folder.\
-
-│   ├── context/                 # React Context providers
-
-│   │   └── AuthContext.tsx      # Authentication context and provider- **HTTP-only Cookies**: Secure authentication token storage
-
-│   ├── lib/                     # Utility libraries
-
-│   │   └── utils.ts             # General utility functions- **File Upload**: Support for documents and images- [Contributing](#-contributing)It correctly bundles React in production mode and optimizes the build for the best performance.
-
-│   ├── pages/                   # Main application pages
-
-│   │   ├── AccountantDashboard.tsx # Accountant dashboard- **PDF Generation**: Report and document generation capabilities
-
-│   │   ├── AdminDashboard.tsx      # Admin dashboard
-
-│   │   ├── LoginPage.tsx           # Login page- **Export Functionality**: Data export in various formats
-
-│   │   ├── ParentDashboard.tsx     # Parent dashboard
-
-│   │   ├── StudentDashboard.tsx    # Student dashboard- **Print Support**: Print-friendly layouts for reports
-
-│   │   ├── SuperadminDashboard.tsx # Superadmin dashboard
-
-│   │   └── TeacherDashboard.tsx    # Teacher dashboard## 🚀 FeaturesThe build is minified and the filenames include the hashes.\
-
-│   ├── services/                # API services
-
-│   │   └── api.ts               # Axios configuration and API methods## 🛠 Tech Stack
-
-│   ├── types/                   # TypeScript type definitions
-
-│   │   └── auth.types.ts        # Authentication-related typesYour app is ready to be deployed!
-
-│   ├── utils/                   # Utility functions
-
-│   │   └── cn.ts                # Tailwind class name utilities- **Framework**: React 18 with TypeScript
-
-│   ├── App.css                  # Global styles
-
-│   ├── App.tsx                  # Main App component- **Build Tool**: Vite### Core Functionality
-
-│   ├── index.css                # Tailwind CSS imports
-
-│   ├── index.tsx                # React entry point- **Styling**: Tailwind CSS
-
-│   └── vite-env.d.ts            # Vite environment types
-
-├── index.html                   # HTML template- **Icons**: Lucide React- **Multi-role Dashboard System**: Tailored interfaces for each user roleSee the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-├── package.json                 # Dependencies and scripts
-
-├── postcss.config.js            # PostCSS configuration- **HTTP Client**: Axios
-
-├── tailwind.config.js           # Tailwind CSS configuration
-
-├── tsconfig.json                # TypeScript configuration- **Routing**: React Router DOM- **School Management**: Complete school administration for superadmins
-
-├── vite.config.ts               # Vite configuration
-
-└── README.md                    # This file- **State Management**: React Context API + useState/useReducer
+- **Attendance System**: Real-time attendance tracking with multiple status options- [Styling & UI](#-styling--ui)- [Project Structure](#-project-structure)### `npm start`
 
 ```
 
-- **Form Handling**: Custom form components with validation- **Student Management**: Registration, profiles, academic tracking### `npm run eject`
+frontend/- **Grade Management**: Grade recording and academic progress tracking
 
-## 📦 Installation
+├── public/                        # Static assets
 
-- **Development**: ESLint, TypeScript compiler
+│   ├── favicon.ico               # App favicon- **Parent Portal**: Child monitoring and communication features- [Error Handling](#-error-handling)
 
-### Prerequisites
+│   ├── logo192.png              # App logo (192x192)
 
-- Node.js 18.0 or higher- **Testing**: React Testing Library, Jest (planned)- **Teacher Management**: Teacher profiles, subject assignments, schedules
+│   ├── logo512.png              # App logo (512x512)- **Financial Management**: Fee tracking and payment management
 
-- npm or yarn package manager
+│   ├── manifest.json            # PWA manifest
+
+│   └── robots.txt               # SEO robots file- [Development Guidelines](#-development-guidelines)- [Installation](#-installation)
+
+├── src/
+
+│   ├── components/              # Reusable components### User Experience
+
+│   │   ├── admin/               # Admin-specific components
+
+│   │   │   ├── StudentForm.tsx  # Student creation/editing form- **Responsive Design**: Mobile-first approach with responsive layouts- [Current Status & Known Issues](#-current-status--known-issues)
+
+│   │   │   ├── StudentList.tsx  # Student listing and management
+
+│   │   │   ├── TeacherForm.tsx  # Teacher creation/editing form- **Real-time Updates**: Live data updates without page refresh
+
+│   │   │   └── TeacherList.tsx  # Teacher listing and management
+
+│   │   ├── layout/              # Layout components- **Intuitive Navigation**: Role-based navigation menus- [Changelog](#-changelog)- [Environment Configuration](#-environment-configuration)Runs the app in the development mode.\
+
+│   │   │   └── DashboardLayout.tsx # Main dashboard layout
+
+│   │   ├── superadmin/          # Superadmin-specific components- **Form Validation**: Client-side validation with user-friendly error messages
+
+│   │   │   ├── SchoolForm.tsx   # School creation/editing form
+
+│   │   │   ├── SchoolList.tsx   # School listing and management- **Loading States**: Proper loading indicators and skeleton screens- [Support](#-support)
+
+│   │   │   ├── SchoolDetails.tsx # School details view
+
+│   │   │   └── SystemSettings.tsx # System configuration- **Error Handling**: Graceful error handling with user feedback
+
+│   │   └── ui/                  # Base UI components
+
+│   │       ├── Button.tsx       # Reusable button component- **Accessibility**: WCAG compliant components and navigation- [Running the Application](#-running-the-application)Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+│   │       ├── Card.tsx         # Card component with variants
+
+│   │       └── Input.tsx        # Input component with validation
+
+│   ├── context/                 # React Context providers
+
+│   │   └── AuthContext.tsx      # Authentication context and provider### Technical Features## 🚀 Features
+
+│   ├── lib/                     # Utility libraries
+
+│   │   └── utils.ts             # General utility functions- **TypeScript**: Full type safety and better development experience
+
+│   ├── pages/                   # Main application pages
+
+│   │   ├── AccountantDashboard.tsx # Accountant dashboard- **Component Library**: Reusable UI components with consistent design- [User Roles & Dashboards](#-user-roles--dashboards)
+
+│   │   ├── AdminDashboard.tsx      # Admin dashboard
+
+│   │   ├── LoginPage.tsx           # Login page- **HTTP-only Cookies**: Secure authentication token storage
+
+│   │   ├── ParentDashboard.tsx     # Parent dashboard
+
+│   │   ├── StudentDashboard.tsx    # Student dashboard- **File Upload**: Support for documents and images### Core Functionality
+
+│   │   ├── SuperadminDashboard.tsx # Superadmin dashboard
+
+│   │   └── TeacherDashboard.tsx    # Teacher dashboard- **Export Functionality**: Data export capabilities
+
+│   ├── services/                # API services
+
+│   │   └── api.ts               # Axios configuration and API methods- **Print Support**: Print-friendly layouts for reports- **Multi-role Dashboard System**: Tailored interfaces for each user role- [Components Overview](#-components-overview)The page will reload if you make edits.\
+
+│   ├── types/                   # TypeScript type definitions
+
+│   │   └── auth.types.ts        # Authentication-related types
+
+│   ├── utils/                   # Utility functions
+
+│   │   └── cn.ts                # Tailwind class name utilities## 🛠 Tech Stack- **School Management**: Complete school administration for superadmins
+
+│   ├── App.css                  # Global styles
+
+│   ├── App.tsx                  # Main App component
+
+│   ├── index.css                # Tailwind CSS imports
+
+│   ├── index.tsx                # React entry point- **Framework**: React 18 with TypeScript- **Student Management**: Registration, profiles, academic tracking- [Authentication Flow](#-authentication-flow)You will also see any lint errors in the console.
+
+│   └── vite-env.d.ts            # Vite environment types
+
+├── index.html                   # HTML template- **Build Tool**: Vite
+
+├── package.json                 # Dependencies and scripts
+
+├── postcss.config.js            # PostCSS configuration- **Styling**: Tailwind CSS- **Teacher Management**: Teacher profiles, subject assignments, schedules
+
+├── tailwind.config.js           # Tailwind CSS configuration
+
+├── tsconfig.json                # TypeScript configuration- **Icons**: Lucide React
+
+├── tsconfig.node.json           # TypeScript config for Node.js
+
+├── vite.config.ts               # Vite configuration- **HTTP Client**: Axios- **Attendance System**: Real-time attendance tracking with multiple status options- [API Integration](#-api-integration)
+
+└── README.md                    # This file
+
+```- **Routing**: React Router DOM
+
+
+
+## 📦 Installation- **State Management**: React Context API + useState/useReducer- **Grade Management**: Grade recording and academic progress tracking
+
+
+
+### Prerequisites- **Form Handling**: Custom form components with validation
+
+- Node.js 18.0 or higher
+
+- npm or yarn package manager- **Development**: ESLint, TypeScript compiler- **Parent Portal**: Child monitoring and communication features- [Styling & UI](#-styling--ui)### `npm test`
 
 - Running backend API server
 
 
 
-### Step-by-step Installation## 📁 Project Structure- **Attendance System**: Real-time attendance tracking with multiple status options**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Step-by-step Installation
 
-
+## 📁 Project Structure- **Financial Management**: Fee tracking and payment management
 
 1. **Clone the repository**
 
    ```bash
 
-   git clone <repository-url>```- **Grade Management**: Grade recording and academic progress tracking
+   git clone <repository-url>
 
-   cd SMS/frontend
+   cd SMS/frontend```- [State Management](#-state-management)
 
-   ```frontend/
+   ```
+
+frontend/
+
+2. **Install dependencies**
+
+   ```bash├── public/                        # Static assets### User Experience
+
+   npm install
+
+   ```│   ├── favicon.ico               # App favicon
 
 
 
-2. **Install dependencies**├── public/                        # Static assets- **Parent Portal**: Child monitoring and communication featuresIf you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. **Set up environment variables**│   ├── logo192.png              # App logo (192x192)- **Responsive Design**: Mobile-first approach with responsive layouts- [Routing](#-routing)Launches the test runner in the interactive watch mode.\
 
    ```bash
 
-   npm install│   ├── favicon.ico               # App favicon
+   cp .env.example .env│   ├── logo512.png              # App logo (512x512)
+
+   # Edit .env with your configuration
+
+   ```│   ├── manifest.json            # PWA manifest- **Real-time Updates**: Live data updates without page refresh
+
+
+
+4. **Start the development server**│   └── robots.txt               # SEO robots file
+
+   ```bash
+
+   npm run dev├── src/- **Intuitive Navigation**: Role-based navigation menus- [Error Handling](#-error-handling)See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
    ```
 
-│   ├── logo192.png              # App logo (192x192)- **Financial Management**: Fee tracking and payment management
+│   ├── components/              # Reusable components
 
-3. **Set up environment variables**
+5. **Open in browser**
 
-   ```bash│   ├── logo512.png              # App logo (512x512)
+   ```│   │   ├── admin/               # Admin-specific components- **Form Validation**: Client-side validation with user-friendly error messages
 
-   cp .env.example .env
+   http://localhost:3000 (or the port shown in terminal)
 
-   # Edit .env with your configuration│   ├── manifest.json            # PWA manifestInstead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-   ```
-
-│   └── robots.txt               # SEO robots file
-
-4. **Start the development server**
-
-   ```bash├── src/### User Experience
-
-   npm run dev
-
-   ```│   ├── components/              # Reusable components
+   ```│   │   │   ├── StudentForm.tsx  # Student creation/editing form
 
 
 
-5. **Open in browser**│   │   ├── admin/               # Admin-specific components- **Responsive Design**: Mobile-first approach with responsive layoutsYou don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-   ```
-
-   http://localhost:3000 (or the port shown in terminal)│   │   │   ├── StudentForm.tsx  # Student creation/editing form
-
-   ```
-
-│   │   │   ├── StudentList.tsx  # Student listing and management- **Real-time Updates**: Live data updates without page refresh
-
-## ⚙️ Environment Configuration
-
-│   │   │   ├── TeacherForm.tsx  # Teacher creation/editing form
-
-Create a `.env` file in the frontend root directory:
-
-│   │   │   └── TeacherList.tsx  # Teacher listing and management- **Intuitive Navigation**: Role-based navigation menus## Learn More
-
-```env
-
-# API Configuration│   │   ├── layout/              # Layout components
-
-VITE_API_URL=http://localhost:5000
-
-│   │   │   └── DashboardLayout.tsx # Main dashboard layout- **Form Validation**: Client-side validation with user-friendly error messages
-
-# App Configuration
-
-VITE_APP_NAME=School Management System│   │   ├── superadmin/          # Superadmin-specific components
-
-VITE_APP_VERSION=1.0.0
-
-│   │   │   ├── SchoolForm.tsx   # School creation/editing form- **Loading States**: Proper loading indicators and skeleton screensYou can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-# Feature Flags
-
-VITE_ENABLE_DEV_TOOLS=true│   │   │   ├── SchoolList.tsx   # School listing and management
-
-VITE_ENABLE_LOGGING=true
-
-│   │   │   └── SchoolDetails.tsx # School details view- **Error Handling**: Graceful error handling with user feedback
-
-# External Services (Optional)
-
-VITE_ANALYTICS_ID=your-analytics-id│   │   └── ui/                  # Base UI components
-
-VITE_SENTRY_DSN=your-sentry-dsn
-
-```│   │       ├── Button.tsx       # Reusable button component- **Accessibility**: WCAG compliant components and navigationTo learn React, check out the [React documentation](https://reactjs.org/).
+## ⚙️ Environment Configuration│   │   │   ├── StudentList.tsx  # Student listing and management- **Loading States**: Proper loading indicators and skeleton screens- [Performance Optimizations](#-performance-optimizations)
 
 
 
-## 🚀 Running the Application│   │       ├── Card.tsx         # Card component with variants
+Create a `.env` file in the frontend root directory:│   │   │   ├── TeacherForm.tsx  # Teacher creation/editing form
 
 
 
-### Development Mode│   │       └── Input.tsx        # Input component with validation
+```env│   │   │   └── TeacherList.tsx  # Teacher listing and management- **Error Handling**: Graceful error handling with user feedback
 
-```bash
+# API Configuration
 
-npm run dev│   ├── context/                 # React Context providers### Technical Features
+VITE_API_URL=http://localhost:5000│   │   ├── layout/              # Layout components
+
+
+
+# App Configuration│   │   │   └── DashboardLayout.tsx # Main dashboard layout- **Accessibility**: WCAG compliant components and navigation- [Development Guidelines](#-development-guidelines)### `npm run build`
+
+VITE_APP_NAME=School Management System
+
+VITE_APP_VERSION=1.0.1│   │   ├── superadmin/          # Superadmin-specific components
+
+
+
+# Feature Flags│   │   │   ├── SchoolForm.tsx   # School creation/editing form
+
+VITE_ENABLE_DEV_TOOLS=true
+
+VITE_ENABLE_LOGGING=true│   │   │   ├── SchoolList.tsx   # School listing and management
+
+
+
+# External Services (Optional)│   │   │   └── SchoolDetails.tsx # School details view### Technical Features- [Testing](#-testing)
+
+VITE_ANALYTICS_ID=your-analytics-id
+
+VITE_SENTRY_DSN=your-sentry-dsn│   │   └── ui/                  # Base UI components
 
 ```
 
-Starts the development server with hot module replacement.│   │   └── AuthContext.tsx      # Authentication context and provider- **TypeScript**: Full type safety and better development experience
+│   │       ├── Button.tsx       # Reusable button component- **TypeScript**: Full type safety and better development experience
 
+## 🚀 Running the Application
 
+│   │       ├── Card.tsx         # Card component with variants
 
-### Production Build│   ├── lib/                     # Utility libraries- **Component Library**: Reusable UI components with consistent design
+### Development Mode
 
-```bash
+```bash│   │       └── Input.tsx        # Input component with validation- **Component Library**: Reusable UI components with consistent design- [Build & Deployment](#-build--deployment)Builds the app for production to the `build` folder.\
 
-npm run build│   │   └── utils.ts             # General utility functions- **HTTP-only Cookies**: Secure authentication token storage
+npm run dev
 
-npm run preview
+```│   ├── context/                 # React Context providers
 
-```│   ├── pages/                   # Main application pages- **File Upload**: Support for documents and images
+Starts the development server with hot module replacement at `http://localhost:3000`.
 
-Builds the application and serves it locally for production preview.
+│   │   └── AuthContext.tsx      # Authentication context and provider- **HTTP-only Cookies**: Secure authentication token storage
 
-│   │   ├── AccountantDashboard.tsx # Accountant dashboard- **PDF Generation**: Report and document generation capabilities
+### Production Preview
+
+```bash│   ├── lib/                     # Utility libraries
+
+npm run build
+
+npm run preview│   │   └── utils.ts             # General utility functions- **File Upload**: Support for documents and images- [Contributing](#-contributing)It correctly bundles React in production mode and optimizes the build for the best performance.
+
+```
+
+│   ├── pages/                   # Main application pages
 
 ### Available Scripts
 
-- `npm run dev` - Start development server│   │   ├── AdminDashboard.tsx      # Admin dashboard- **Export Functionality**: Data export in various formats
+- `npm run dev` - Start development server│   │   ├── AccountantDashboard.tsx # Accountant dashboard- **PDF Generation**: Report and document generation capabilities
 
 - `npm run build` - Build for production
 
-- `npm run preview` - Preview production build│   │   ├── LoginPage.tsx           # Login page- **Print Support**: Print-friendly layouts for reports
+- `npm run preview` - Preview production build│   │   ├── AdminDashboard.tsx      # Admin dashboard
 
 - `npm run lint` - Run ESLint
 
-- `npm run type-check` - Run TypeScript compiler check│   │   ├── ParentDashboard.tsx     # Parent dashboard
+- `npm run type-check` - Run TypeScript compiler check│   │   ├── LoginPage.tsx           # Login page- **Export Functionality**: Data export in various formats
 
 
 
-## 👥 User Roles & Dashboards│   │   ├── StudentDashboard.tsx    # Student dashboard## 🛠 Tech Stack
+## 👥 User Roles & Dashboards│   │   ├── ParentDashboard.tsx     # Parent dashboard
 
 
 
-### Superadmin Dashboard│   │   ├── SuperadminDashboard.tsx # Superadmin dashboard
+### Superadmin Dashboard│   │   ├── StudentDashboard.tsx    # Student dashboard- **Print Support**: Print-friendly layouts for reports
 
 **Access Level**: System-wide management
 
+│   │   ├── SuperadminDashboard.tsx # Superadmin dashboard
+
+#### Key Features:
+
+- **School Management**: Create, edit, delete, and monitor schools│   │   └── TeacherDashboard.tsx    # Teacher dashboard## 🚀 FeaturesThe build is minified and the filenames include the hashes.\
+
+- **System Statistics**: Overview of all schools, students, teachers  
+
+- **API Configuration**: Manage school API keys for external integrations│   ├── services/                # API services
+
+- **System Settings**: Global configuration and preferences
+
+│   │   └── api.ts               # Axios configuration and API methods## 🛠 Tech Stack
+
+#### School Count Display ✅ **Recently Fixed**
+
+- **Total Schools**: Shows accurate count from database│   ├── types/                   # TypeScript type definitions
+
+- **Active Schools**: Shows schools with "active" status
+
+- **Pending Schools**: Shows schools awaiting approval│   │   └── auth.types.ts        # Authentication-related typesYour app is ready to be deployed!
+
+- **Status Breakdown**: Real-time status distribution in dashboard cards
+
+│   ├── utils/                   # Utility functions
+
+### Admin Dashboard
+
+**Access Level**: School-specific management│   │   └── cn.ts                # Tailwind class name utilities- **Framework**: React 18 with TypeScript
+
+
+
+#### Key Features:│   ├── App.css                  # Global styles
+
+- **Student Management**: Register, edit, and manage students with automatic credential generation
+
+- **Teacher Management**: Hire, assign, and manage teaching staff│   ├── App.tsx                  # Main App component- **Build Tool**: Vite### Core Functionality
+
+- **Academic Management**: Subjects, schedules, calendars
+
+- **Reports**: Generate academic and administrative reports│   ├── index.css                # Tailwind CSS imports
+
+
+
+#### Recent Improvements:│   ├── index.tsx                # React entry point- **Styling**: Tailwind CSS
+
+- ✅ **Credential Generation**: Automatic secure credential creation for students and parents
+
+- ✅ **Student ID Format**: Updated to 10-digit format (YYYYGGRRR)│   └── vite-env.d.ts            # Vite environment types
+
+- ✅ **Loading States**: Proper loading indicators during CRUD operations
+
+├── index.html                   # HTML template- **Icons**: Lucide React- **Multi-role Dashboard System**: Tailored interfaces for each user roleSee the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+### Other Dashboards
+
+- **Teacher Dashboard**: Class management, attendance, grades, assignments├── package.json                 # Dependencies and scripts
+
+- **Student Dashboard**: Academic records, assignments, schedule, announcements
+
+- **Parent Dashboard**: Child monitoring, academic progress, communication├── postcss.config.js            # PostCSS configuration- **HTTP Client**: Axios
+
+- **Accountant Dashboard**: Fee collection, transactions, financial reports
+
+├── tailwind.config.js           # Tailwind CSS configuration
+
+## 🧩 Components Overview
+
+├── tsconfig.json                # TypeScript configuration- **Routing**: React Router DOM- **School Management**: Complete school administration for superadmins
+
+### UI Components
+
+├── vite.config.ts               # Vite configuration
+
+#### Button.tsx
+
+Reusable button component with multiple variants, sizes, loading states, and icon support.└── README.md                    # This file- **State Management**: React Context API + useState/useReducer
+
+
+
+#### Card.tsx```
+
+Flexible card component with header/content/footer sections and responsive design.
+
+- **Form Handling**: Custom form components with validation- **Student Management**: Registration, profiles, academic tracking### `npm run eject`
+
+#### Input.tsx
+
+Enhanced input component with validation display, error messages, and various input types.## 📦 Installation
+
+
+
+### Feature Components- **Development**: ESLint, TypeScript compiler
+
+
+
+#### StudentForm.tsx *(Recently Updated)*### Prerequisites
+
+- ✅ **Automatic Credential Generation**: Secure credentials for both student and parent accounts
+
+- Personal information collection with validation- Node.js 18.0 or higher- **Testing**: React Testing Library, Jest (planned)- **Teacher Management**: Teacher profiles, subject assignments, schedules
+
+- Academic details and parent information association
+
+- npm or yarn package manager
+
+#### SchoolForm.tsx
+
+Comprehensive school creation form with API configuration for external integrations.- Running backend API server
+
+
+
+## 🔐 Authentication Flow
+
+
+
+### Recent Authentication Improvements:### Step-by-step Installation## 📁 Project Structure- **Attendance System**: Real-time attendance tracking with multiple status options**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+
+- ✅ **Fixed Auto-reload Issue**: Removed problematic axios interceptor causing infinite redirects
+
+- ✅ **Forced Password Change**: Users must change temporary passwords on first login
+
+- ✅ **Secure Credentials**: All passwords generated with bcrypt (12 salt rounds)
+
+1. **Clone the repository**
+
+### Login Process
+
+1. User navigates to login page   ```bash
+
+2. Credentials sent to `/api/auth/login`
+
+3. JWT stored in HTTP-only cookie   git clone <repository-url>```- **Grade Management**: Grade recording and academic progress tracking
+
+4. User redirected to appropriate dashboard
+
+5. Session persists across browser sessions   cd SMS/frontend
+
+
+
+## 🔌 API Integration   ```frontend/
+
+
+
+### API Service Configuration
+
+```typescript
+
+const api = axios.create({2. **Install dependencies**├── public/                        # Static assets- **Parent Portal**: Child monitoring and communication featuresIf you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+  baseURL: `${VITE_API_URL}/api`,
+
+  timeout: 30000,   ```bash
+
+  withCredentials: true, // Include cookies for authentication
+
+  headers: {   npm install│   ├── favicon.ico               # App favicon
+
+    'Content-Type': 'application/json',
+
+  },   ```
+
+});
+
+```│   ├── logo192.png              # App logo (192x192)- **Financial Management**: Fee tracking and payment management
+
+
+
+### Key Features:3. **Set up environment variables**
+
+- **HTTP-only Cookies**: Secure authentication without localStorage
+
+- **Automatic Error Handling**: Global error handling (recently fixed)   ```bash│   ├── logo512.png              # App logo (512x512)
+
+- **Request/Response Interceptors**: Automatic authentication handling
+
+   cp .env.example .env
+
+## 🔧 Recent Updates
+
+   # Edit .env with your configuration│   ├── manifest.json            # PWA manifestInstead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+
+### ✅ **Authentication System Overhaul - September 19-21, 2025**
+
+   ```
+
+#### Issues Resolved:
+
+1. **Login Auto-reload Problem**: ✅ **FIXED**│   └── robots.txt               # SEO robots file
+
+   - **Issue**: Page auto-reloaded preventing successful login
+
+   - **Root Cause**: Axios response interceptor doing hard redirects4. **Start the development server**
+
+   - **Solution**: Removed automatic redirect, let AuthContext handle authentication state
+
+   ```bash├── src/### User Experience
+
+2. **School Count Display Issue**: ✅ **FIXED**
+
+   - **Issue**: SuperAdmin dashboard showed "0 schools" despite having 5 schools   npm run dev
+
+   - **Root Cause**: API response handling - accessing wrong data structure
+
+   - **Solution**: Fixed to access `response.data.data.schools` correctly   ```│   ├── components/              # Reusable components
+
+
+
+3. **Student ID Format Standardization**: ✅ **COMPLETED**
+
+   - **Change**: Updated from `YYYY-GG-RRR` to `YYYYGGRRR` (10-digit format)
+
+   - **Impact**: Improved consistency and easier integration with external systems5. **Open in browser**│   │   ├── admin/               # Admin-specific components- **Responsive Design**: Mobile-first approach with responsive layoutsYou don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+
+
+
+#### System Enhancements:   ```
+
+- **Automatic Credential Generation**: Secure password generation for students and parents
+
+- **HTTP-only Cookie Authentication**: Enhanced security with proper token storage   http://localhost:3000 (or the port shown in terminal)│   │   │   ├── StudentForm.tsx  # Student creation/editing form
+
+- **Forced Password Change**: Users must update temporary passwords on first login
+
+- **Enhanced Error Handling**: Better user feedback and error recovery   ```
+
+
+
+### ✅ **API Response Structure Standardization**│   │   │   ├── StudentList.tsx  # Student listing and management- **Real-time Updates**: Live data updates without page refresh
+
+All endpoints now return consistent response format:
+
+## ⚙️ Environment Configuration
+
+```typescript
+
+// Success Response│   │   │   ├── TeacherForm.tsx  # Teacher creation/editing form
+
+{
+
+  "success": true,Create a `.env` file in the frontend root directory:
+
+  "data": { /* actual data */ },
+
+  "message": "Operation completed successfully"│   │   │   └── TeacherList.tsx  # Teacher listing and management- **Intuitive Navigation**: Role-based navigation menus## Learn More
+
+}
+
+```env
+
+// Error Response
+
+{# API Configuration│   │   ├── layout/              # Layout components
+
+  "success": false,
+
+  "message": "User-friendly error message",VITE_API_URL=http://localhost:5000
+
+  "errorSources": [/* error details */]
+
+}│   │   │   └── DashboardLayout.tsx # Main dashboard layout- **Form Validation**: Client-side validation with user-friendly error messages
+
+```
+
+# App Configuration
+
+## 🚨 Error Handling
+
+VITE_APP_NAME=School Management System│   │   ├── superadmin/          # Superadmin-specific components
+
+### Recent Improvements:
+
+- ✅ **Global Error Boundary**: Catches and displays React errors gracefullyVITE_APP_VERSION=1.0.0
+
+- ✅ **API Error Handling**: Automatic retry and user-friendly error messages
+
+- ✅ **Validation Feedback**: Real-time form validation with clear error states│   │   │   ├── SchoolForm.tsx   # School creation/editing form- **Loading States**: Proper loading indicators and skeleton screensYou can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+- ✅ **Authentication Errors**: Proper handling of token expiration and unauthorized access
+
+# Feature Flags
+
+## 🔧 Development Guidelines
+
+VITE_ENABLE_DEV_TOOLS=true│   │   │   ├── SchoolList.tsx   # School listing and management
+
+### Code Style:
+
+- **TypeScript First**: All components use proper TypeScript interfacesVITE_ENABLE_LOGGING=true
+
+- **Functional Components**: Using React hooks instead of class components
+
+- **Custom Hooks**: Extract reusable logic into custom hooks│   │   │   └── SchoolDetails.tsx # School details view- **Error Handling**: Graceful error handling with user feedback
+
+- **File Naming**: PascalCase for components, kebab-case for utilities
+
+# External Services (Optional)
+
+### Performance Best Practices:
+
+- **Code Splitting**: Lazy loading for improved performanceVITE_ANALYTICS_ID=your-analytics-id│   │   └── ui/                  # Base UI components
+
+- **React.memo**: Memoization for expensive components
+
+- **useMemo/useCallback**: Preventing unnecessary re-rendersVITE_SENTRY_DSN=your-sentry-dsn
+
+- **Image Optimization**: Proper image formats and lazy loading
+
+```│   │       ├── Button.tsx       # Reusable button component- **Accessibility**: WCAG compliant components and navigationTo learn React, check out the [React documentation](https://reactjs.org/).
+
+## 📊 Current Status
+
+
+
+### ✅ Recently Completed:
+
+- Multi-role dashboard system with all 6 user roles## 🚀 Running the Application│   │       ├── Card.tsx         # Card component with variants
+
+- School management with API integration for face recognition
+
+- Student and teacher management with automatic credential generation
+
+- Authentication system with HTTP-only cookies and forced password changes
+
+- Responsive design implementation across all components### Development Mode│   │       └── Input.tsx        # Input component with validation
+
+- **Fixed**: Login auto-reload issue
+
+- **Fixed**: School count display accuracy```bash
+
+- **Enhanced**: Error handling and user feedback
+
+npm run dev│   ├── context/                 # React Context providers### Technical Features
+
+### 🚀 Current Capabilities:
+
+- **Production Ready**: Core functionality complete and tested```
+
+- **Secure Authentication**: HTTP-only cookies with proper session management
+
+- **Automated Systems**: Credential generation, student ID creationStarts the development server with hot module replacement.│   │   └── AuthContext.tsx      # Authentication context and provider- **TypeScript**: Full type safety and better development experience
+
+- **Responsive UI**: Mobile-first design with consistent styling
+
+- **Error Resilient**: Comprehensive error handling and user feedback
+
+
+
+## 📦 Build & Deployment### Production Build│   ├── lib/                     # Utility libraries- **Component Library**: Reusable UI components with consistent design
+
+
+
+### Production Build```bash
+
+```bash
+
+npm run buildnpm run build│   │   └── utils.ts             # General utility functions- **HTTP-only Cookies**: Secure authentication token storage
+
+```
+
+Creates optimized production build in `dist` folder.npm run preview
+
+
+
+### Deployment Checklist:```│   ├── pages/                   # Main application pages- **File Upload**: Support for documents and images
+
+- [ ] Environment variables configured
+
+- [ ] API base URL updated for productionBuilds the application and serves it locally for production preview.
+
+- [ ] CORS settings configured on backend
+
+- [ ] HTTPS enabled for production│   │   ├── AccountantDashboard.tsx # Accountant dashboard- **PDF Generation**: Report and document generation capabilities
+
+- [ ] Error monitoring set up (Sentry)
+
+### Available Scripts
+
+## 📞 Support
+
+- `npm run dev` - Start development server│   │   ├── AdminDashboard.tsx      # Admin dashboard- **Export Functionality**: Data export in various formats
+
+### Quick Start Checklist:
+
+1. ✅ Backend API server running on port 5000- `npm run build` - Build for production
+
+2. ✅ Frontend development server on port 3000
+
+3. ✅ MongoDB database connected and seeded- `npm run preview` - Preview production build│   │   ├── LoginPage.tsx           # Login page- **Print Support**: Print-friendly layouts for reports
+
+4. ✅ Environment variables configured
+
+5. ✅ Authentication system functional- `npm run lint` - Run ESLint
+
+
+
+### Development Support:- `npm run type-check` - Run TypeScript compiler check│   │   ├── ParentDashboard.tsx     # Parent dashboard
+
+- **Issues**: Create GitHub issues for bug reports and feature requests
+
+- **Documentation**: Comprehensive backend and frontend READMEs available
+
+- **Database**: MongoDB connection required for full functionality
+
+## 👥 User Roles & Dashboards│   │   ├── StudentDashboard.tsx    # Student dashboard## 🛠 Tech Stack
+
+---
+
+
+
+**Last Updated**: September 21, 2025  
+
+**Version**: 1.0.1  ### Superadmin Dashboard│   │   ├── SuperadminDashboard.tsx # Superadmin dashboard
+
+**React**: 18.0+  
+
+**Node.js**: 18.0+ (for development)  **Access Level**: System-wide management
+
+**Status**: Production Ready with Recent Authentication & Error Handling Improvements
 │   │   └── TeacherDashboard.tsx    # Teacher dashboard- **Framework**: React 18 with TypeScript
 
 #### Key Features:

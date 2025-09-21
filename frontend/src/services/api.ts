@@ -31,10 +31,8 @@ api.interceptors.response.use(
     return response;
   },
   (error: any) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - redirect to login (cookie will be cleared by logout endpoint)
-      window.location.href = '/login';
-    }
+    // Remove the automatic redirect on 401 - let the AuthContext handle authentication state
+    // The 401 error will be passed through to the calling code to handle appropriately
     return Promise.reject(error);
   }
 );
