@@ -85,7 +85,7 @@ const studentSchema = new Schema<IStudentDocument, IStudentModel, IStudentMethod
       required: [true, 'Student ID is required'],
       unique: true,
       trim: true,
-      match: [/^\d{4}-\d{2}-\d{3}$/, 'Student ID must follow format YYYY-GG-XXX'],
+      match: [/^\d{10}$/, 'Student ID must be 10 digits (YYYYGGRRR format)'],
       index: true,
     },
     grade: {
@@ -128,6 +128,13 @@ const studentSchema = new Schema<IStudentDocument, IStudentModel, IStudentMethod
       type: Date,
       required: [true, 'Admission date is required'],
       default: Date.now,
+    },
+    admissionYear: {
+      type: Number,
+      required: [true, 'Admission year is required'],
+      min: [2000, 'Admission year must be 2000 or later'],
+      max: [new Date().getFullYear() + 1, 'Admission year cannot be in the future'],
+      index: true,
     },
     parentId: {
       type: Schema.Types.ObjectId,

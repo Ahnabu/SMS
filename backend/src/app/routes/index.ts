@@ -13,6 +13,7 @@ import { superadminRoutes } from '../modules/superadmin/superadmin.route';
 import { classRoutes } from '../modules/class/class.route';
 import { homeworkRoutes } from '../modules/homework/homework.route';
 import { examRoutes } from '../modules/exam/exam.route';
+import { adminRoutes } from '../modules/admin/admin.route';
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
@@ -23,6 +24,10 @@ const moduleRoutes = [
   {
     path: '/superadmin',
     route: superadminRoutes,
+  },
+  {
+    path: '/admin',
+    route: adminRoutes,
   },
   {
     path: '/organizations',

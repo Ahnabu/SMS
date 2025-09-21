@@ -9,6 +9,7 @@ export interface IStudent {
   bloodGroup: string;
   dob: Date;
   admissionDate: Date;
+  admissionYear: number; // Extracted from admission date for easier querying
   parentId?: Types.ObjectId;
   rollNumber?: number;
   isActive: boolean;
@@ -92,6 +93,7 @@ export interface IStudentResponse {
   bloodGroup: string;
   dob: Date;
   admissionDate: Date;
+  admissionYear: number;
   parentId?: string;
   rollNumber?: number;
   isActive: boolean;
