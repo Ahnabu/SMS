@@ -6,6 +6,7 @@ export interface User {
   role: 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent' | 'accountant';
   schoolId?: string;
   isActive: boolean;
+  isFirstLogin?: boolean;
 }
 
 export interface AuthResponse {
@@ -13,6 +14,7 @@ export interface AuthResponse {
   token: string;
   user: User;
   message?: string;
+  requiresPasswordChange?: boolean;
 }
 
 export interface LoginCredentials {
@@ -20,11 +22,16 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface PasswordChangeCredentials {
+  newPassword: string;
+}
+
 export interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  logout: () => void;
+  requiresPasswordChange: boolean;
+  login: (credentials: LoginCredentials) => Promise<{success: boolean; requiresPasswordChange?: boolean}>;
+  logout: () => Promise<void>;
+  changePassword: (credentials: PasswordChangeCredentials) => Promise<boolean>;
   isAuthenticated: boolean;
 }

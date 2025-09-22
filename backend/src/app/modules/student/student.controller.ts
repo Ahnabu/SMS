@@ -12,8 +12,27 @@ const createStudent = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
-    message: 'Student created successfully',
-    data: result,
+    message: 'Student created successfully with auto-generated credentials',
+    data: {
+      student: result.student,
+      generatedCredentials: {
+        student: {
+          username: result.credentials.student.username,
+          password: result.credentials.student.password,
+          message: 'Student login credentials. Password must be changed on first login.',
+        },
+        parent: {
+          username: result.credentials.parent.username,
+          password: result.credentials.parent.password,
+          message: 'Parent login credentials. Password must be changed on first login.',
+        },
+        instructions: [
+          'Please save these credentials securely and provide them to the respective users.',
+          'Both accounts will require password change upon first login for security.',
+          'Student ID format: YYYYGGRRR (Year-Grade-Roll, e.g., 2025050001)',
+        ],
+      },
+    },
   });
 });
 

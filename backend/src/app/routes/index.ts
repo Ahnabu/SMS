@@ -10,6 +10,10 @@ import { authRoutes } from '../modules/auth/auth.route';
 import { StudentRoutes } from '../modules/student/student.route';
 import { TeacherRoutes } from '../modules/teacher/teacher.route';
 import { superadminRoutes } from '../modules/superadmin/superadmin.route';
+import { classRoutes } from '../modules/class/class.route';
+import { homeworkRoutes } from '../modules/homework/homework.route';
+import { examRoutes } from '../modules/exam/exam.route';
+import { adminRoutes } from '../modules/admin/admin.route';
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
@@ -20,6 +24,10 @@ const moduleRoutes = [
   {
     path: '/superadmin',
     route: superadminRoutes,
+  },
+  {
+    path: '/admin',
+    route: adminRoutes,
   },
   {
     path: '/organizations',
@@ -40,6 +48,18 @@ const moduleRoutes = [
   {
     path: '/teachers',
     route: TeacherRoutes,
+  },
+  {
+    path: '/classes',
+    route: classRoutes,
+  },
+  {
+    path: '/homework',
+    route: homeworkRoutes,
+  },
+  {
+    path: '/exams',
+    route: examRoutes,
   },
 ];
 

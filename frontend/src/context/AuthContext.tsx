@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AuthContextType, User, LoginCredentials } from '../types/auth.types';
+import { AuthContextType, User, LoginCredentials, PasswordChangeCredentials } from '../types/auth.types';
 import { apiService } from '../services/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -10,105 +10,117 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in on app start
-    const storedToken = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(userData);
-        // Verify token with backend
-        verifyToken();
-      } catch (error) {
-        // Clear invalid stored data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-      }
-    } else {
-      setIsLoading(false);
-    }
+    // Check if user is logged in on app start by calling verify endpoint
+    checkExistingAuth();
   }, []);
 
-  const verifyToken = async () => {
+  const checkExistingAuth = async () => {
     try {
+      // Since we're using HTTP-only cookies, we can't access the token directly
+      // Instead, we call the verify endpoint which will check the cookie
       const response = await apiService.verify();
-      if (response.data.success) {
-        setIsLoading(false);
+      
+      if (response.data.success && response.data.data) {
+        const { user: userData, requiresPasswordChange: needsPasswordChange } = response.data.data;
+        setUser(userData);
+        setRequiresPasswordChange(needsPasswordChange || false);
       } else {
-        logout();
+        clearAuthData();
       }
     } catch (error) {
-      console.error('Token verification failed:', error);
-      logout();
+      console.error('Error checking existing auth:', error);
+      clearAuthData();
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  const clearAuthData = () => {
+    setUser(null);
+    setRequiresPasswordChange(false);
+    // No need to clear localStorage/sessionStorage since we're using cookies
+  };
+
+  const login = async (credentials: LoginCredentials): Promise<{success: boolean; requiresPasswordChange?: boolean}> => {
     try {
       setIsLoading(true);
       const response = await apiService.login(credentials.username, credentials.password);
 
       if (response.data.success && response.data.data) {
-        const { token: authToken, user: userData } = response.data.data;
+        const { user: userData, requiresPasswordChange: needsPasswordChange } = response.data.data;
 
-        // Store in localStorage
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-
-        // Update state
-        setToken(authToken);
         setUser(userData);
+        setRequiresPasswordChange(needsPasswordChange || false);
 
-        setIsLoading(false);
-        return true;
-      } else {
-        setIsLoading(false);
-        return false;
+        return { 
+          success: true, 
+          requiresPasswordChange: needsPasswordChange 
+        };
       }
+
+      return { success: false };
     } catch (error) {
       console.error('Login failed:', error);
+      return { success: false };
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const changePassword = async (credentials: PasswordChangeCredentials): Promise<boolean> => {
+    try {
+      const response = await apiService.forcePasswordChange(credentials.newPassword);
+      
+      if (response.data.success) {
+        // Update the requiresPasswordChange flag
+        setRequiresPasswordChange(false);
+        
+        // Update user's isFirstLogin if present
+        if (user) {
+          setUser({
+            ...user,
+            isFirstLogin: false,
+          });
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Password change failed:', error);
       return false;
     }
   };
 
-  const logout = () => {
-    // Clear localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-
-    // Clear state
-    setToken(null);
-    setUser(null);
-    setIsLoading(false);
-
-    // Optional: Call logout API
+  const logout = async (): Promise<void> => {
     try {
-      apiService.logout();
+      // Call logout endpoint to clear HTTP-only cookie
+      await apiService.logout();
     } catch (error) {
       console.error('Logout API call failed:', error);
+    } finally {
+      // Always clear local state regardless of API call success
+      clearAuthData();
     }
   };
 
-  const isAuthenticated = !!token && !!user;
-
-  const value: AuthContextType = {
+  const contextValue: AuthContextType = {
     user,
-    token,
     isLoading,
+    requiresPasswordChange,
     login,
     logout,
-    isAuthenticated,
+    changePassword,
+    isAuthenticated: !!user,
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
@@ -116,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
