@@ -49,6 +49,11 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+  };
 }
 
 export default api;

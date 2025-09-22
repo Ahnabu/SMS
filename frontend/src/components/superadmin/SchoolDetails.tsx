@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Edit } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
-import { apiService } from "../../services/api";
+import { apiService } from "@/services";
 import { School, SchoolDetailsProps, StatusBadge } from "../modules/school";
 import SchoolBasicInfo from "../modules/school/SchoolBasicInfo";
 import SchoolContactInfo from "../modules/school/SchoolContactInfo";
@@ -27,7 +27,7 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
       loadSchoolDetails();
     }
   }, [schoolId, isOpen]);
-  
+
   const loadSchoolDetails = async () => {
     try {
       setLoading(true);
@@ -118,10 +118,14 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
   };
 
   const handleResetPassword = async () => {
-    if (!confirm("Are you sure you want to reset the admin password? This will generate a new password.")) {
+    if (
+      !confirm(
+        "Are you sure you want to reset the admin password? This will generate a new password."
+      )
+    ) {
       return;
     }
-    
+
     try {
       await apiService.superadmin.resetAdminPassword(schoolId!);
       loadSchoolDetails(); // Reload to get the new password
@@ -130,7 +134,7 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
       console.error("Failed to reset admin password:", error);
       toast.error("Failed to reset admin password");
     }
-  }
+  };
 
   const handleRegenerateApiKey = async () => {
     try {
@@ -191,7 +195,10 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
             <SchoolContactInfo school={school} />
 
             {/* Administrator Information */}
-            <SchoolAdminInfo school={school} onResetPassword={handleResetPassword} />
+            <SchoolAdminInfo
+              school={school}
+              onResetPassword={handleResetPassword}
+            />
 
             {/* Academic Session */}
             <SchoolAcademicSession school={school} />

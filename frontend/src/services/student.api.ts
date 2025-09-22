@@ -2,7 +2,6 @@ import { api, ApiResponse } from "./api-base";
 
 // Student API service
 export const studentApi = {
-  // Admin endpoints for student management
   create: (data: {
     schoolId?: string;
     firstName: string;
@@ -16,14 +15,19 @@ export const studentApi = {
     admissionDate?: string;
     rollNumber?: number;
     parentInfo?: {
-      firstName: string;
-      lastName: string;
+      name: string;
       email?: string;
       phone?: string;
       address?: string;
       occupation?: string;
     };
   }) => api.post<ApiResponse>("/admin/students", data),
+
+  // Create student with photos (FormData)
+  createWithPhotos: (formData: FormData) =>
+    api.post<ApiResponse>("/admin/students", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 
   getAll: (params?: {
     page?: number;

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, UserCheck, UserX, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, Eye, UserCheck, UserX } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { apiService } from '../../services/api';
+import { apiService } from '@/services';
 
 interface Student {
   id: string;
@@ -86,15 +86,15 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(({
       const response = await apiService.admin.getStudents({
         page: currentPage,
         limit: 10,
-        class: classFilter !== 'all' ? classFilter : undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        grade: classFilter !== 'all' ? parseInt(classFilter, 10) : undefined,
+        // status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
       });
 
       if (response.data.success) {
         const responseData = response.data.data;
-        setStudents(Array.isArray(responseData.students) ? responseData.students : []);
-        setTotalPages(responseData.totalPages || 1);
+        setStudents(responseData);
+        setTotalPages(response.data.meta?.page as number);
       } else {
         setStudents([]);
         setTotalPages(1);
@@ -102,62 +102,12 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(({
     } catch (error) {
       console.error('Failed to load students:', error);
       // Set demo data for testing
-      setStudents([
-        {
-          id: '1',
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john.doe@school.edu',
-          phone: '+1-555-0123',
-          studentId: 'STU001',
-          class: '10',
-          section: 'A',
-          rollNumber: '001',
-          dateOfBirth: '2008-05-15',
-          address: {
-            street: '123 Main St',
-            city: 'New York',
-            state: 'NY',
-            country: 'USA',
-            postalCode: '10001',
-          },
-          parent: {
-            id: 'par1',
-            name: 'Robert Doe',
-            email: 'robert.doe@email.com',
-            phone: '+1-555-0124',
-          },
-          isActive: true,
-          admissionDate: '2024-01-15',
-          createdAt: '2024-01-15T10:00:00Z',
-        },
-        {
-          id: '2',
-          firstName: 'Jane',
-          lastName: 'Smith',
-          email: 'jane.smith@school.edu',
-          phone: '+1-555-0456',
-          studentId: 'STU002',
-          class: '9',
-          section: 'B',
-          rollNumber: '025',
-          dateOfBirth: '2009-08-20',
-          parent: {
-            id: 'par2',
-            name: 'Mary Smith',
-            email: 'mary.smith@email.com',
-            phone: '+1-555-0457',
-          },
-          isActive: false,
-          admissionDate: '2024-02-01',
-          createdAt: '2024-02-01T14:30:00Z',
-        },
-      ]);
+     
     } finally {
       setLoading(false);
     }
   };
-
+console.log(students)
   const handleDeleteStudent = async (studentId: string) => {
     if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
       return;
@@ -247,7 +197,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(({
             </div>
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
-              <select
+              <select aria-label='Filter by class'
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -258,7 +208,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(({
                 <option value="11">Class 11</option>
                 <option value="12">Class 12</option>
               </select>
-              <select
+              <select aria-label='Filter by status'
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"

@@ -1,12 +1,15 @@
-import httpStatus from 'http-status';
-import { Types } from 'mongoose';
-import path from 'path';
-import { AppError } from '../../errors/AppError';
-import { School } from '../school/school.model';
-import { User } from '../user/user.model';
-import { Student, StudentPhoto } from './student.model';
-import { FileUtils } from '../../utils/fileUtils';
-import config from '../../config';
+import httpStatus from "http-status";
+import mongoose, { Types } from "mongoose";
+import path from "path";
+import { AppError } from "../../errors/AppError";
+import { School } from "../school/school.model";
+import { User } from "../user/user.model";
+import { Parent } from "../parent/parent.model";
+import { Student, StudentPhoto } from "./student.model";
+import { FileUtils } from "../../utils/fileUtils";
+import { CredentialGenerator } from "../../utils/credentialGenerator";
+
+import config from "../../config";
 import {
   ICreateStudentRequest,
   IUpdateStudentRequest,
@@ -15,30 +18,39 @@ import {
   IStudentStats,
   IPhotoUploadRequest,
   IStudentPhotoResponse,
-} from './student.interface';
+} from "./student.interface";
 
 class StudentService {
-  async createStudent(studentData: ICreateStudentRequest): Promise<IStudentResponse> {
+  async createStudent(
+    studentData: ICreateStudentRequest,
+    photos?: Express.Multer.File[]
+  ): Promise<IStudentResponse> {
+    const session = await mongoose.startSession();
+
     try {
+      session.startTransaction();
+
       // Verify school exists and is active
-      const school = await School.findById(studentData.schoolId);
+      const school = await School.findById(studentData.schoolId).session(
+        session
+      );
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
-      if (school.status !== 'active') {
+      if (school.status !== "active") {
         throw new AppError(
           httpStatus.BAD_REQUEST,
-          'Cannot create student for inactive school'
+          "Cannot create student for inactive school"
         );
       }
 
       // Check if student with same name exists in the same grade/section
       const existingUser = await User.findOne({
         schoolId: studentData.schoolId,
-        firstName: { $regex: new RegExp(`^${studentData.firstName}$`, 'i') },
-        lastName: { $regex: new RegExp(`^${studentData.lastName}$`, 'i') },
-        role: 'student',
+        firstName: { $regex: new RegExp(`^${studentData.firstName}$`, "i") },
+        lastName: { $regex: new RegExp(`^${studentData.lastName}$`, "i") },
+        role: "student",
       });
 
       if (existingUser) {
@@ -57,93 +69,168 @@ class StudentService {
         }
       }
 
-      // Generate student ID
-      const studentId = await Student.generateNextStudentId(
-        studentData.schoolId,
-        studentData.grade
-      );
+      const admissionDate =
+        studentData.admissionDate || new Date().toISOString().split("T")[0];
+      const admissionYear = new Date(admissionDate).getFullYear();
 
-      // Generate username from student ID
-      const username = studentId.replace(/-/g, '').toLowerCase();
+      // Generate student ID and credentials using CredentialGenerator
+      const { studentId, rollNumber, credentials } =
+        await CredentialGenerator.generateStudentRegistration(
+          admissionYear,
+          studentData.grade.toString(),
+          studentData.schoolId
+        );
 
       // Create user account for student
-      const newUser = await User.create({
-        schoolId: studentData.schoolId,
-        role: 'student',
-        username,
-        passwordHash: studentId, // Temporary password, same as student ID
-        firstName: studentData.firstName,
-        lastName: studentData.lastName,
-        email: studentData.email,
-        phone: studentData.phone,
-      });
+      const newUser = await User.create(
+        [
+          {
+            schoolId: studentData.schoolId,
+            role: "student",
+            username: credentials.student.username,
+            passwordHash: credentials.student.hashedPassword,
+            firstName: studentData.firstName,
+            lastName: studentData.lastName,
+            email: studentData.email,
+            phone: studentData.phone,
+          },
+        ],
+        { session }
+      );
 
       // Create student record
-      const newStudent = await Student.create({
-        userId: newUser._id,
-        schoolId: studentData.schoolId,
-        studentId,
-        grade: studentData.grade,
-        section: studentData.section,
-        bloodGroup: studentData.bloodGroup,
-        dob: new Date(studentData.dob),
-        admissionDate: studentData.admissionDate ? new Date(studentData.admissionDate) : new Date(),
-        rollNumber: studentData.rollNumber,
-      });
+      const newStudent = await Student.create(
+        [
+          {
+            userId: newUser[0]._id,
+            schoolId: studentData.schoolId,
+            studentId,
+            grade: studentData.grade,
+            section: studentData.section,
+            bloodGroup: studentData.bloodGroup,
+            dob: new Date(studentData.dob),
+            admissionDate: studentData.admissionDate
+              ? new Date(studentData.admissionDate)
+              : new Date(),
+            admissionYear,
+            rollNumber: rollNumber,
+          },
+        ],
+        { session }
+      );
 
       // Create parent if parent info is provided
       if (studentData.parentInfo) {
         const { parentInfo } = studentData;
 
-        // Generate parent username
-        const parentUsername = `${username}_parent`;
+        // Create parent user account with generated credentials
+        const parentUser = await User.create(
+          [
+            {
+              schoolId: studentData.schoolId,
+              role: "parent",
+              username: credentials.parent.username,
+              passwordHash: credentials.parent.hashedPassword,
+              firstName: parentInfo.name.split(" ")[0] || parentInfo.name,
+              lastName: parentInfo.name.split(" ").slice(1).join(" ") || "",
+              email: parentInfo.email,
+              phone: parentInfo.phone,
+            },
+          ],
+          { session }
+        );
 
-        // Create parent user account
-        const parentUser = await User.create({
-          schoolId: studentData.schoolId,
-          role: 'parent',
-          username: parentUsername,
-          passwordHash: studentId, // Same temporary password
-          firstName: parentInfo.firstName,
-          lastName: parentInfo.lastName,
-          email: parentInfo.email,
-          phone: parentInfo.phone,
-        });
+        // Generate parent ID for the Parent model
+        const parentId = await Parent.generateNextParentId(
+          studentData.schoolId
+        );
 
-        // Create parent record (Parent model will be created later)
-        // For now, just update the student with parent reference
-        newStudent.parentId = parentUser._id;
-        await newStudent.save();
+        // Create basic parent record with required fields
+        const newParent = await Parent.create(
+          [
+            {
+              userId: parentUser[0]._id,
+              schoolId: studentData.schoolId,
+              parentId: parentId,
+              children: [newStudent[0]._id], // Link to the student
+              relationship: "Guardian", // Default relationship
+              address: {
+                city: "Unknown",
+                state: "Unknown",
+                zipCode: "000000",
+                country: "India",
+                street: parentInfo.address || "",
+              },
+              preferences: {
+                communicationMethod: "All",
+                receiveNewsletters: true,
+                receiveAttendanceAlerts: true,
+                receiveExamResults: true,
+                receiveEventNotifications: true,
+              },
+              occupation: parentInfo.occupation,
+            },
+          ],
+          { session }
+        );
+
+        // Update student with parent reference
+        newStudent[0].parentId = newParent[0]._id;
+        await newStudent[0].save({ session });
       }
 
       // Create photo folder structure
-      const age = new Date().getFullYear() - new Date(studentData.dob).getFullYear();
-      const admitDate = new Date(studentData.admissionDate || Date.now()).toISOString().split('T')[0];
+      const age =
+        new Date().getFullYear() - new Date(studentData.dob).getFullYear();
+      const admitDate = new Date(studentData.admissionDate || Date.now())
+        .toISOString()
+        .split("T")[0];
 
       try {
         await FileUtils.createStudentPhotoFolder(school.name, {
           firstName: studentData.firstName,
           age,
           grade: studentData.grade,
-          section: studentData.section,
+          section: studentData.section as string,
           bloodGroup: studentData.bloodGroup,
           admitDate,
           studentId,
         });
       } catch (error) {
-        console.warn('Failed to create photo folder:', error);
+        console.warn("Failed to create photo folder:", error);
         // Don't fail the student creation if folder creation fails
       }
 
-      // Populate and return
-      await newStudent.populate([
-        { path: 'userId', select: 'firstName lastName username email phone' },
-        { path: 'schoolId', select: 'name' },
-        { path: 'parentId' },
+      // Commit transaction
+      await session.commitTransaction();
+
+      // Populate and return (after transaction is committed)
+      await newStudent[0].populate([
+        { path: "userId", select: "firstName lastName username email phone" },
+        { path: "schoolId", select: "name" },
+        { path: "parentId" },
       ]);
 
-      return this.formatStudentResponse(newStudent);
+      const response = this.formatStudentResponse(newStudent[0]);
+
+      // Add generated credentials to response
+      response.credentials = {
+        student: {
+          username: credentials.student.username,
+          password: credentials.student.password,
+        },
+        parent: {
+          username: credentials.parent.username,
+          password: credentials.parent.password,
+        },
+      };
+
+      return response;
     } catch (error: unknown) {
+      // Only abort if transaction is still active
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       if (error instanceof AppError) {
         throw error;
       }
@@ -151,6 +238,8 @@ class StudentService {
         httpStatus.INTERNAL_SERVER_ERROR,
         `Failed to create student: ${(error as Error).message}`
       );
+    } finally {
+      session.endSession();
     }
   }
 
@@ -173,7 +262,17 @@ class StudentService {
     hasPrevPage: boolean;
   }> {
     try {
-      const { page, limit, schoolId, grade, section, isActive, search, sortBy, sortOrder } = queryParams;
+      const {
+        page,
+        limit,
+        schoolId,
+        grade,
+        section,
+        isActive,
+        search,
+        sortBy,
+        sortOrder,
+      } = queryParams;
       const skip = (page - 1) * limit;
 
       // Build query
@@ -191,53 +290,51 @@ class StudentService {
         query.section = section;
       }
 
-      if (isActive && isActive !== 'all') {
-        query.isActive = isActive === 'true';
+      if (isActive && isActive !== "all") {
+        query.isActive = isActive === "true";
       }
 
       // Build search query for user fields
       let userQuery: any = {};
       if (search) {
         userQuery.$or = [
-          { firstName: { $regex: new RegExp(search, 'i') } },
-          { lastName: { $regex: new RegExp(search, 'i') } },
-          { username: { $regex: new RegExp(search, 'i') } },
+          { firstName: { $regex: new RegExp(search, "i") } },
+          { lastName: { $regex: new RegExp(search, "i") } },
+          { username: { $regex: new RegExp(search, "i") } },
         ];
       }
 
       // If we have user search criteria, find matching users first
       let userIds: Types.ObjectId[] = [];
       if (Object.keys(userQuery).length > 0) {
-        const matchingUsers = await User.find(userQuery).select('_id');
-        userIds = matchingUsers.map(user => user._id);
+        const matchingUsers = await User.find(userQuery).select("_id");
+        userIds = matchingUsers.map((user) => user._id);
         query.userId = { $in: userIds };
       }
 
       // Handle student ID search separately
       if (search && !userQuery.$or) {
-        query.$or = [
-          { studentId: { $regex: new RegExp(search, 'i') } },
-        ];
+        query.$or = [{ studentId: { $regex: new RegExp(search, "i") } }];
       }
 
       // Build sort
       const sort: any = {};
-      if (sortBy === 'firstName' || sortBy === 'lastName') {
+      if (sortBy === "firstName" || sortBy === "lastName") {
         // For user fields, we'll sort after population
         sort.grade = 1;
         sort.section = 1;
         sort.rollNumber = 1;
       } else {
-        sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        sort[sortBy] = sortOrder === "desc" ? -1 : 1;
       }
 
       // Execute queries
       const [students, totalCount] = await Promise.all([
         Student.find(query)
-          .populate('userId', 'firstName lastName username email phone')
-          .populate('schoolId', 'name')
-          .populate('parentId')
-          .populate('photoCount')
+          .populate("userId", "firstName lastName username email phone")
+          .populate("schoolId", "name")
+          .populate("parentId")
+          .populate("photoCount")
           .sort(sort)
           .skip(skip)
           .limit(limit)
@@ -248,7 +345,9 @@ class StudentService {
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        students: students.map(student => this.formatStudentResponse(student)),
+        students: students.map((student) =>
+          this.formatStudentResponse(student)
+        ),
         totalCount,
         currentPage: page,
         totalPages,
@@ -266,19 +365,19 @@ class StudentService {
   async getStudentById(id: string): Promise<IStudentResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const student = await Student.findById(id)
-        .populate('userId', 'firstName lastName username email phone')
-        .populate('schoolId', 'name')
-        .populate('parentId')
-        .populate('photos')
-        .populate('photoCount')
+        .populate("userId", "firstName lastName username email phone")
+        .populate("schoolId", "name")
+        .populate("parentId")
+        .populate("photos")
+        .populate("photoCount")
         .lean();
 
       if (!student) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
       return this.formatStudentResponse(student);
@@ -293,15 +392,18 @@ class StudentService {
     }
   }
 
-  async updateStudent(id: string, updateData: IUpdateStudentRequest): Promise<IStudentResponse> {
+  async updateStudent(
+    id: string,
+    updateData: IUpdateStudentRequest
+  ): Promise<IStudentResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const student = await Student.findById(id);
       if (!student) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
       const updatedStudent = await Student.findByIdAndUpdate(
@@ -309,10 +411,10 @@ class StudentService {
         { $set: updateData },
         { new: true, runValidators: true }
       )
-        .populate('userId', 'firstName lastName username email phone')
-        .populate('schoolId', 'name')
-        .populate('parentId')
-        .populate('photoCount')
+        .populate("userId", "firstName lastName username email phone")
+        .populate("schoolId", "name")
+        .populate("parentId")
+        .populate("photoCount")
         .lean();
 
       return this.formatStudentResponse(updatedStudent!);
@@ -330,15 +432,15 @@ class StudentService {
   async deleteStudent(id: string): Promise<void> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const student = await Student.findById(id)
-        .populate('userId', 'firstName lastName')
-        .populate('schoolId', 'name');
+        .populate("userId", "firstName lastName")
+        .populate("schoolId", "name");
 
       if (!student) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
       // Delete associated user account
@@ -348,8 +450,9 @@ class StudentService {
 
       // Delete photo folder
       try {
-        const age = new Date().getFullYear() - new Date(student.dob).getFullYear();
-        const admitDate = student.admissionDate.toISOString().split('T')[0];
+        const age =
+          new Date().getFullYear() - new Date(student.dob).getFullYear();
+        const admitDate = student.admissionDate.toISOString().split("T")[0];
 
         const folderPath = await FileUtils.createStudentPhotoFolder(
           (student.schoolId as any).name,
@@ -366,7 +469,7 @@ class StudentService {
 
         await FileUtils.deleteFolder(folderPath);
       } catch (error) {
-        console.warn('Failed to delete photo folder:', error);
+        console.warn("Failed to delete photo folder:", error);
       }
 
       // The pre-delete middleware in the model will handle photo deletion
@@ -388,19 +491,21 @@ class StudentService {
   ): Promise<IStudentPhotoResponse[]> {
     try {
       if (!Types.ObjectId.isValid(studentId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const student = await Student.findById(studentId)
-        .populate('userId', 'firstName lastName')
-        .populate('schoolId', 'name');
+        .populate("userId", "firstName lastName")
+        .populate("schoolId", "name");
 
       if (!student) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
       // Check current photo count
-      const currentPhotoCount = await StudentPhoto.countDocuments({ studentId });
+      const currentPhotoCount = await StudentPhoto.countDocuments({
+        studentId,
+      });
       const remainingSlots = config.max_photos_per_student - currentPhotoCount;
 
       if (files.length > remainingSlots) {
@@ -419,8 +524,9 @@ class StudentService {
       }
 
       // Get student folder path
-      const age = new Date().getFullYear() - new Date(student.dob).getFullYear();
-      const admitDate = student.admissionDate.toISOString().split('T')[0];
+      const age =
+        new Date().getFullYear() - new Date(student.dob).getFullYear();
+      const admitDate = student.admissionDate.toISOString().split("T")[0];
 
       const folderPath = await FileUtils.createStudentPhotoFolder(
         (student.schoolId as any).name,
@@ -436,7 +542,9 @@ class StudentService {
       );
 
       // Get available photo numbers
-      const availableNumbers = await FileUtils.getAvailablePhotoNumbers(folderPath);
+      const availableNumbers = await FileUtils.getAvailablePhotoNumbers(
+        folderPath
+      );
 
       if (files.length > availableNumbers.length) {
         throw new AppError(
@@ -453,7 +561,11 @@ class StudentService {
         const photoNumber = availableNumbers[i];
 
         // Save file with numbered naming
-        const fileInfo = await FileUtils.savePhotoWithNumber(file, folderPath, photoNumber);
+        const fileInfo = await FileUtils.savePhotoWithNumber(
+          file,
+          folderPath,
+          photoNumber
+        );
 
         // Create photo record
         const photoRecord = await StudentPhoto.create({
@@ -491,13 +603,16 @@ class StudentService {
 
   async deletePhoto(studentId: string, photoId: string): Promise<void> {
     try {
-      if (!Types.ObjectId.isValid(studentId) || !Types.ObjectId.isValid(photoId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid ID format');
+      if (
+        !Types.ObjectId.isValid(studentId) ||
+        !Types.ObjectId.isValid(photoId)
+      ) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid ID format");
       }
 
       const photo = await StudentPhoto.findOne({ _id: photoId, studentId });
       if (!photo) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Photo not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Photo not found");
       }
 
       // Delete physical file
@@ -524,15 +639,21 @@ class StudentService {
   ): Promise<IStudentResponse[]> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
-      const students = await Student.findByGradeAndSection(schoolId, grade, section);
-      return students.map(student => this.formatStudentResponse(student));
+      const students = await Student.findByGradeAndSection(
+        schoolId,
+        grade,
+        section
+      );
+      return students.map((student) => this.formatStudentResponse(student));
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch students by grade and section: ${(error as Error).message}`
+        `Failed to fetch students by grade and section: ${
+          (error as Error).message
+        }`
       );
     }
   }
@@ -540,33 +661,47 @@ class StudentService {
   async getStudentStats(schoolId: string): Promise<IStudentStats> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
-      const [totalStudents, activeStudents, gradeStats, sectionStats, recentAdmissions] = await Promise.all([
+      const [
+        totalStudents,
+        activeStudents,
+        gradeStats,
+        sectionStats,
+        recentAdmissions,
+      ] = await Promise.all([
         Student.countDocuments({ schoolId }),
         Student.countDocuments({ schoolId, isActive: true }),
         Student.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
-          { $group: { _id: '$grade', count: { $sum: 1 } } },
+          { $group: { _id: "$grade", count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ]),
         Student.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
-          { $group: { _id: '$section', count: { $sum: 1 } } },
+          { $group: { _id: "$section", count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ]),
         Student.countDocuments({
           schoolId,
-          admissionDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          admissionDate: {
+            $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
         }),
       ]);
 
       return {
         totalStudents,
         activeStudents,
-        byGrade: gradeStats.map(stat => ({ grade: stat._id, count: stat.count })),
-        bySection: sectionStats.map(stat => ({ section: stat._id, count: stat.count })),
+        byGrade: gradeStats.map((stat) => ({
+          grade: stat._id,
+          count: stat.count,
+        })),
+        bySection: sectionStats.map((stat) => ({
+          section: stat._id,
+          count: stat.count,
+        })),
         recentAdmissions,
       };
     } catch (error) {
@@ -580,14 +715,14 @@ class StudentService {
   async getStudentPhotos(studentId: string): Promise<IStudentPhotoResponse[]> {
     try {
       if (!Types.ObjectId.isValid(studentId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const photos = await StudentPhoto.find({ studentId })
         .sort({ photoNumber: 1 })
         .lean();
 
-      return photos.map(photo => ({
+      return photos.map((photo) => ({
         id: photo._id.toString(),
         photoPath: photo.photoPath,
         photoNumber: photo.photoNumber,
@@ -606,20 +741,21 @@ class StudentService {
   async getAvailablePhotoSlots(studentId: string): Promise<number[]> {
     try {
       if (!Types.ObjectId.isValid(studentId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid student ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
       const student = await Student.findById(studentId)
-        .populate('userId', 'firstName')
-        .populate('schoolId', 'name');
+        .populate("userId", "firstName")
+        .populate("schoolId", "name");
 
       if (!student) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
       // Get student folder path
-      const age = new Date().getFullYear() - new Date(student.dob).getFullYear();
-      const admitDate = student.admissionDate.toISOString().split('T')[0];
+      const age =
+        new Date().getFullYear() - new Date(student.dob).getFullYear();
+      const admitDate = student.admissionDate.toISOString().split("T")[0];
 
       const folderPath = await FileUtils.createStudentPhotoFolder(
         (student.schoolId as any).name,
@@ -644,13 +780,18 @@ class StudentService {
   }
 
   private formatStudentResponse(student: any): IStudentResponse {
-    const age = student.dob ? new Date().getFullYear() - new Date(student.dob).getFullYear() : 0;
-    const admissionYear = student.admissionDate ? new Date(student.admissionDate).getFullYear() : new Date().getFullYear();
+    const age = student.dob
+      ? new Date().getFullYear() - new Date(student.dob).getFullYear()
+      : 0;
+    const admissionYear = student.admissionDate
+      ? new Date(student.admissionDate).getFullYear()
+      : new Date().getFullYear();
 
     return {
       id: student._id?.toString() || student.id,
       userId: student.userId?._id?.toString() || student.userId?.toString(),
-      schoolId: student.schoolId?._id?.toString() || student.schoolId?.toString(),
+      schoolId:
+        student.schoolId?._id?.toString() || student.schoolId?.toString(),
       studentId: student.studentId,
       grade: student.grade,
       section: student.section,
@@ -658,39 +799,49 @@ class StudentService {
       dob: student.dob,
       admissionDate: student.admissionDate,
       admissionYear,
-      parentId: student.parentId?._id?.toString() || student.parentId?.toString(),
+      parentId:
+        student.parentId?._id?.toString() || student.parentId?.toString(),
       rollNumber: student.rollNumber,
       isActive: student.isActive,
       age,
       createdAt: student.createdAt,
       updatedAt: student.updatedAt,
-      user: student.userId ? {
-        id: student.userId._id?.toString() || student.userId.id,
-        username: student.userId.username,
-        firstName: student.userId.firstName,
-        lastName: student.userId.lastName,
-        fullName: `${student.userId.firstName} ${student.userId.lastName}`.trim(),
-        email: student.userId.email,
-        phone: student.userId.phone,
-      } : undefined,
-      school: student.schoolId?.name ? {
-        id: student.schoolId._id?.toString() || student.schoolId.id,
-        name: student.schoolId.name,
-      } : undefined,
-      parent: student.parentId ? {
-        id: student.parentId._id?.toString() || student.parentId.id,
-        userId: student.parentId.userId?.toString(),
-        fullName: student.parentId.userId ?
-          `${student.parentId.userId.firstName} ${student.parentId.userId.lastName}`.trim() : '',
-      } : undefined,
-      photos: student.photos?.map((photo: any) => ({
-        id: photo._id?.toString() || photo.id,
-        photoPath: photo.photoPath,
-        photoNumber: photo.photoNumber,
-        filename: photo.filename,
-        size: photo.size,
-        createdAt: photo.createdAt,
-      })) || [],
+      user: student.userId
+        ? {
+            id: student.userId._id?.toString() || student.userId.id,
+            username: student.userId.username,
+            firstName: student.userId.firstName,
+            lastName: student.userId.lastName,
+            fullName:
+              `${student.userId.firstName} ${student.userId.lastName}`.trim(),
+            email: student.userId.email,
+            phone: student.userId.phone,
+          }
+        : undefined,
+      school: student.schoolId?.name
+        ? {
+            id: student.schoolId._id?.toString() || student.schoolId.id,
+            name: student.schoolId.name,
+          }
+        : undefined,
+      parent: student.parentId
+        ? {
+            id: student.parentId._id?.toString() || student.parentId.id,
+            userId: student.parentId.userId?.toString(),
+            fullName: student.parentId.userId
+              ? `${student.parentId.userId.firstName} ${student.parentId.userId.lastName}`.trim()
+              : "",
+          }
+        : undefined,
+      photos:
+        student.photos?.map((photo: any) => ({
+          id: photo._id?.toString() || photo.id,
+          photoPath: photo.photoPath,
+          photoNumber: photo.photoNumber,
+          filename: photo.filename,
+          size: photo.size,
+          createdAt: photo.createdAt,
+        })) || [],
       photoCount: student.photoCount || 0,
     };
   }

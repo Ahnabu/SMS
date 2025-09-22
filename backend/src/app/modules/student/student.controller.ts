@@ -1,37 +1,43 @@
-import { Request, Response } from 'express';
-import httpStatus from 'http-status';
-import { catchAsync } from '../../utils/catchAsync';
-import { sendResponse } from '../../utils/sendResponse';
-import { studentService } from './student.service';
-import { ICreateStudentRequest, IUpdateStudentRequest } from './student.interface';
+import { Request, Response } from "express";
+import httpStatus from "http-status";
+import { catchAsync } from "../../utils/catchAsync";
+import { sendResponse } from "../../utils/sendResponse";
+import { studentService } from "./student.service";
+import {
+  ICreateStudentRequest,
+  IUpdateStudentRequest,
+} from "./student.interface";
 
 const createStudent = catchAsync(async (req: Request, res: Response) => {
   const studentData: ICreateStudentRequest = req.body;
-  const result = await studentService.createStudent(studentData);
+  const photos = (req.files as Express.Multer.File[]) || [];
+
+  const result = await studentService.createStudent(studentData, photos);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
-    message: 'Student created successfully with auto-generated credentials',
+    message: "Student created successfully with auto-generated credentials",
     data: {
-      student: result.student,
-      generatedCredentials: {
-        student: {
-          username: result.credentials.student.username,
-          password: result.credentials.student.password,
-          message: 'Student login credentials. Password must be changed on first login.',
-        },
-        parent: {
-          username: result.credentials.parent.username,
-          password: result.credentials.parent.password,
-          message: 'Parent login credentials. Password must be changed on first login.',
-        },
-        instructions: [
-          'Please save these credentials securely and provide them to the respective users.',
-          'Both accounts will require password change upon first login for security.',
-          'Student ID format: YYYYGGRRR (Year-Grade-Roll, e.g., 2025050001)',
-        ],
-      },
+      student: result,
+      credentials: result.credentials
+        ? {
+            student: {
+              id: result.studentId,
+              username: result.credentials.student.username,
+              password: result.credentials.student.password,
+              email: result.user?.email,
+              phone: result.user?.phone,
+            },
+            parent: {
+              id: result.parent?.id || "",
+              username: result.credentials.parent.username,
+              password: result.credentials.parent.password,
+              email: result.parent?.userId ? undefined : undefined, // Will need parent email from service
+              phone: undefined, // Will need parent phone from service
+            },
+          }
+        : undefined,
     },
   });
 });
@@ -43,7 +49,7 @@ const getAllStudents = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Students retrieved successfully',
+    message: "Students retrieved successfully",
     meta: {
       page: result.currentPage,
       limit: Number(filters.limit) || 20,
@@ -60,7 +66,7 @@ const getStudentById = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student retrieved successfully',
+    message: "Student retrieved successfully",
     data: result,
   });
 });
@@ -73,7 +79,7 @@ const updateStudent = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student updated successfully',
+    message: "Student updated successfully",
     data: result,
   });
 });
@@ -85,26 +91,28 @@ const deleteStudent = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student deleted successfully',
+    message: "Student deleted successfully",
     data: null,
   });
 });
 
-const getStudentsByGradeAndSection = catchAsync(async (req: Request, res: Response) => {
-  const { schoolId, grade, section } = req.params;
-  const result = await studentService.getStudentsByGradeAndSection(
-    schoolId,
-    parseInt(grade),
-    section
-  );
+const getStudentsByGradeAndSection = catchAsync(
+  async (req: Request, res: Response) => {
+    const { schoolId, grade, section } = req.params;
+    const result = await studentService.getStudentsByGradeAndSection(
+      schoolId,
+      parseInt(grade),
+      section
+    );
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Students retrieved successfully',
-    data: result,
-  });
-});
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Students retrieved successfully",
+      data: result,
+    });
+  }
+);
 
 const getStudentStats = catchAsync(async (req: Request, res: Response) => {
   const { schoolId } = req.params;
@@ -113,7 +121,7 @@ const getStudentStats = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student statistics retrieved successfully',
+    message: "Student statistics retrieved successfully",
     data: result,
   });
 });
@@ -126,7 +134,7 @@ const uploadStudentPhotos = catchAsync(async (req: Request, res: Response) => {
     return sendResponse(res, {
       statusCode: httpStatus.BAD_REQUEST,
       success: false,
-      message: 'No photos provided',
+      message: "No photos provided",
       data: null,
     });
   }
@@ -136,7 +144,7 @@ const uploadStudentPhotos = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student photos uploaded successfully',
+    message: "Student photos uploaded successfully",
     data: result,
   });
 });
@@ -148,7 +156,7 @@ const deleteStudentPhoto = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student photo deleted successfully',
+    message: "Student photo deleted successfully",
     data: null,
   });
 });
@@ -160,22 +168,24 @@ const getStudentPhotos = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Student photos retrieved successfully',
+    message: "Student photos retrieved successfully",
     data: result,
   });
 });
 
-const getAvailablePhotoSlots = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await studentService.getAvailablePhotoSlots(id);
+const getAvailablePhotoSlots = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await studentService.getAvailablePhotoSlots(id);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Available photo slots retrieved successfully',
-    data: result,
-  });
-});
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Available photo slots retrieved successfully",
+      data: result,
+    });
+  }
+);
 
 export const StudentController = {
   createStudent,

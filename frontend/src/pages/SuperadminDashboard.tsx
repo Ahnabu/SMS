@@ -5,11 +5,11 @@ import SuperadminHome from "@/components/superadmin/SuperadminHome";
 import SchoolManagement from "@/components/superadmin/SchoolManagement";
 import SystemSettings from "@/components/superadmin/SystemSettings";
 import { useAuth } from "../context/AuthContext";
-import { apiService } from "../services/api";
 import type {
   SuperadminStats,
   SchoolSummary,
 } from "@/components/superadmin/types";
+import { apiService } from "@/services";
 
 const SuperadminDashboard: React.FC = () => {
   const { user } = useAuth();

@@ -15,6 +15,7 @@ import { studentApi } from "../../services/student.api";
 import { adminApi } from "../../services/admin.api";
 import { useAuth } from "../../context/AuthContext";
 import { showApiError, showToast } from "../../utils/toast";
+import { CredentialsModal } from "./CredentialsModal";
 
 interface Student {
   id?: string;
@@ -22,10 +23,9 @@ interface Student {
   lastName: string;
   email: string;
   phone?: string;
-  studentId: string;
   grade: number;
-  section: string;
-  rollNumber: number;
+  section?: string; // Made optional - will be auto-assigned
+  rollNumber?: number; // Auto-generated
   dob?: string;
   bloodGroup?: string;
   address?: {
@@ -40,10 +40,13 @@ interface Student {
     name: string;
     email: string;
     phone: string;
+    address?: string;
+    occupation?: string;
   };
   isActive: boolean;
   admissionDate: string;
   schoolId: string;
+  photos?: File[]; // For photo upload
 }
 
 interface StudentFormProps {
@@ -65,12 +68,10 @@ const StudentForm: React.FC<StudentFormProps> = ({
     lastName: "",
     email: "",
     phone: "",
-    studentId: "",
-    grade: 9, // Changed from class to grade with number
-    section: "",
-    rollNumber: 1, // Changed to number
-    dob: "", // Changed from dateOfBirth
-    bloodGroup: "", // Added blood group
+    grade: 9,
+    section: "A",
+    dob: "",
+    bloodGroup: "A+",
     address: {
       street: "",
       city: "",
@@ -82,16 +83,37 @@ const StudentForm: React.FC<StudentFormProps> = ({
       name: "",
       email: "",
       phone: "",
+      address: "",
+      occupation: "",
     },
     isActive: true,
     admissionDate: new Date().toISOString().split("T")[0],
-    schoolId: user?.schoolId || "", // Added schoolId from auth
+    schoolId: user?.schoolId || "",
+    photos: [],
   });
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [schoolData, setSchoolData] = useState<any>(null);
   const [loadingSchool, setLoadingSchool] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoPreview, setPhotoPreview] = useState<string[]>([]);
+  const [credentials, setCredentials] = useState<{
+    student: {
+      id: string;
+      username: string;
+      password: string;
+      email?: string;
+      phone?: string;
+    };
+    parent: {
+      id: string;
+      username: string;
+      password: string;
+      email?: string;
+      phone?: string;
+    };
+  } | null>(null);
 
   // Load school data to get grade configuration
   useEffect(() => {
@@ -114,7 +136,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
 
     loadSchoolData();
   }, [user?.schoolId]);
-  console.log("schoolData:", schoolData);
+
   useEffect(() => {
     if (student) {
       setFormData({
@@ -136,10 +158,8 @@ const StudentForm: React.FC<StudentFormProps> = ({
         lastName: "",
         email: "",
         phone: "",
-        studentId: "",
         grade: 9,
         section: "",
-        rollNumber: 1,
         dob: "",
         bloodGroup: "",
         address: {
@@ -153,10 +173,13 @@ const StudentForm: React.FC<StudentFormProps> = ({
           name: "",
           email: "",
           phone: "",
+          address: "",
+          occupation: "",
         },
         isActive: true,
         admissionDate: new Date().toISOString().split("T")[0],
         schoolId: user?.schoolId || "",
+        photos: [],
       });
     }
     setErrors({});
@@ -172,16 +195,21 @@ const StudentForm: React.FC<StudentFormProps> = ({
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
-    if (!formData.studentId.trim())
-      newErrors.studentId = "Student ID is required";
     if (!formData.grade || formData.grade < 1 || formData.grade > 12)
       newErrors.grade = "Valid grade is required";
-    if (!formData.section.trim()) newErrors.section = "Section is required";
-    if (!formData.rollNumber || formData.rollNumber < 1)
-      newErrors.rollNumber = "Valid roll number is required";
+    if (!formData.bloodGroup?.trim())
+      newErrors.bloodGroup = "Blood group is required";
+    if (!formData.dob) newErrors.dob = "Date of birth is required";
     if (!formData.admissionDate)
       newErrors.admissionDate = "Admission date is required";
     if (!formData.schoolId) newErrors.schoolId = "School ID is required";
+
+    // Photos validation
+    if (!formData.photos || formData.photos.length < 3) {
+      newErrors.photos = "Minimum 3 photos are required for registration";
+    } else if (formData.photos.length > 8) {
+      newErrors.photos = "Maximum 8 photos allowed";
+    }
 
     // Parent validation
     if (!formData.parent.name.trim())
@@ -207,50 +235,118 @@ const StudentForm: React.FC<StudentFormProps> = ({
 
     setLoading(true);
     try {
-      console.log("Sending student data:", JSON.stringify(formData, null, 2));
+      // Create FormData and ensure all required fields are present
+      const formDataToSend = new FormData();
 
-      // Transform form data to match backend expectations
-      const studentData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        grade: formData.grade, // Already a number
-        section: formData.section,
-        rollNumber: formData.rollNumber, // Already a number
-        dob: formData.dob || new Date().toISOString().split("T")[0], // Ensure dob is not undefined
-        bloodGroup: formData.bloodGroup || "A+", // Provide default if empty
-        admissionDate: formData.admissionDate,
-        schoolId: formData.schoolId,
-        parentInfo: {
-          firstName: formData.parent.name.split(" ")[0] || formData.parent.name,
-          lastName: formData.parent.name.split(" ").slice(1).join(" ") || "",
-          email: formData.parent.email,
-          phone: formData.parent.phone,
-        },
-      };
-
-      if (student?.id) {
-        // Update existing student
-        const response = await studentApi.update(student.id, studentData);
-        if (response.data.success) {
-          showToast.success("Student updated successfully!");
-          onSave({ ...formData, id: student.id, ...response.data.data });
-        }
-      } else {
-        // Create new student
-        const response = await studentApi.create(studentData);
-        if (response.data.success) {
-          showToast.success("Student created successfully!");
-          onSave({ ...formData, ...response.data.data });
-        }
+      // Validate required fields before sending
+      if (!user?.schoolId) {
+        throw new Error("School ID is missing");
+      }
+      if (!formData.firstName?.trim()) {
+        throw new Error("First name is required");
+      }
+      if (!formData.lastName?.trim()) {
+        throw new Error("Last name is required");
+      }
+      if (!formData.grade) {
+        throw new Error("Grade is required");
+      }
+      if (!formData.bloodGroup) {
+        throw new Error("Blood group is required");
+      }
+      if (!formData.dob) {
+        throw new Error("Date of birth is required");
+      }
+      if (!formData.parent.name?.trim()) {
+        throw new Error("Parent name is required");
       }
 
-      onClose();
+      // Add student data - only add non-empty values
+      formDataToSend.append("schoolId", user.schoolId);
+      formDataToSend.append("firstName", formData.firstName.trim());
+      formDataToSend.append("lastName", formData.lastName.trim());
+
+      if (formData.email?.trim()) {
+        formDataToSend.append("email", formData.email.trim());
+      }
+      if (formData.phone?.trim()) {
+        formDataToSend.append("phone", formData.phone.trim());
+      }
+
+      formDataToSend.append("grade", formData.grade.toString());
+      formDataToSend.append("section", formData.section?.trim() || "A");
+      formDataToSend.append("bloodGroup", formData.bloodGroup);
+      formDataToSend.append("dob", formData.dob);
+      formDataToSend.append("admissionDate", formData.admissionDate);
+
+      // Add parent info
+      const parentName = formData.parent.name.trim();
+      const parentNames = parentName.split(/\s+/); // Split by any whitespace
+
+      formDataToSend.append("parentInfo[firstName]", parentNames[0]);
+      formDataToSend.append(
+        "parentInfo[lastName]",
+        parentNames.slice(1).join(" ")
+      );
+
+      if (formData.parent.email?.trim()) {
+        formDataToSend.append(
+          "parentInfo[email]",
+          formData.parent.email.trim()
+        );
+      }
+      if (formData.parent.phone?.trim()) {
+        formDataToSend.append(
+          "parentInfo[phone]",
+          formData.parent.phone.trim()
+        );
+      }
+      if (formData.parent.address?.trim()) {
+        formDataToSend.append(
+          "parentInfo[address]",
+          formData.parent.address.trim()
+        );
+      }
+      if (formData.parent.occupation?.trim()) {
+        formDataToSend.append(
+          "parentInfo[occupation]",
+          formData.parent.occupation.trim()
+        );
+      }
+
+      // Add photos
+      if (formData.photos && formData.photos.length > 0) {
+        formData.photos.forEach((photo) => {
+          formDataToSend.append("photos", photo);
+        });
+      }
+
+      // Debug log
+      console.log("=== Frontend FormData Debug ===");
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(
+          `${key}:`,
+          value instanceof File ? `File: ${value.name}` : value
+        );
+      }
+
+      // Submit the form
+      const response = await studentApi.createWithPhotos(formDataToSend);
+
+      if (response.data.success) {
+        showToast.success(
+          "Student created successfully with auto-generated credentials!"
+        );
+
+        if (response.data.data.credentials) {
+          setCredentials(response.data.data.credentials);
+        }
+
+        onSave({ ...formData, ...response.data.data });
+        onClose();
+      }
     } catch (error: any) {
       console.error("Failed to save student:", error);
-      console.error("Error response data:", error.response?.data);
-
       showApiError(error, "Failed to save student");
     } finally {
       setLoading(false);
@@ -278,6 +374,84 @@ const StudentForm: React.FC<StudentFormProps> = ({
       }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+
+    // Validate file count
+    if (selectedPhotos.length + newFiles.length > 8) {
+      setErrors((prev) => ({ ...prev, photos: "Maximum 8 photos allowed" }));
+      return;
+    }
+
+    // Validate file types and sizes
+    const validFiles: File[] = [];
+    const previews: string[] = [];
+
+    newFiles.forEach((file) => {
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({
+          ...prev,
+          photos: "Only image files are allowed",
+        }));
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB
+        setErrors((prev) => ({
+          ...prev,
+          photos: "Each photo must be under 10MB",
+        }));
+        return;
+      }
+
+      validFiles.push(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          previews.push(e.target.result as string);
+          if (previews.length === validFiles.length) {
+            setPhotoPreview((prev) => [...prev, ...previews]);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    setSelectedPhotos((prev) => [...prev, ...validFiles]);
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...(prev.photos || []), ...validFiles],
+    }));
+
+    // Clear error if photos are now valid
+    if (selectedPhotos.length + validFiles.length >= 3) {
+      setErrors((prev) => ({ ...prev, photos: "" }));
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setSelectedPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreview((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({
+      ...prev,
+      photos: prev.photos?.filter((_, i) => i !== index) || [],
+    }));
+
+    // Update validation
+    if (selectedPhotos.length - 1 < 3) {
+      setErrors((prev) => ({
+        ...prev,
+        photos: "Minimum 3 photos are required",
+      }));
     }
   };
 
@@ -372,25 +546,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Student ID <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    value={formData.studentId}
-                    onChange={(e) =>
-                      handleInputChange("studentId", e.target.value)
-                    }
-                    placeholder="STU001"
-                    className={errors.studentId ? "border-red-500" : ""}
-                  />
-                  {errors.studentId && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.studentId}
-                    </p>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Grade <span className="text-red-500">*</span>
@@ -437,44 +593,97 @@ const StudentForm: React.FC<StudentFormProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Section <span className="text-red-500">*</span>
+                    Section (Optional)
                   </label>
                   <Input
-                    value={formData.section}
+                    value={formData.section || ""}
                     onChange={(e) =>
                       handleInputChange("section", e.target.value)
                     }
-                    placeholder="A"
+                    placeholder="Leave empty for auto-assignment"
                     className={errors.section ? "border-red-500" : ""}
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    If left empty, section will be automatically assigned based
+                    on capacity
+                  </p>
                   {errors.section && (
                     <p className="text-red-500 text-sm mt-1">
                       {errors.section}
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Roll Number <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.rollNumber}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "rollNumber",
-                        parseInt(e.target.value) || 1
-                      )
-                    }
-                    placeholder="001"
-                    className={errors.rollNumber ? "border-red-500" : ""}
+              </div>
+
+              {/* Photo Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Student Photos <span className="text-red-500">*</span>
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload"
                   />
-                  {errors.rollNumber && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.rollNumber}
+                  <label
+                    htmlFor="photo-upload"
+                    className="cursor-pointer flex flex-col items-center justify-center"
+                  >
+                    <div className="text-gray-400 mb-2">
+                      <svg
+                        className="w-12 h-12"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-600 text-center">
+                      <span className="font-medium">
+                        Click to upload photos
+                      </span>{" "}
+                      or drag and drop
                     </p>
-                  )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG up to 10MB each (3-8 photos required)
+                    </p>
+                  </label>
                 </div>
+
+                {photoPreview.length > 0 && (
+                  <div className="mt-4 grid grid-cols-4 gap-2">
+                    {photoPreview.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-20 object-cover rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {errors.photos && (
+                  <p className="text-red-500 text-sm mt-1">{errors.photos}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -601,6 +810,33 @@ const StudentForm: React.FC<StudentFormProps> = ({
                   )}
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Parent Address
+                  </label>
+                  <Input
+                    value={formData.parent.address || ""}
+                    onChange={(e) =>
+                      handleInputChange("parent.address", e.target.value)
+                    }
+                    placeholder="Enter parent address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Parent Occupation
+                  </label>
+                  <Input
+                    value={formData.parent.occupation || ""}
+                    onChange={(e) =>
+                      handleInputChange("parent.occupation", e.target.value)
+                    }
+                    placeholder="Enter parent occupation"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -699,6 +935,15 @@ const StudentForm: React.FC<StudentFormProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Credentials Modal */}
+      <CredentialsModal
+        isOpen={!!credentials}
+        onClose={() => setCredentials(null)}
+        credentials={credentials}
+        studentName={`${formData.firstName} ${formData.lastName}`}
+        parentName={formData.parent.name}
+      />
     </div>
   );
 };

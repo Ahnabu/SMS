@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, UserCheck, UserX } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { apiService } from '../../services/api';
+import { apiService } from '@/services';
 
 interface Teacher {
   id: string;
@@ -81,8 +81,8 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(({
       const response = await apiService.admin.getTeachers({
         page: currentPage,
         limit: 10,
-        department: departmentFilter !== 'all' ? departmentFilter : undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        // department: departmentFilter !== 'all' ? departmentFilter : undefined,
+        // status: statusFilter !== 'all' ? statusFilter : undefined,
         search: searchTerm || undefined,
       });
 
@@ -244,9 +244,9 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(({
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
-              <select
+              <select aria-label='Department'
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -269,7 +269,7 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(({
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
