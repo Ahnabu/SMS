@@ -52,6 +52,7 @@ import {
   deleteCalendarEvent,
   getAdminDashboard
 } from './admin.controller';
+import { getSchool } from '../school/school.controller';
 
 const router = express.Router();
 
@@ -61,7 +62,11 @@ router.use(requireSchoolAdmin);
 
 // Dashboard endpoint
 router.get('/dashboard', getAdminDashboard);
-
+router.get(
+  "/school/:id",
+  //validateRequest(getSchoolValidationSchema),
+  getSchool
+);
 // Student management routes
 router.post('/students', validateRequest(createStudentValidationSchema), StudentController.createStudent);
 router.get('/students', validateRequest(getStudentsValidationSchema), StudentController.getAllStudents);

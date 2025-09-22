@@ -645,6 +645,7 @@ class StudentService {
 
   private formatStudentResponse(student: any): IStudentResponse {
     const age = student.dob ? new Date().getFullYear() - new Date(student.dob).getFullYear() : 0;
+    const admissionYear = student.admissionDate ? new Date(student.admissionDate).getFullYear() : new Date().getFullYear();
 
     return {
       id: student._id?.toString() || student.id,
@@ -656,6 +657,7 @@ class StudentService {
       bloodGroup: student.bloodGroup,
       dob: student.dob,
       admissionDate: student.admissionDate,
+      admissionYear,
       parentId: student.parentId?._id?.toString() || student.parentId?.toString(),
       rollNumber: student.rollNumber,
       isActive: student.isActive,
