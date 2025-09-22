@@ -1,9 +1,9 @@
-import httpStatus from 'http-status';
-import { Types } from 'mongoose';
-import { AppError } from '../../errors/AppError';
-import { Organization } from '../organization/organization.model';
-import { User } from '../user/user.model';
-import { School } from './school.model';
+import httpStatus from "http-status";
+import { Types } from "mongoose";
+import { AppError } from "../../errors/AppError";
+import { Organization } from "../organization/organization.model";
+import { User } from "../user/user.model";
+import { School } from "./school.model";
 import {
   ICreateSchoolRequest,
   IUpdateSchoolRequest,
@@ -12,7 +12,7 @@ import {
   ISchoolCredentials,
   ISchoolStatsResponse,
   SchoolStatus,
-} from './school.interface';
+} from "./school.interface";
 
 class SchoolService {
   async createSchool(
@@ -23,20 +23,20 @@ class SchoolService {
       if (schoolData.orgId) {
         const organization = await Organization.findById(schoolData.orgId);
         if (!organization) {
-          throw new AppError(httpStatus.NOT_FOUND, 'Organization not found');
+          throw new AppError(httpStatus.NOT_FOUND, "Organization not found");
         }
 
-        if (organization.status !== 'active') {
+        if (organization.status !== "active") {
           throw new AppError(
             httpStatus.BAD_REQUEST,
-            'Cannot create school for inactive organization'
+            "Cannot create school for inactive organization"
           );
         }
       }
 
       // Check if school with same name already exists
       const existingSchool = await School.findOne({
-        name: { $regex: new RegExp(`^${schoolData.name}$`, 'i') }
+        name: { $regex: new RegExp(`^${schoolData.name}$`, "i") },
       });
 
       if (existingSchool) {
@@ -47,9 +47,12 @@ class SchoolService {
       }
 
       // Generate school slug and ID first
-      const slug = schoolData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+      const slug = schoolData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-");
       const schoolIdCounter = await School.countDocuments();
-      const schoolId = `SCH${String(schoolIdCounter + 1).padStart(3, '0')}`;
+      const schoolId = `SCH${String(schoolIdCounter + 1).padStart(3, "0")}`;
 
       // Create the school first with temporary adminUserId
       const tempObjectId = new Types.ObjectId();
@@ -60,23 +63,26 @@ class SchoolService {
         adminUserId: tempObjectId, // Temporary ID
         currentSession: {
           ...schoolData.currentSession,
-          isActive: true
+          isActive: true,
         },
-        academicSessions: [{
-          ...schoolData.currentSession,
-          isActive: true
-        }],
+        academicSessions: [
+          {
+            ...schoolData.currentSession,
+            isActive: true,
+          },
+        ],
         apiEndpoint: `/api/schools/${schoolId}`,
         apiKey: this.generateApiKey(),
         isActive: true,
-        status: 'active'
+        status: "active",
       });
 
       // Now create the admin user with the school ID
       const adminUser = await User.create({
-        role: 'admin',
+        role: "admin",
         username: schoolData.adminDetails.username,
         passwordHash: schoolData.adminDetails.password, // This will be hashed by the User model
+        displayPassword: schoolData.adminDetails.password, // Store plain text for superadmin viewing
         firstName: schoolData.adminDetails.firstName,
         lastName: schoolData.adminDetails.lastName,
         email: schoolData.adminDetails.email,
@@ -86,7 +92,9 @@ class SchoolService {
       });
 
       // Update the school with the real admin user ID
-      await School.findByIdAndUpdate(newSchool._id, { adminUserId: adminUser._id });
+      await School.findByIdAndUpdate(newSchool._id, {
+        adminUserId: adminUser._id,
+      });
 
       return {
         school: this.formatSchoolResponse(newSchool),
@@ -110,7 +118,12 @@ class SchoolService {
   }
 
   private generateApiKey(): string {
-    return 'sk_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+    return (
+      "sk_" +
+      Math.random().toString(36).substr(2, 9) +
+      "_" +
+      Date.now().toString(36)
+    );
   }
 
   async getSchools(queryParams: {
@@ -130,7 +143,8 @@ class SchoolService {
     hasPrevPage: boolean;
   }> {
     try {
-      const { page, limit, orgId, status, search, sortBy, sortOrder } = queryParams;
+      const { page, limit, orgId, status, search, sortBy, sortOrder } =
+        queryParams;
       const skip = (page - 1) * limit;
 
       // Build query
@@ -140,27 +154,27 @@ class SchoolService {
         query.orgId = orgId;
       }
 
-      if (status && status !== 'all') {
+      if (status && status !== "all") {
         query.status = status;
       }
 
       if (search) {
         query.$or = [
-          { name: { $regex: new RegExp(search, 'i') } },
-          { address: { $regex: new RegExp(search, 'i') } },
+          { name: { $regex: new RegExp(search, "i") } },
+          { address: { $regex: new RegExp(search, "i") } },
         ];
       }
 
       // Build sort
       const sort: any = {};
-      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+      sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
       // Execute queries
       const [schools, totalCount] = await Promise.all([
         School.find(query)
-          .populate('orgId', 'name status')
-          .populate('studentsCount')
-          .populate('teachersCount')
+          .populate("orgId", "name status")
+          .populate("studentsCount")
+          .populate("teachersCount")
           .sort(sort)
           .skip(skip)
           .limit(limit)
@@ -171,7 +185,7 @@ class SchoolService {
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        schools: schools.map(school => this.formatSchoolResponse(school)),
+        schools: schools.map((school) => this.formatSchoolResponse(school)),
         totalCount,
         currentPage: page,
         totalPages,
@@ -189,17 +203,17 @@ class SchoolService {
   async getSchoolById(id: string): Promise<ISchoolResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       const school = await School.findById(id)
-        .populate('orgId', 'name status')
-        .populate('studentsCount')
-        .populate('teachersCount')
+        .populate("orgId", "name status")
+        .populate("studentsCount")
+        .populate("teachersCount")
         .lean();
 
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       return this.formatSchoolResponse(school);
@@ -220,19 +234,19 @@ class SchoolService {
   ): Promise<ISchoolResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       // Check if school exists
       const school = await School.findById(id);
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       // If updating name, check for duplicates in the same organization
       if (updateData.name && updateData.name !== school.name) {
         const existingSchool = await School.findOne({
-          name: { $regex: new RegExp(`^${updateData.name}$`, 'i') },
+          name: { $regex: new RegExp(`^${updateData.name}$`, "i") },
           orgId: school.orgId,
           _id: { $ne: id },
         });
@@ -250,9 +264,9 @@ class SchoolService {
         { $set: updateData },
         { new: true, runValidators: true }
       )
-        .populate('orgId', 'name status')
-        .populate('studentsCount')
-        .populate('teachersCount')
+        .populate("orgId", "name status")
+        .populate("studentsCount")
+        .populate("teachersCount")
         .lean();
 
       return this.formatSchoolResponse(updatedSchool!);
@@ -270,12 +284,12 @@ class SchoolService {
   async deleteSchool(id: string): Promise<void> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       const school = await School.findById(id);
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       // The pre-delete middleware in the model will check for dependent data
@@ -291,50 +305,19 @@ class SchoolService {
     }
   }
 
-  async resetAdminPassword(id: string, newPassword: string): Promise<void> {
-    try {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
-      }
-
-      const school = await School.findById(id).populate('adminUserId');
-      if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
-      }
-
-      if (!school.adminUserId) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'School has no admin user assigned');
-      }
-
-      // Get the admin user and update password
-      const adminUser = await User.findById(school.adminUserId);
-      if (!adminUser) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Admin user not found');
-      }
-
-      await adminUser.updatePassword(newPassword);
-      // Mark as first login so they'll be prompted to change password
-      adminUser.isFirstLogin = true;
-      await adminUser.save();
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to reset admin password: ${(error as Error).message}`
-      );
-    }
-  }
-
   async getSchoolsByOrganization(orgId: string): Promise<ISchoolResponse[]> {
     try {
       if (!Types.ObjectId.isValid(orgId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid organization ID format');
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          "Invalid organization ID format"
+        );
       }
 
       const schools = await School.findByOrganization(orgId);
-      return schools.map((school: ISchoolDocument) => this.formatSchoolResponse(school));
+      return schools.map((school: ISchoolDocument) =>
+        this.formatSchoolResponse(school)
+      );
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
@@ -343,7 +326,10 @@ class SchoolService {
     }
   }
 
-  async validateAdminCredentials(username: string, password: string): Promise<ISchoolDocument | null> {
+  async validateAdminCredentials(
+    username: string,
+    password: string
+  ): Promise<ISchoolDocument | null> {
     try {
       // This method is deprecated - use User model authentication instead
       return null;
@@ -376,21 +362,25 @@ class SchoolService {
       stats: school.stats,
       createdAt: school.createdAt,
       updatedAt: school.updatedAt,
-      admin: school.adminUserId?.name ? {
-        id: school.adminUserId._id?.toString() || school.adminUserId.id,
-        username: school.adminUserId.username,
-        fullName: `${school.adminUserId.firstName} ${school.adminUserId.lastName}`,
-        email: school.adminUserId.email,
-        phone: school.adminUserId.phone,
-      } : undefined,
+      admin: school.adminUserId?.name
+        ? {
+            id: school.adminUserId._id?.toString() || school.adminUserId.id,
+            username: school.adminUserId.username,
+            fullName: `${school.adminUserId.firstName} ${school.adminUserId.lastName}`,
+            email: school.adminUserId.email,
+            phone: school.adminUserId.phone,
+          }
+        : undefined,
       // Legacy support - remove adminUsername reference
       orgId: school.orgId?.toString(),
       studentsCount: school.studentsCount || school.stats?.totalStudents || 0,
       teachersCount: school.teachersCount || school.stats?.totalTeachers || 0,
-      organization: school.orgId?.name ? {
-        id: school.orgId._id?.toString() || school.orgId.id,
-        name: school.orgId.name,
-      } : undefined,
+      organization: school.orgId?.name
+        ? {
+            id: school.orgId._id?.toString() || school.orgId.id,
+            name: school.orgId.name,
+          }
+        : undefined,
     };
   }
 
@@ -410,7 +400,7 @@ class SchoolService {
 
       // Create school first with a temporary adminUserId
       const tempObjectId = new Types.ObjectId();
-      
+
       const schoolCreateData: any = {
         name: schoolData.name,
         slug,
@@ -437,17 +427,21 @@ class SchoolService {
       }
 
       const newSchool = new School(schoolCreateData);
-      
+
       // Log the data being created for debugging
-      console.log('Creating school with data:', JSON.stringify(schoolCreateData, null, 2));
-      
+      console.log(
+        "Creating school with data:",
+        JSON.stringify(schoolCreateData, null, 2)
+      );
+
       await newSchool.save();
 
       // Now create admin user with the school ID
       const adminUser = new User({
-        role: 'admin',
+        role: "admin",
         username: schoolData.adminDetails.username,
         passwordHash: schoolData.adminDetails.password,
+        displayPassword: schoolData.adminDetails.password, // Store plain text for superadmin viewing
         firstName: schoolData.adminDetails.firstName,
         lastName: schoolData.adminDetails.lastName,
         email: schoolData.adminDetails.email,
@@ -465,7 +459,7 @@ class SchoolService {
       // Generate API credentials
       const apiEndpoint = newSchool.generateApiEndpoint();
       const apiKey = newSchool.generateApiKey();
-      
+
       newSchool.apiEndpoint = apiEndpoint;
       newSchool.apiKey = apiKey;
       await newSchool.save();
@@ -479,7 +473,9 @@ class SchoolService {
       };
 
       return {
-        school: this.formatSchoolResponse(await newSchool.populate('adminUserId')),
+        school: this.formatSchoolResponse(
+          await newSchool.populate("adminUserId")
+        ),
         credentials,
       };
     } catch (error) {
@@ -499,7 +495,7 @@ class SchoolService {
     status?: SchoolStatus;
     search?: string;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<{
     schools: ISchoolResponse[];
     totalCount: number;
@@ -514,8 +510,8 @@ class SchoolService {
         limit = 10,
         status,
         search,
-        sortBy = 'createdAt',
-        sortOrder = 'desc'
+        sortBy = "createdAt",
+        sortOrder = "desc",
       } = queryParams;
 
       const skip = (page - 1) * limit;
@@ -527,30 +523,30 @@ class SchoolService {
 
       if (search) {
         query.$or = [
-          { name: { $regex: new RegExp(search, 'i') } },
-          { schoolId: { $regex: new RegExp(search, 'i') } },
-          { 'address.city': { $regex: new RegExp(search, 'i') } },
-          { affiliation: { $regex: new RegExp(search, 'i') } },
+          { name: { $regex: new RegExp(search, "i") } },
+          { schoolId: { $regex: new RegExp(search, "i") } },
+          { "address.city": { $regex: new RegExp(search, "i") } },
+          { affiliation: { $regex: new RegExp(search, "i") } },
         ];
       }
 
       const sort: any = {};
-      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+      sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
       const [schools, totalCount] = await Promise.all([
         School.find(query)
-          .populate('adminUserId', 'username firstName lastName email phone')
+          .populate("adminUserId", "username firstName lastName email phone")
           .sort(sort)
           .skip(skip)
           .limit(limit)
           .lean(),
         School.countDocuments(query),
       ]);
-
+      console.log(schools);
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        schools: schools.map(school => this.formatSchoolResponse(school)),
+        schools: schools.map((school) => this.formatSchoolResponse(school)),
         totalCount,
         currentPage: page,
         totalPages,
@@ -571,12 +567,15 @@ class SchoolService {
   async getSchoolStats(schoolId: string): Promise<ISchoolStatsResponse> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
-      const school = await School.findById(schoolId).populate('adminUserId', 'firstName lastName');
+      const school = await School.findById(schoolId).populate(
+        "adminUserId",
+        "firstName lastName"
+      );
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       // Update stats
@@ -620,26 +619,27 @@ class SchoolService {
   ): Promise<ISchoolResponse> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       const school = await School.findById(schoolId);
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       // Check if username already exists
       const existingUser = await User.findOne({ username: adminData.username });
       if (existingUser) {
-        throw new AppError(httpStatus.CONFLICT, 'Username already exists');
+        throw new AppError(httpStatus.CONFLICT, "Username already exists");
       }
 
       // Create new admin user
       const newAdmin = new User({
-        role: 'admin',
+        role: "admin",
         schoolId: school._id,
         username: adminData.username,
         passwordHash: adminData.password,
+        displayPassword: adminData.password, // Store plain text for superadmin viewing
         firstName: adminData.firstName,
         lastName: adminData.lastName,
         email: adminData.email,
@@ -658,7 +658,7 @@ class SchoolService {
       school.adminUserId = newAdmin._id;
       await school.save();
 
-      return this.formatSchoolResponse(await school.populate('adminUserId'));
+      return this.formatSchoolResponse(await school.populate("adminUserId"));
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
@@ -678,21 +678,21 @@ class SchoolService {
   ): Promise<ISchoolResponse> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       const school = await School.findByIdAndUpdate(
         schoolId,
-        { 
-          status, 
+        {
+          status,
           lastModifiedBy: updatedBy,
-          isActive: status === SchoolStatus.ACTIVE 
+          isActive: status === SchoolStatus.ACTIVE,
         },
         { new: true, runValidators: true }
-      ).populate('adminUserId', 'username firstName lastName email phone');
+      ).populate("adminUserId", "username firstName lastName email phone");
 
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       return this.formatSchoolResponse(school);
@@ -728,29 +728,40 @@ class SchoolService {
         activeSchools,
         pendingSchools,
         suspendedSchools,
-        schoolStats
+        schoolStats,
       ] = await Promise.all([
         School.countDocuments({ isActive: true }),
         School.countDocuments({ status: SchoolStatus.ACTIVE }),
         School.countDocuments({ status: SchoolStatus.PENDING_APPROVAL }),
         School.countDocuments({ status: SchoolStatus.SUSPENDED }),
-        School.find({ isActive: true }).select('stats').lean()
+        School.find({ isActive: true }).select("stats").lean(),
       ]);
 
-      const totalStudents = schoolStats.reduce((sum, school) => sum + (school.stats?.totalStudents || 0), 0);
-      const totalTeachers = schoolStats.reduce((sum, school) => sum + (school.stats?.totalTeachers || 0), 0);
-      const totalParents = schoolStats.reduce((sum, school) => sum + (school.stats?.totalParents || 0), 0);
+      const totalStudents = schoolStats.reduce(
+        (sum, school) => sum + (school.stats?.totalStudents || 0),
+        0
+      );
+      const totalTeachers = schoolStats.reduce(
+        (sum, school) => sum + (school.stats?.totalTeachers || 0),
+        0
+      );
+      const totalParents = schoolStats.reduce(
+        (sum, school) => sum + (school.stats?.totalParents || 0),
+        0
+      );
 
       // Calculate recent activity (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const [recentSchools, recentStudents, recentTeachers] = await Promise.all([
-        School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-        // TODO: Add student and teacher count queries when those collections are available
-        Promise.resolve(0),
-        Promise.resolve(0)
-      ]);
+      const [recentSchools, recentStudents, recentTeachers] = await Promise.all(
+        [
+          School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+          // TODO: Add student and teacher count queries when those collections are available
+          Promise.resolve(0),
+          Promise.resolve(0),
+        ]
+      );
 
       return {
         totalSchools,
@@ -777,19 +788,21 @@ class SchoolService {
   /**
    * Generate new API key for school
    */
-  async regenerateApiKey(schoolId: string): Promise<{ apiKey: string; apiEndpoint: string }> {
+  async regenerateApiKey(
+    schoolId: string
+  ): Promise<{ apiKey: string; apiEndpoint: string }> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
       const school = await School.findById(schoolId);
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       const newApiKey = await school.regenerateApiKey();
-      
+
       return {
         apiKey: newApiKey,
         apiEndpoint: school.apiEndpoint,
@@ -801,6 +814,141 @@ class SchoolService {
         `Failed to regenerate API key: ${(error as Error).message}`
       );
     }
+  }
+
+  async getAdminCredentials(schoolId: string): Promise<{
+    username: string;
+    password: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    lastLogin?: string;
+  }> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
+      }
+
+      const school = await School.findById(schoolId).populate({
+        path: "adminUserId",
+        select:
+          "username firstName lastName email phone lastLogin displayPassword",
+      });
+
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
+      }
+
+      if (!school.adminUserId) {
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          "Admin not assigned to this school"
+        );
+      }
+
+      const admin = school.adminUserId as any; // Populated admin user
+
+      return {
+        username: admin.username,
+        password: admin.displayPassword || "********", // Show actual password for superadmin
+        fullName: admin.fullName || `${admin.firstName} ${admin.lastName}`,
+        email: admin.email,
+        phone: admin.phone,
+        lastLogin: admin.lastLogin?.toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get admin credentials: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async resetAdminPassword(
+    schoolId: string,
+    newPassword?: string,
+    updatedBy?: Types.ObjectId
+  ): Promise<{
+    username: string;
+    newPassword: string;
+    fullName: string;
+    email: string;
+  }> {
+    try {
+      if (!Types.ObjectId.isValid(schoolId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
+      }
+
+      const school = await School.findById(schoolId).populate({
+        path: "adminUserId",
+        select: "username firstName lastName email passwordHash",
+      });
+
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
+      }
+
+      if (!school.adminUserId) {
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          "Admin not assigned to this school"
+        );
+      }
+
+      const admin = school.adminUserId as any; // Populated admin user
+
+      // Generate new password if not provided
+      const passwordToSet = newPassword || this.generateSecurePassword();
+
+      // Update the admin's password using the User model method
+      const userToUpdate = await User.findById(admin._id);
+      if (!userToUpdate) {
+        throw new AppError(httpStatus.NOT_FOUND, "Admin user not found");
+      }
+
+      // Update both hashed password and display password
+      await userToUpdate.updatePassword(passwordToSet);
+      userToUpdate.displayPassword = passwordToSet; // Store plain text for superadmin viewing
+      await userToUpdate.save();
+
+      return {
+        username: admin.username,
+        newPassword: passwordToSet,
+        fullName: admin.fullName || `${admin.firstName} ${admin.lastName}`,
+        email: admin.email,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to reset admin password: ${(error as Error).message}`
+      );
+    }
+  }
+
+  private generateSecurePassword(): string {
+    const length = 12;
+    const charset =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+
+    // Ensure at least one character from each category
+    password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // uppercase
+    password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]; // lowercase
+    password += "0123456789"[Math.floor(Math.random() * 10)]; // digit
+    password += "!@#$%^&*"[Math.floor(Math.random() * 8)]; // special char
+
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+      password += charset[Math.floor(Math.random() * charset.length)];
+    }
+
+    // Shuffle the password
+    return password
+      .split("")
+      .sort(() => 0.5 - Math.random())
+      .join("");
   }
 }
 

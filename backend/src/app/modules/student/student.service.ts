@@ -6,7 +6,6 @@ import { School } from '../school/school.model';
 import { User } from '../user/user.model';
 import { Student, StudentPhoto } from './student.model';
 import { FileUtils } from '../../utils/fileUtils';
-import { CredentialGenerator } from '../../utils/credentialGenerator';
 import config from '../../config';
 import {
   ICreateStudentRequest,
@@ -19,13 +18,7 @@ import {
 } from './student.interface';
 
 class StudentService {
-  async createStudent(studentData: ICreateStudentRequest): Promise<{
-    student: IStudentResponse;
-    credentials: {
-      student: { username: string; password: string };
-      parent: { username: string; password: string };
-    };
-  }> {
+  async createStudent(studentData: ICreateStudentRequest): Promise<IStudentResponse> {
     try {
       // Verify school exists and is active
       const school = await School.findById(studentData.schoolId);
@@ -40,24 +33,12 @@ class StudentService {
         );
       }
 
-      // Extract admission year from admission date
-      const admissionDate = studentData.admissionDate ? new Date(studentData.admissionDate) : new Date();
-      const admissionYear = admissionDate.getFullYear();
-
-      // Generate student ID and credentials using the new system
-      const registrationData = await CredentialGenerator.generateStudentRegistration(
-        admissionYear,
-        studentData.grade.toString(),
-        studentData.schoolId
-      );
-
       // Check if student with same name exists in the same grade/section
       const existingUser = await User.findOne({
         schoolId: studentData.schoolId,
         firstName: { $regex: new RegExp(`^${studentData.firstName}$`, 'i') },
         lastName: { $regex: new RegExp(`^${studentData.lastName}$`, 'i') },
         role: 'student',
-        isDeleted: false,
       });
 
       if (existingUser) {
@@ -66,7 +47,6 @@ class StudentService {
           userId: existingUser._id,
           grade: studentData.grade,
           section: studentData.section,
-          isDeleted: false,
         });
 
         if (existingStudent) {
@@ -77,59 +57,68 @@ class StudentService {
         }
       }
 
+      // Generate student ID
+      const studentId = await Student.generateNextStudentId(
+        studentData.schoolId,
+        studentData.grade
+      );
+
+      // Generate username from student ID
+      const username = studentId.replace(/-/g, '').toLowerCase();
+
       // Create user account for student
       const newUser = await User.create({
         schoolId: studentData.schoolId,
         role: 'student',
-        username: registrationData.credentials.student.username,
-        passwordHash: registrationData.credentials.student.hashedPassword,
+        username,
+        passwordHash: studentId, // Temporary password, same as student ID
         firstName: studentData.firstName,
         lastName: studentData.lastName,
         email: studentData.email,
         phone: studentData.phone,
-        isFirstLogin: true, // Force password change on first login
       });
 
       // Create student record
       const newStudent = await Student.create({
         userId: newUser._id,
         schoolId: studentData.schoolId,
-        studentId: registrationData.studentId,
+        studentId,
         grade: studentData.grade,
         section: studentData.section,
         bloodGroup: studentData.bloodGroup,
         dob: new Date(studentData.dob),
-        admissionDate: admissionDate,
-        admissionYear: admissionYear,
-        rollNumber: registrationData.rollNumber,
+        admissionDate: studentData.admissionDate ? new Date(studentData.admissionDate) : new Date(),
+        rollNumber: studentData.rollNumber,
       });
 
       // Create parent if parent info is provided
-      let parentUser = null;
       if (studentData.parentInfo) {
         const { parentInfo } = studentData;
 
+        // Generate parent username
+        const parentUsername = `${username}_parent`;
+
         // Create parent user account
-        parentUser = await User.create({
+        const parentUser = await User.create({
           schoolId: studentData.schoolId,
           role: 'parent',
-          username: registrationData.credentials.parent.username,
-          passwordHash: registrationData.credentials.parent.hashedPassword,
+          username: parentUsername,
+          passwordHash: studentId, // Same temporary password
           firstName: parentInfo.firstName,
           lastName: parentInfo.lastName,
           email: parentInfo.email,
           phone: parentInfo.phone,
-          isFirstLogin: true, // Force password change on first login
         });
 
-        // Update student with parent reference
+        // Create parent record (Parent model will be created later)
+        // For now, just update the student with parent reference
         newStudent.parentId = parentUser._id;
         await newStudent.save();
       }
 
       // Create photo folder structure
       const age = new Date().getFullYear() - new Date(studentData.dob).getFullYear();
-      const admitDate = admissionDate.toISOString().split('T')[0];
+      const admitDate = new Date(studentData.admissionDate || Date.now()).toISOString().split('T')[0];
 
       try {
         await FileUtils.createStudentPhotoFolder(school.name, {
@@ -139,7 +128,7 @@ class StudentService {
           section: studentData.section,
           bloodGroup: studentData.bloodGroup,
           admitDate,
-          studentId: registrationData.studentId,
+          studentId,
         });
       } catch (error) {
         console.warn('Failed to create photo folder:', error);
@@ -153,23 +142,8 @@ class StudentService {
         { path: 'parentId' },
       ]);
 
-      const studentResponse = this.formatStudentResponse(newStudent);
-
-      // Return student data along with plain text credentials for admin
-      return {
-        student: studentResponse,
-        credentials: {
-          student: {
-            username: registrationData.credentials.student.username,
-            password: registrationData.credentials.student.password,
-          },
-          parent: {
-            username: registrationData.credentials.parent.username,
-            password: registrationData.credentials.parent.password,
-          },
-        },
-      };
-    } catch (error) {
+      return this.formatStudentResponse(newStudent);
+    } catch (error: unknown) {
       if (error instanceof AppError) {
         throw error;
       }
@@ -282,10 +256,9 @@ class StudentService {
         hasPrevPage: page > 1,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch students: ${errorMessage}`
+        `Failed to fetch students: ${(error as Error).message}`
       );
     }
   }
@@ -313,10 +286,9 @@ class StudentService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch student: ${errorMessage}`
+        `Failed to fetch student: ${(error as Error).message}`
       );
     }
   }
@@ -348,10 +320,9 @@ class StudentService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to update student: ${errorMessage}`
+        `Failed to update student: ${(error as Error).message}`
       );
     }
   }
@@ -404,10 +375,9 @@ class StudentService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete student: ${errorMessage}`
+        `Failed to delete student: ${(error as Error).message}`
       );
     }
   }
@@ -503,7 +473,7 @@ class StudentService {
           photoNumber: photoRecord.photoNumber,
           filename: photoRecord.filename,
           size: photoRecord.size,
-          createdAt: photoRecord.createdAt || new Date(),
+          createdAt: photoRecord.createdAt as Date,
         });
       }
 
@@ -512,10 +482,9 @@ class StudentService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to upload photos: ${errorMessage}`
+        `Failed to upload photos: ${(error as Error).message}`
       );
     }
   }
@@ -541,10 +510,9 @@ class StudentService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete photo: ${errorMessage}`
+        `Failed to delete photo: ${(error as Error).message}`
       );
     }
   }
@@ -562,10 +530,9 @@ class StudentService {
       const students = await Student.findByGradeAndSection(schoolId, grade, section);
       return students.map(student => this.formatStudentResponse(student));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch students by grade and section: ${errorMessage}`
+        `Failed to fetch students by grade and section: ${(error as Error).message}`
       );
     }
   }
@@ -689,7 +656,6 @@ class StudentService {
       bloodGroup: student.bloodGroup,
       dob: student.dob,
       admissionDate: student.admissionDate,
-      admissionYear: student.admissionYear,
       parentId: student.parentId?._id?.toString() || student.parentId?.toString(),
       rollNumber: student.rollNumber,
       isActive: student.isActive,

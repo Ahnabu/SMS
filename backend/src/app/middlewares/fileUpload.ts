@@ -21,7 +21,7 @@ const createFileFilter = (allowedTypes: string[], allowedExtensions?: string[]) 
       }
     }
 
-    cb(new AppError(`File type not allowed. Allowed types: ${allowedTypes.join(', ')}`, 400));
+    cb(new AppError(400, `File type not allowed. Allowed types: ${allowedTypes.join(', ')}`));
   };
 };
 
@@ -226,8 +226,8 @@ export const validateStudentPhotoCount = async (req: Request, res: Response, nex
     const canUpload = await student.canUploadMorePhotos();
     if (!canUpload) {
       return next(new AppError(
-        `Student has reached maximum photo limit of ${config.max_photos_per_student}`,
-        400
+        400,
+        `Student has reached maximum photo limit of ${config.max_photos_per_student}`
       ));
     }
 
@@ -238,8 +238,8 @@ export const validateStudentPhotoCount = async (req: Request, res: Response, nex
 
     if (files.length > remainingSlots) {
       return next(new AppError(
-        `Can only upload ${remainingSlots} more photos. Student has ${currentPhotoCount}/${config.max_photos_per_student} photos.`,
-        400
+        400,
+        `Can only upload ${remainingSlots} more photos. Student has ${currentPhotoCount}/${config.max_photos_per_student} photos.`
       ));
     }
 
@@ -261,8 +261,8 @@ export const validateFileSize = (maxSize: number = config.max_file_size) => {
       for (const file of files) {
         if (file.size > maxSize) {
           return next(new AppError(
-            `File ${file.originalname} exceeds maximum size of ${Math.round(maxSize / (1024 * 1024))}MB`,
-            400
+            400,
+            `File ${file.originalname} exceeds maximum size of ${Math.round(maxSize / (1024 * 1024))}MB`
           ));
         }
       }
@@ -285,8 +285,8 @@ export const validateFileExtensions = (allowedExtensions: string[]) => {
         
         if (!allowedExtensions.includes(fileExt)) {
           return next(new AppError(
-            `File ${file.originalname} has invalid extension. Allowed: ${allowedExtensions.join(', ')}`,
-            400
+            400, 
+            `File ${file.originalname} has invalid extension. Allowed: ${allowedExtensions.join(', ')}`
           ));
         }
       }
@@ -343,8 +343,9 @@ export const handleMulterError = (error: any, req: Request, res: Response, next:
       case 'LIMIT_UNEXPECTED_FILE':
         message = 'Unexpected file field';
         break;
-      case 'MISSING_FIELD_NAME':
-        message = 'Missing field name';
+      // MISSING_FIELD_NAME is not a valid MulterError code
+      default:
+        message = 'File upload error: ' + error.message;
         break;
     }
 
