@@ -1,56 +1,64 @@
-import { Schema, model } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import { Schema, model } from "mongoose";
+import bcrypt from "bcryptjs";
 import {
   IUser,
   IUserDocument,
   IUserMethods,
   IUserModel,
   UserRole,
-} from './user.interface';
+} from "./user.interface";
 
 // User schema definition
 const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
   {
     schoolId: {
       type: Schema.Types.ObjectId,
-      ref: 'School',
-      required: function(this: IUserDocument) {
-        return this.role !== 'superadmin';
+      ref: "School",
+      required: function (this: IUserDocument) {
+        return this.role !== "superadmin";
       },
     },
     role: {
       type: String,
-      required: [true, 'Role is required'],
+      required: [true, "Role is required"],
       enum: Object.values(UserRole),
       index: true,
     },
     username: {
       type: String,
-      required: [true, 'Username is required'],
+      required: [true, "Username is required"],
       unique: true,
       trim: true,
       lowercase: true,
-      minLength: [3, 'Username must be at least 3 characters'],
-      maxLength: [30, 'Username cannot exceed 30 characters'],
-      match: [/^[a-z0-9_.-]+$/, 'Username can only contain lowercase letters, numbers, dots, hyphens, and underscores'],
+      minLength: [3, "Username must be at least 3 characters"],
+      maxLength: [30, "Username cannot exceed 30 characters"],
+      match: [
+        /^[a-z0-9_.-]+$/,
+        "Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
+      ],
       index: true,
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password is required'],
+      required: [true, "Password is required"],
       select: false, // Don't include in queries by default
+    },
+    displayPassword: {
+      type: String,
+      select: false, // Only accessible for superadmin viewing
+      trim: true,
     },
     firstName: {
       type: String,
-      required: [true, 'First name is required'],
+      required: [true, "First name is required"],
       trim: true,
-      maxlength: [50, 'First name cannot exceed 50 characters'],
+      maxlength: [50, "First name cannot exceed 50 characters"],
     },
     lastName: {
       type: String,
-      required: [true, 'Last name is required'],
+      required: [true, "Last name is required"],
       trim: true,
-      maxlength: [50, 'Last name cannot exceed 50 characters'],
+      maxlength: [50, "Last name cannot exceed 50 characters"],
     },
     email: {
       type: String,
@@ -60,7 +68,7 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
         validator: function (email: string) {
           return !email || /^\S+@\S+\.\S+$/.test(email);
         },
-        message: 'Invalid email format',
+        message: "Invalid email format",
       },
       index: { sparse: true }, // Allow multiple null values
     },
@@ -71,7 +79,7 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
         validator: function (phone: string) {
           return !phone || /^\+?[\d\s\-\(\)]+$/.test(phone);
         },
-        message: 'Invalid phone number format',
+        message: "Invalid phone number format",
       },
     },
     isActive: {
@@ -94,11 +102,15 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
 );
 
 // Instance methods
-userSchema.methods.validatePassword = async function (password: string): Promise<boolean> {
+userSchema.methods.validatePassword = async function (
+  password: string
+): Promise<boolean> {
   return await bcrypt.compare(password, this.passwordHash);
 };
 
-userSchema.methods.updatePassword = async function (newPassword: string): Promise<IUserDocument> {
+userSchema.methods.updatePassword = async function (
+  newPassword: string
+): Promise<IUserDocument> {
   this.passwordHash = await bcrypt.hash(newPassword, 12);
   return await this.save();
 };
@@ -108,7 +120,7 @@ userSchema.methods.getFullName = function (): string {
 };
 
 userSchema.methods.canAccessSchool = function (schoolId: string): boolean {
-  if (this.role === 'superadmin') return true;
+  if (this.role === "superadmin") return true;
   return this.schoolId?.toString() === schoolId;
 };
 
@@ -117,32 +129,41 @@ userSchema.methods.updateLastLogin = function (): Promise<IUserDocument> {
   return this.save();
 };
 
-userSchema.methods.markFirstLoginComplete = async function (): Promise<IUserDocument> {
-  this.isFirstLogin = false;
-  this.lastLogin = new Date();
-  return await this.save();
-};
+userSchema.methods.markFirstLoginComplete =
+  async function (): Promise<IUserDocument> {
+    this.isFirstLogin = false;
+    this.lastLogin = new Date();
+    return await this.save();
+  };
 
 // Static methods
-userSchema.statics.findByUsername = function (username: string): Promise<IUserDocument | null> {
-  return this.findOne({ username: username.toLowerCase() }).select('+passwordHash');
+userSchema.statics.findByUsername = function (
+  username: string
+): Promise<IUserDocument | null> {
+  return this.findOne({ username: username.toLowerCase() }).select(
+    "+passwordHash"
+  );
 };
 
-userSchema.statics.findBySchool = function (schoolId: string): Promise<IUserDocument[]> {
+userSchema.statics.findBySchool = function (
+  schoolId: string
+): Promise<IUserDocument[]> {
   return this.find({ schoolId, isActive: true })
-    .populate('schoolId', 'name status')
+    .populate("schoolId", "name status")
     .sort({ firstName: 1, lastName: 1 });
 };
 
-userSchema.statics.findByRole = function (role: UserRole): Promise<IUserDocument[]> {
+userSchema.statics.findByRole = function (
+  role: UserRole
+): Promise<IUserDocument[]> {
   return this.find({ role, isActive: true })
-    .populate('schoolId', 'name status')
+    .populate("schoolId", "name status")
     .sort({ firstName: 1, lastName: 1 });
 };
 
 userSchema.statics.findActiveUsers = function (): Promise<IUserDocument[]> {
   return this.find({ isActive: true })
-    .populate('schoolId', 'name status')
+    .populate("schoolId", "name status")
     .sort({ role: 1, firstName: 1, lastName: 1 });
 };
 
@@ -154,39 +175,52 @@ userSchema.index({ createdAt: -1 });
 userSchema.index({ email: 1 }, { sparse: true });
 
 // Pre-save middleware
-userSchema.pre('save', async function (next) {
+userSchema.pre("save", async function (next) {
   // Hash password if it's being modified and not already hashed
-  if (this.isModified('passwordHash') && !this.passwordHash.startsWith('$2a$')) {
+  if (
+    this.isModified("passwordHash") &&
+    !this.passwordHash.startsWith("$2a$")
+  ) {
     this.passwordHash = await bcrypt.hash(this.passwordHash, 12);
   }
 
   // Normalize names (title case)
-  if (this.isModified('firstName')) {
-    this.firstName = this.firstName.trim().replace(/\w\S*/g, (txt) =>
-      txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-    );
+  if (this.isModified("firstName")) {
+    this.firstName = this.firstName
+      .trim()
+      .replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+      );
   }
 
-  if (this.isModified('lastName')) {
-    this.lastName = this.lastName.trim().replace(/\w\S*/g, (txt) =>
-      txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-    );
+  if (this.isModified("lastName")) {
+    this.lastName = this.lastName
+      .trim()
+      .replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+      );
   }
 
   // Ensure username is lowercase
-  if (this.isModified('username')) {
+  if (this.isModified("username")) {
     this.username = this.username.toLowerCase();
   }
 
   // Validate superadmin constraints
-  if (this.role === 'superadmin' && this.schoolId) {
-    const error = new Error('Superadmin users cannot be associated with a school');
+  if (this.role === "superadmin" && this.schoolId) {
+    const error = new Error(
+      "Superadmin users cannot be associated with a school"
+    );
     return next(error);
   }
 
   // Validate non-superadmin constraints
-  if (this.role !== 'superadmin' && !this.schoolId) {
-    const error = new Error('Non-superadmin users must be associated with a school');
+  if (this.role !== "superadmin" && !this.schoolId) {
+    const error = new Error(
+      "Non-superadmin users must be associated with a school"
+    );
     return next(error);
   }
 
@@ -194,24 +228,28 @@ userSchema.pre('save', async function (next) {
 });
 
 // Pre-delete middleware
-userSchema.pre('deleteOne', { document: true, query: false }, async function (next) {
-  // Check for dependent data based on role (will be implemented when other models are created)
-  // For now, just prevent deletion of superadmin users
-  if (this.role === 'superadmin') {
-    const error = new Error('Superadmin users cannot be deleted');
-    return next(error);
-  }
+userSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    // Check for dependent data based on role (will be implemented when other models are created)
+    // For now, just prevent deletion of superadmin users
+    if (this.role === "superadmin") {
+      const error = new Error("Superadmin users cannot be deleted");
+      return next(error);
+    }
 
-  next();
-});
+    next();
+  }
+);
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function () {
+userSchema.virtual("fullName").get(function () {
   return this.getFullName();
 });
 
 // Ensure virtual fields are serialized
-userSchema.set('toJSON', {
+userSchema.set("toJSON", {
   virtuals: true,
   transform: function (doc, ret) {
     ret.id = ret._id;
@@ -222,7 +260,7 @@ userSchema.set('toJSON', {
   },
 });
 
-userSchema.set('toObject', {
+userSchema.set("toObject", {
   virtuals: true,
   transform: function (doc, ret) {
     ret.id = ret._id;
@@ -234,4 +272,4 @@ userSchema.set('toObject', {
 });
 
 // Export the model
-export const User = model<IUserDocument, IUserModel>('User', userSchema);
+export const User = model<IUserDocument, IUserModel>("User", userSchema);

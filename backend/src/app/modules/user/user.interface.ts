@@ -1,12 +1,12 @@
-import { Document, Types, Model } from 'mongoose';
+import { Document, Types, Model } from "mongoose";
 
 export enum UserRole {
-  SUPERADMIN = 'superadmin',
-  ADMIN = 'admin',
-  TEACHER = 'teacher',
-  STUDENT = 'student',
-  PARENT = 'parent',
-  ACCOUNTANT = 'accountant',
+  SUPERADMIN = "superadmin",
+  ADMIN = "admin",
+  TEACHER = "teacher",
+  STUDENT = "student",
+  PARENT = "parent",
+  ACCOUNTANT = "accountant",
 }
 
 export interface IUser {
@@ -14,6 +14,7 @@ export interface IUser {
   role: UserRole;
   username: string;
   passwordHash: string;
+  displayPassword?: string; // Plain text password for superadmin viewing
   firstName: string;
   lastName: string;
   email?: string;

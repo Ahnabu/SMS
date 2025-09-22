@@ -182,6 +182,7 @@ export interface IUpdateTeacherRequest {
     basic: number;
     allowances?: number;
     deductions?: number;
+    netSalary?: number;
   };
   isClassTeacher?: boolean;
   classTeacherFor?: {

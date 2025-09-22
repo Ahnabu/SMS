@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import config from '../config';
 import { IUserDocument } from '../modules/user/user.interface';
 
@@ -19,9 +19,11 @@ export const generateAccessToken = (user: IUserDocument): string => {
     schoolId: user.schoolId?.toString() || 'system',
   };
 
-  return jwt.sign(payload, config.jwt_secret as string, {
-    expiresIn: config.jwt_expires_in,
-  });
+  const options: SignOptions = {
+    expiresIn: config.jwt_expires_in as jwt.SignOptions['expiresIn'],
+  };
+
+  return jwt.sign(payload, config.jwt_secret as jwt.Secret, options);
 };
 
 export const verifyToken = (token: string): JWTPayload => {

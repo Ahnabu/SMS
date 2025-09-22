@@ -143,13 +143,13 @@ class StudentService {
       ]);
 
       return this.formatStudentResponse(newStudent);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof AppError) {
         throw error;
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to create student: ${error.message}`
+        `Failed to create student: ${(error as Error).message}`
       );
     }
   }
@@ -258,7 +258,7 @@ class StudentService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch students: ${error.message}`
+        `Failed to fetch students: ${(error as Error).message}`
       );
     }
   }
@@ -288,7 +288,7 @@ class StudentService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch student: ${error.message}`
+        `Failed to fetch student: ${(error as Error).message}`
       );
     }
   }
@@ -322,7 +322,7 @@ class StudentService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to update student: ${error.message}`
+        `Failed to update student: ${(error as Error).message}`
       );
     }
   }
@@ -377,7 +377,7 @@ class StudentService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete student: ${error.message}`
+        `Failed to delete student: ${(error as Error).message}`
       );
     }
   }
@@ -473,7 +473,7 @@ class StudentService {
           photoNumber: photoRecord.photoNumber,
           filename: photoRecord.filename,
           size: photoRecord.size,
-          createdAt: photoRecord.createdAt,
+          createdAt: photoRecord.createdAt as Date,
         });
       }
 
@@ -484,7 +484,7 @@ class StudentService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to upload photos: ${error.message}`
+        `Failed to upload photos: ${(error as Error).message}`
       );
     }
   }
@@ -512,7 +512,7 @@ class StudentService {
       }
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to delete photo: ${error.message}`
+        `Failed to delete photo: ${(error as Error).message}`
       );
     }
   }
@@ -532,7 +532,7 @@ class StudentService {
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to fetch students by grade and section: ${error.message}`
+        `Failed to fetch students by grade and section: ${(error as Error).message}`
       );
     }
   }

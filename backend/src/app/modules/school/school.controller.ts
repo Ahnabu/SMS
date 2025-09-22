@@ -6,23 +6,25 @@ import { schoolService } from "./school.service";
 import { sendResponse } from "../../utils/sendResponse";
 import { AuthenticatedRequest } from "../../middlewares/auth";
 
-const createSchool = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  // Use the modern school creation method
-  const result = await schoolService.createSchoolModern(
-    req.body,
-    new Types.ObjectId(req.user?.id)
-  );
-  
-  sendResponse(res, {
-    statusCode: httpStatus.CREATED,
-    success: true,
-    message: "School created successfully",
-    data: {
-      school: result.school,
-      adminCredentials: result.credentials,
-    },
-  });
-});
+const createSchool = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the modern school creation method
+    const result = await schoolService.createSchoolModern(
+      req.body,
+      new Types.ObjectId(req.user?.id)
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: "School created successfully",
+      data: {
+        school: result.school,
+        adminCredentials: result.credentials,
+      },
+    });
+  }
+);
 
 const getAllSchools = catchAsync(async (req: Request, res: Response) => {
   const result = await schoolService.getAllSchools(req.query);
@@ -86,7 +88,7 @@ const assignAdmin = catchAsync(async (req: Request, res: Response) => {
 
 const updateSchoolStatus = catchAsync(async (req: Request, res: Response) => {
   const result = await schoolService.updateSchoolStatus(
-    req.params.id, 
+    req.params.id,
     req.body.status,
     req.body.updatedBy || new Types.ObjectId() // Temporary fallback
   );
@@ -118,6 +120,32 @@ const getSystemStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAdminCredentials = catchAsync(async (req: Request, res: Response) => {
+  const result = await schoolService.getAdminCredentials(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Admin credentials retrieved successfully",
+    data: result,
+  });
+});
+
+const resetAdminPassword = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const result = await schoolService.resetAdminPassword(
+      req.params.id,
+      req.body.newPassword,
+      new Types.ObjectId(req.user?.id)
+    );
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Admin password reset successfully",
+      data: result,
+    });
+  }
+);
+
 export {
   createSchool,
   getAllSchools,
@@ -129,4 +157,6 @@ export {
   updateSchoolStatus,
   regenerateApiKey,
   getSystemStats,
+  getAdminCredentials,
+  resetAdminPassword,
 };
