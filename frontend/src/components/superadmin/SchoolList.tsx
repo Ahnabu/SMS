@@ -220,7 +220,9 @@ const SchoolList: React.FC<SchoolListProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">School Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            School Management
+          </h1>
           <p className="text-gray-600">Manage all schools in the system</p>
         </div>
         <Button onClick={onCreateSchool} className="flex items-center gap-2">
@@ -230,8 +232,7 @@ const SchoolList: React.FC<SchoolListProps> = ({
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className='p-2'>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -240,28 +241,29 @@ const SchoolList: React.FC<SchoolListProps> = ({
                   placeholder="Search schools..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="pending_approval">Pending</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Inactive</option>
-              </select>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-400" />
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-10 border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors min-w-[120px]"
+                  aria-label="Filter schools by status"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="pending_approval">Pending</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
             </div>
           </div>
-        </CardContent>
       </Card>
-
       {/* Schools Grid */}
       {loading ? (
         <div className="text-center py-8">
@@ -272,14 +274,19 @@ const SchoolList: React.FC<SchoolListProps> = ({
         <Card>
           <CardContent className="text-center py-12">
             <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No schools found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No schools found
+            </h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'No schools match your search criteria.'
-                : 'Get started by creating your first school.'}
+              {searchTerm || statusFilter !== "all"
+                ? "No schools match your search criteria."
+                : "Get started by creating your first school."}
             </p>
-            {!searchTerm && statusFilter === 'all' && (
-              <Button onClick={onCreateSchool} className="flex items-center gap-2 mx-auto">
+            {!searchTerm && statusFilter === "all" && (
+              <Button
+                onClick={onCreateSchool}
+                className="flex items-center gap-2 mx-auto"
+              >
                 <Plus className="w-4 h-4" />
                 Add New School
               </Button>
@@ -300,9 +307,7 @@ const SchoolList: React.FC<SchoolListProps> = ({
                       ID: {school.schoolId} • Est. {school.establishedYear}
                     </CardDescription>
                   </div>
-                  <div className="ml-2">
-                    {getStatusBadge(school.status)}
-                  </div>
+                  <div className="ml-2">{getStatusBadge(school.status)}</div>
                 </div>
               </CardHeader>
 
@@ -311,20 +316,28 @@ const SchoolList: React.FC<SchoolListProps> = ({
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-gray-600">
-                    <p>{school.address.city}, {school.address.state}</p>
-                    <p className="text-xs text-gray-500">{school.address.country}</p>
+                    <p>
+                      {school.address.city}, {school.address.state}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {school.address.country}
+                    </p>
                   </div>
                 </div>
 
                 {/* Contact */}
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">{school.contact.phone}</span>
+                  <span className="text-sm text-gray-600">
+                    {school.contact.phone}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">{school.contact.email}</span>
+                  <span className="text-sm text-gray-600">
+                    {school.contact.email}
+                  </span>
                 </div>
 
                 {/* Stats */}
@@ -378,11 +391,11 @@ const SchoolList: React.FC<SchoolListProps> = ({
                     </Button>
                   </div>
 
-                  {school.status === 'pending_approval' && (
+                  {school.status === "pending_approval" && (
                     <div className="flex gap-1">
                       <Button
                         size="sm"
-                        onClick={() => handleStatusChange(school.id, 'active')}
+                        onClick={() => handleStatusChange(school.id, "active")}
                         className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
                       >
                         Approve
@@ -390,7 +403,9 @@ const SchoolList: React.FC<SchoolListProps> = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleStatusChange(school.id, 'suspended')}
+                        onClick={() =>
+                          handleStatusChange(school.id, "suspended")
+                        }
                         className="h-7 px-2 text-xs text-red-600 hover:bg-red-50"
                       >
                         Reject
