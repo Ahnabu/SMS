@@ -167,10 +167,10 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
             <StatusBadge status={school.status} />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onEdit(school)}>
+            {/* <Button variant="outline" size="sm" onClick={() => onEdit(school)}>
               <Edit className="w-4 h-4 mr-1" />
               Edit
-            </Button>
+            </Button> */}
             <Button variant="outline" size="sm" onClick={onClose}>
               <X className="w-4 h-4" />
             </Button>
