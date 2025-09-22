@@ -1,0 +1,276 @@
+  async createStudentNew(studentData: ICreateStudentRequest, photos?: Express.Multer.File[]): Promise<IStudentResponse> {
+    const session = await mongoose.startSession();
+    
+    try {
+      session.startTransaction();
+
+      // Verify school exists and is active
+      const school = await School.findById(studentData.schoolId).session(session);
+      if (!school) {
+        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+      }
+
+      if (school.status !== 'active') {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          'Cannot create student for inactive school'
+        );
+      }
+
+      // Validate photos (minimum 3 required for registration)
+      if (!photos || photos.length < 3) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          'Minimum 3 photos are required for student registration'
+        );
+      }
+
+      validatePhotoUpload(photos, 0);
+
+      // Parse dates
+      const dob = new Date(studentData.dob);
+      const admissionDate = studentData.admissionDate 
+        ? new Date(studentData.admissionDate) 
+        : new Date();
+      const admissionYear = admissionDate.getFullYear();
+
+      // Auto-assign section if not provided
+      let section = studentData.section;
+      if (!section) {
+        section = await this.getOrCreateNextAvailableSection(
+          studentData.schoolId, 
+          studentData.grade, 
+          session
+        );
+      }
+
+      // Generate student credentials and ID
+      const registration = await CredentialGenerator.generateStudentRegistration(
+        admissionYear,
+        studentData.grade.toString(),
+        studentData.schoolId
+      );
+
+      // Create user account for student
+      const studentUser = await User.create([{
+        schoolId: studentData.schoolId,
+        role: 'student',
+        username: registration.credentials.student.username,
+        passwordHash: registration.credentials.student.hashedPassword,
+        firstName: studentData.firstName,
+        lastName: studentData.lastName,
+        email: studentData.email,
+        phone: studentData.phone,
+        isActive: true,
+        requiresPasswordChange: false, // Passwords are permanent for students
+      }], { session });
+
+      // Create parent user account
+      const parentUser = await User.create([{
+        schoolId: studentData.schoolId,
+        role: 'parent',
+        username: registration.credentials.parent.username,
+        passwordHash: registration.credentials.parent.hashedPassword,
+        firstName: studentData.parentInfo.firstName,
+        lastName: studentData.parentInfo.lastName,
+        email: studentData.parentInfo.email,
+        phone: studentData.parentInfo.phone,
+        isActive: true,
+        requiresPasswordChange: false, // Passwords are permanent for parents
+      }], { session });
+
+      // Create parent record
+      const parent = await Parent.create([{
+        userId: parentUser[0]._id,
+        schoolId: studentData.schoolId,
+        address: studentData.parentInfo.address,
+        occupation: studentData.parentInfo.occupation,
+        children: [], // Will be updated after student creation
+      }], { session });
+
+      // Create student record
+      const student = await Student.create([{
+        userId: studentUser[0]._id,
+        schoolId: studentData.schoolId,
+        studentId: registration.studentId,
+        grade: studentData.grade,
+        section: section,
+        bloodGroup: studentData.bloodGroup,
+        dob: dob,
+        admissionDate: admissionDate,
+        admissionYear: admissionYear,
+        parentId: parent[0]._id,
+        rollNumber: registration.rollNumber,
+        isActive: true,
+      }], { session });
+
+      // Update parent's children array
+      await Parent.findByIdAndUpdate(
+        parent[0]._id,
+        { $push: { children: student[0]._id } },
+        { session }
+      );
+
+      // Generate Cloudinary folder path
+      const folderPath = generateCloudinaryFolderPath(
+        school.name,
+        'student',
+        studentData.firstName,
+        dob,
+        studentData.bloodGroup,
+        admissionDate,
+        studentData.grade,
+        section
+      );
+
+      // Upload photos to Cloudinary
+      const uploadedPhotos = await uploadPhotosToCloudinary(
+        photos,
+        folderPath,
+        student[0]._id.toString()
+      );
+
+      // Save photo records to database
+      const photoRecords = uploadedPhotos.map(photo => ({
+        studentId: student[0]._id,
+        schoolId: studentData.schoolId,
+        photoPath: photo.secure_url,
+        photoNumber: photo.photoNumber,
+        filename: photo.public_id,
+        originalName: photo.originalName,
+        mimetype: 'image/jpeg', // All photos are converted to JPEG
+        size: photo.size,
+      }));
+
+      await StudentPhoto.insertMany(photoRecords, { session });
+
+      // Create school folder structure if it doesn't exist
+      await createSchoolFolderStructure(school.name);
+
+      await session.commitTransaction();
+
+      // Return complete student data with credentials
+      const response: IStudentResponse = {
+        id: student[0]._id.toString(),
+        userId: studentUser[0]._id.toString(),
+        schoolId: studentData.schoolId,
+        studentId: registration.studentId,
+        grade: studentData.grade,
+        section: section,
+        bloodGroup: studentData.bloodGroup,
+        dob: dob,
+        admissionDate: admissionDate,
+        admissionYear: admissionYear,
+        parentId: parent[0]._id.toString(),
+        rollNumber: registration.rollNumber,
+        isActive: true,
+        age: CredentialGenerator.calculateAge(dob),
+        createdAt: student[0].createdAt || new Date(),
+        updatedAt: student[0].updatedAt || new Date(),
+        user: {
+          id: studentUser[0]._id.toString(),
+          username: studentUser[0].username,
+          firstName: studentUser[0].firstName,
+          lastName: studentUser[0].lastName,
+          fullName: `${studentUser[0].firstName} ${studentUser[0].lastName}`,
+          email: studentUser[0].email,
+          phone: studentUser[0].phone,
+        },
+        school: {
+          id: school._id.toString(),
+          name: school.name,
+        },
+        parent: {
+          id: parent[0]._id.toString(),
+          userId: parentUser[0]._id.toString(),
+          fullName: `${parentUser[0].firstName} ${parentUser[0].lastName}`,
+          username: parentUser[0].username,
+        },
+        photos: uploadedPhotos.map(photo => ({
+          id: photo.public_id,
+          photoPath: photo.secure_url,
+          photoNumber: photo.photoNumber,
+          filename: photo.public_id,
+          size: photo.size,
+          createdAt: new Date(),
+        })),
+        photoCount: uploadedPhotos.length,
+        folderPath: folderPath,
+        credentials: {
+          student: {
+            username: registration.credentials.student.username,
+            password: registration.credentials.student.password,
+          },
+          parent: {
+            username: registration.credentials.parent.username,
+            password: registration.credentials.parent.password,
+          },
+        },
+      };
+
+      return response;
+
+    } catch (error: unknown) {
+      await session.abortTransaction();
+      console.error('Student creation failed:', error);
+      
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to create student: ${errorMessage}`
+      );
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Get or create next available section for a grade
+   */
+  private async getOrCreateNextAvailableSection(
+    schoolId: string, 
+    grade: number, 
+    session: any
+  ): Promise<string> {
+    // Get existing sections for this grade
+    const existingSections = await Student.distinct('section', {
+      schoolId,
+      grade,
+      isActive: true,
+    }).session(session);
+
+    // Get school settings for max students per section
+    const school = await School.findById(schoolId).session(session);
+    const maxStudentsPerSection = school?.settings?.maxStudentsPerSection || 40;
+
+    // Check if any existing section has space
+    for (const section of existingSections.sort()) {
+      const sectionCount = await Student.countDocuments({
+        schoolId,
+        grade,
+        section,
+        isActive: true,
+      }).session(session);
+
+      if (sectionCount < maxStudentsPerSection) {
+        return section;
+      }
+    }
+
+    // All existing sections are full, create a new one
+    const sections = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const section of sections) {
+      if (!existingSections.includes(section)) {
+        return section;
+      }
+    }
+
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Maximum number of sections (26) reached for this grade'
+    );
+  }

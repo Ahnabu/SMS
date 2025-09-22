@@ -41,12 +41,12 @@ export const apiService = {
     assignAdmin: superadminApi.assignAdmin,
     getAdminCredentials: superadminApi.getAdminCredentials,
     resetAdminPassword: superadminApi.resetAdminPassword,
-    resetPassword: superadminApi.resetAdminPassword, // Backward compatibility
+    resetPassword: superadminApi.resetAdminPassword, 
     regenerateApiKey: superadminApi.regenerateApiKey,
     getSystemSettings: superadminApi.getSystemSettings,
     updateSystemSettings: superadminApi.updateSystemSettings,
-    getAllSchools: superadminApi.getSchools, // Backward compatibility
-    assignSchoolAdmin: superadminApi.assignAdmin, // Backward compatibility
+    getAllSchools: superadminApi.getSchools, 
+    assignSchoolAdmin: superadminApi.assignAdmin, 
   },
 
   // Admin routes

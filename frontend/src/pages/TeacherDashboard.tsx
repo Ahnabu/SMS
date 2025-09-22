@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { apiService } from '../services/api';
+import { apiService } from '@/services';
 
 const TeacherDashboard: React.FC = () => {
   const { user, logout } = useAuth();

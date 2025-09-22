@@ -12,9 +12,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { apiService } from '../../services/api';
+import { apiService } from '@/services';
 
-interface SystemSettings {
+interface SystemSettingsConfig {
   general: {
     siteName: string;
     siteUrl: string;
@@ -67,7 +67,7 @@ interface SystemSettingsProps {
 }
 
 const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
-  const [settings, setSettings] = useState<SystemSettings>({
+  const [settings, setSettings] = useState<SystemSettingsConfig>({
     general: {
       siteName: 'School Management System',
       siteUrl: 'https://sms.example.com',
@@ -135,7 +135,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
     }
   };
 
-  const handleInputChange = (section: keyof SystemSettings, field: string, value: any) => {
+  const handleInputChange = (section: keyof SystemSettingsConfig, field: string, value: any) => {
     setSettings(prev => ({
       ...prev,
       [section]: {
@@ -278,7 +278,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Timezone
                     </label>
-                    <select
+                    <select aria-label='Timezone'
                       value={settings.general.timezone}
                       onChange={(e) => handleInputChange('general', 'timezone', e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -295,7 +295,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Language
                     </label>
-                    <select
+                    <select aria-label='Language'
                       value={settings.general.language}
                       onChange={(e) => handleInputChange('general', 'language', e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -312,7 +312,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Currency
                     </label>
-                    <select
+                    <select aria-label='Currency'
                       value={settings.general.currency}
                       onChange={(e) => handleInputChange('general', 'currency', e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -329,7 +329,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date Format
                     </label>
-                    <select
+                    <select aria-label='Date Format'
                       value={settings.general.dateFormat}
                       onChange={(e) => handleInputChange('general', 'dateFormat', e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"

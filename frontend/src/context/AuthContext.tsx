@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthContextType, User, LoginCredentials, PasswordChangeCredentials } from '../types/auth.types';
-import { apiService } from '../services/api';
+import { authApi } from '@/services';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Since we're using HTTP-only cookies, we can't access the token directly
       // Instead, we call the verify endpoint which will check the cookie
-      const response = await apiService.verify();
+      const response = await authApi.verify();
       
       if (response.data.success && response.data.data) {
         const { user: userData, requiresPasswordChange: needsPasswordChange } = response.data.data;
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials): Promise<{success: boolean; requiresPasswordChange?: boolean}> => {
     try {
       setIsLoading(true);
-      const response = await apiService.login(credentials.username, credentials.password);
+      const response = await authApi.login(credentials.username, credentials.password);
 
       if (response.data.success && response.data.data) {
         const { user: userData, requiresPasswordChange: needsPasswordChange } = response.data.data;
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const changePassword = async (credentials: PasswordChangeCredentials): Promise<boolean> => {
     try {
-      const response = await apiService.forcePasswordChange(credentials.newPassword);
+      const response = await authApi.forcePasswordChange(credentials.newPassword);
       
       if (response.data.success) {
         // Update the requiresPasswordChange flag
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       // Call logout endpoint to clear HTTP-only cookie
-      await apiService.logout();
+      await authApi.logout();
     } catch (error) {
       console.error('Logout API call failed:', error);
     } finally {
