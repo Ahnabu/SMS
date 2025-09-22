@@ -53,7 +53,7 @@ const SchoolAdminInfo: React.FC<SchoolAdminInfoProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  copyToClipboard(school.admin.username, "Username")
+                  copyToClipboard(school.admin!.username, "Username")
                 }
                 className="h-6 w-6 p-0"
               >
@@ -86,7 +86,7 @@ const SchoolAdminInfo: React.FC<SchoolAdminInfoProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    copyToClipboard(school.admin.password!, "Password")
+                    copyToClipboard(school.admin!.password!, "Password")
                   }
                   className="h-6 w-6 p-0"
                 >

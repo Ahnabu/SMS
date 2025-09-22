@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -7,17 +7,15 @@ import {
   Trash2,
   Eye,
   Building,
+  ChevronDown,
+  Check,
+  X,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { StatusBadge } from "../modules/school";
 import { apiService } from "../../services/api";
 
 interface School {
@@ -74,12 +72,9 @@ const SchoolList: React.FC<SchoolListProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadSchools();
-  }, [currentPage, statusFilter, searchTerm, refreshTrigger]); 
-
-  const loadSchools = async () => {
+  const loadSchools = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.superadmin.getSchools({
@@ -176,14 +171,21 @@ const SchoolList: React.FC<SchoolListProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, statusFilter, searchTerm]);
+
+  useEffect(() => {
+    loadSchools();
+  }, [loadSchools, refreshTrigger]);
 
   const handleStatusChange = async (schoolId: string, newStatus: string) => {
     try {
+      setUpdatingStatus(schoolId);
       await apiService.superadmin.updateSchoolStatus(schoolId, newStatus);
       loadSchools();
     } catch (error) {
       console.error("Failed to update school status:", error);
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -202,6 +204,177 @@ const SchoolList: React.FC<SchoolListProps> = ({
     } catch (error) {
       console.error("Failed to delete school:", error);
     }
+  };
+
+  // Status component with dropdown for quick actions
+  const StatusDropdown: React.FC<{ school: School }> = ({ school }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const isUpdating = updatingStatus === school.id;
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node)
+        ) {
+          setIsOpen(false);
+        }
+      };
+
+      if (isOpen) {
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+          document.removeEventListener("mousedown", handleClickOutside);
+      }
+    }, [isOpen]);
+
+    const getStatusConfig = (status: string) => {
+      switch (status) {
+        case "active":
+          return {
+            icon: Check,
+            color: "text-green-700",
+            bg: "bg-green-100",
+            border: "border-green-200",
+            label: "Active",
+          };
+        case "pending_approval":
+          return {
+            icon: Clock,
+            color: "text-amber-700",
+            bg: "bg-amber-100",
+            border: "border-amber-200",
+            label: "Pending",
+          };
+        case "suspended":
+          return {
+            icon: AlertTriangle,
+            color: "text-red-700",
+            bg: "bg-red-100",
+            border: "border-red-200",
+            label: "Suspended",
+          };
+        case "inactive":
+          return {
+            icon: X,
+            color: "text-gray-700",
+            bg: "bg-gray-100",
+            border: "border-gray-200",
+            label: "Inactive",
+          };
+        default:
+          return {
+            icon: Clock,
+            color: "text-gray-700",
+            bg: "bg-gray-100",
+            border: "border-gray-200",
+            label: status,
+          };
+      }
+    };
+
+    const statusConfig = getStatusConfig(school.status);
+    const StatusIcon = statusConfig.icon;
+
+    const statusOptions = [
+      {
+        value: "active",
+        label: "Active",
+        icon: Check,
+        color: "text-green-600",
+      },
+      {
+        value: "pending_approval",
+        label: "Pending Approval",
+        icon: Clock,
+        color: "text-amber-600",
+      },
+      {
+        value: "suspended",
+        label: "Suspended",
+        icon: AlertTriangle,
+        color: "text-red-600",
+      },
+      { value: "inactive", label: "Inactive", icon: X, color: "text-gray-600" },
+    ];
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          disabled={isUpdating}
+          className={`
+            inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
+            border transition-all duration-200 hover:shadow-sm
+            ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}
+            ${
+              isUpdating
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-opacity-80 cursor-pointer"
+            }
+          `}
+        >
+          {isUpdating ? (
+            <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <StatusIcon className="w-3 h-3" />
+          )}
+          <span>{statusConfig.label}</span>
+          <ChevronDown
+            className={`w-3 h-3 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {isOpen && !isUpdating && (
+          <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            <div className="py-1">
+              {statusOptions.map((option) => {
+                const OptionIcon = option.icon;
+                const isCurrentStatus = option.value === school.status;
+
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      if (!isCurrentStatus) {
+                        handleStatusChange(school.id, option.value);
+                      }
+                      setIsOpen(false);
+                    }}
+                    disabled={isCurrentStatus}
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-2 text-sm text-left
+                      transition-colors
+                      ${
+                        isCurrentStatus
+                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                          : "hover:bg-gray-50 text-gray-700 cursor-pointer"
+                      }
+                    `}
+                  >
+                    <OptionIcon
+                      className={`w-4 h-4 ${
+                        isCurrentStatus ? "text-gray-400" : option.color
+                      }`}
+                    />
+                    <span>{option.label}</span>
+                    {isCurrentStatus && (
+                      <span className="ml-auto text-xs text-gray-400">
+                        Current
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -332,31 +505,8 @@ const SchoolList: React.FC<SchoolListProps> = ({
                     </td>
                     <td className="py-2 px-3 text-center">
                       <div className="flex justify-center">
-                        <StatusBadge status={school.status} />
+                        <StatusDropdown school={school} />
                       </div>
-                      {school.status === "pending_approval" && (
-                        <div className="flex gap-1 mt-1 justify-center">
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleStatusChange(school.id, "active")
-                            }
-                            className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700"
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              handleStatusChange(school.id, "suspended")
-                            }
-                            className="h-6 px-2 text-xs text-red-600 hover:bg-red-50"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
                     </td>
                     <td className="py-2 px-3">
                       <div className="flex items-center justify-center gap-1">
