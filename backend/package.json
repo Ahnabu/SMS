@@ -13,7 +13,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "seed": "ts-node ./src/app/scripts/seeder-cli.ts",
-    "seed:help": "ts-node ./src/app/scripts/seeder-cli.ts help"
+    "seed:help": "ts-node ./src/app/scripts/seeder-cli.ts help",
+    "migrate:address": "ts-node ./src/scripts/addAddressToExistingStudents.ts"
   },
   "keywords": [
     "school",
