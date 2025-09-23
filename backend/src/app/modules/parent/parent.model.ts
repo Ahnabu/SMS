@@ -107,7 +107,6 @@ const parentSchema = new Schema<IParentDocument, IParentModel, IParentMethods>(
         required: [true, 'Country is required'],
         trim: true,
         maxlength: [100, 'Country cannot exceed 100 characters'],
-        default: 'India',
       },
     },
     emergencyContact: {

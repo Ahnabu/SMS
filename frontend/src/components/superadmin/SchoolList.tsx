@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus,
-  Search,
-  Filter,
   Edit,
   Trash2,
   Eye,
@@ -15,7 +13,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DataTableFilter, FilterConfig } from "@/components/ui/DataTableFilter";
 import { apiService } from "@/services";
 
 interface School {
@@ -73,6 +71,24 @@ const SchoolList: React.FC<SchoolListProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+  // Filter configuration
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: "status",
+      label: "Status",
+      placeholder: "All Status",
+      value: statusFilter,
+      onChange: setStatusFilter,
+      options: [
+        { label: "All Status", value: "all" },
+        { label: "Active", value: "active" },
+        { label: "Pending", value: "pending_approval" },
+        { label: "Suspended", value: "suspended" },
+        { label: "Inactive", value: "inactive" },
+      ],
+    },
+  ];
 
   const loadSchools = useCallback(async () => {
     try {
@@ -394,38 +410,12 @@ const SchoolList: React.FC<SchoolListProps> = ({
       </div>
 
       {/* Filters */}
-      <Card className="p-2">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search schools..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors min-w-[120px]"
-                aria-label="Filter schools by status"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="pending_approval">Pending</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </Card>
+      <DataTableFilter
+        searchPlaceholder="Search schools..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={filterConfigs}
+      />
       {/* Schools Table */}
       {loading ? (
         <div className="text-center py-8">

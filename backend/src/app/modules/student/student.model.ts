@@ -172,6 +172,33 @@ const studentSchema = new Schema<
       default: true,
       index: true,
     },
+    address: {
+      street: {
+        type: String,
+        trim: true,
+        maxlength: [100, "Street address cannot exceed 100 characters"],
+      },
+      city: {
+        type: String,
+        trim: true,
+        maxlength: [50, "City cannot exceed 50 characters"],
+      },
+      state: {
+        type: String,
+        trim: true,
+        maxlength: [50, "State cannot exceed 50 characters"],
+      },
+      country: {
+        type: String,
+        trim: true,
+        maxlength: [50, "Country cannot exceed 50 characters"],
+      },
+      postalCode: {
+        type: String,
+        trim: true,
+        maxlength: [20, "Postal code cannot exceed 20 characters"],
+      },
+    },
   },
   {
     timestamps: true,
@@ -246,6 +273,15 @@ studentSchema.statics.findByGradeAndSection = function (
 ): Promise<IStudentDocument[]> {
   return this.find({ schoolId, grade, section, isActive: true })
     .populate("userId", "firstName lastName username email phone")
+    .populate("schoolId", "_id name")
+    .populate({
+      path: "parentId",
+      select: "_id userId occupation address relationship",
+      populate: {
+        path: "userId",
+        select: "_id firstName lastName username email phone",
+      },
+    })
     .sort({ rollNumber: 1 });
 };
 
@@ -254,8 +290,15 @@ studentSchema.statics.findByStudentId = function (
 ): Promise<IStudentDocument | null> {
   return this.findOne({ studentId })
     .populate("userId", "firstName lastName username email phone")
-    .populate("schoolId", "name")
-    .populate("parentId");
+    .populate("schoolId", "_id name")
+    .populate({
+      path: "parentId",
+      select: "_id userId occupation address relationship",
+      populate: {
+        path: "userId",
+        select: "_id firstName lastName username email phone",
+      },
+    });
 };
 
 studentSchema.statics.generateNextStudentId = async function (

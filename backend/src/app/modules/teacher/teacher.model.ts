@@ -268,7 +268,6 @@ const teacherSchema = new Schema<ITeacherDocument, ITeacherModel, ITeacherMethod
         type: String,
         required: [true, 'Country is required'],
         trim: true,
-        default: 'India',
       },
     },
     emergencyContact: {

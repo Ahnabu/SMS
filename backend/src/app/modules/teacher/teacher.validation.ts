@@ -169,7 +169,6 @@ const createTeacherValidationSchema = z.object({
         .string()
         .max(100, 'Country cannot exceed 100 characters')
         .trim()
-        .default('India'),
     }),
     emergencyContact: z.object({
       name: z

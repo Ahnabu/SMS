@@ -1,0 +1,89 @@
+import { Schema, model } from "mongoose";
+import { IUserCredentialsDocument } from "./userCredentials.interface";
+
+
+// User Credentials schema for storing initial login credentials
+const userCredentialsSchema = new Schema<IUserCredentialsDocument>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User ID is required"],
+      unique: true,
+      index: true,
+    },
+    schoolId: {
+      type: Schema.Types.ObjectId,
+      ref: "School",
+      required: [true, "School ID is required"],
+      index: true,
+    },
+    initialUsername: {
+      type: String,
+      required: [true, "Initial username is required"],
+      trim: true,
+    },
+    initialPassword: {
+      type: String,
+      required: [true, "Initial password is required"],
+      select: false, // Don't include in normal queries
+    },
+    hasChangedPassword: {
+      type: Boolean,
+      default: false,
+    },
+    role: {
+      type: String,
+      enum: ["student", "parent", "teacher"],
+      required: [true, "Role is required"],
+      index: true,
+    },
+    associatedStudentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Student",
+      // Only required for parent credentials
+      required: function (this: IUserCredentialsDocument) {
+        return this.role === "parent";
+      },
+      index: true,
+    },
+    issuedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    lastAccessedAt: {
+      type: Date,
+    },
+    // For audit purposes
+    issuedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Issued by admin is required"],
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
+
+// Indexes for better performance
+userCredentialsSchema.index({ schoolId: 1, role: 1 });
+userCredentialsSchema.index({ associatedStudentId: 1 });
+userCredentialsSchema.index({ hasChangedPassword: 1 });
+
+// Transform output to exclude sensitive fields
+userCredentialsSchema.set("toJSON", {
+  transform: function (doc, ret: Record<string, any>) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.initialPassword;
+    return ret;
+  },
+});
+
+export const UserCredentials = model<IUserCredentialsDocument>(
+  "UserCredentials",
+  userCredentialsSchema
+);

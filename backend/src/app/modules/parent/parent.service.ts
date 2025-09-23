@@ -64,7 +64,7 @@ class ParentService {
         } : undefined,
         address: {
           ...parentData.address,
-          country: parentData.address.country || 'India',
+          country: parentData.address.country 
         },
         emergencyContact: parentData.emergencyContact,
         preferences: {

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { AppError } from "../../errors/AppError";
 import { studentService } from "./student.service";
 import {
   ICreateStudentRequest,
@@ -10,9 +11,22 @@ import {
 
 const createStudent = catchAsync(async (req: Request, res: Response) => {
   const studentData: ICreateStudentRequest = req.body;
-  const photos = (req.files as Express.Multer.File[]) || [];
 
-  const result = await studentService.createStudent(studentData, photos);
+  // Get admin user from auth middleware
+  const adminUserId = (req as any).user?.id;
+  if (!adminUserId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Admin user not found");
+  }
+
+  // Handle files from multer fields (FoundX pattern)
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const photos = files?.photos || [];
+
+  const result = await studentService.createStudent(
+    studentData,
+    photos,
+    adminUserId
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,

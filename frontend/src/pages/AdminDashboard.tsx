@@ -283,11 +283,6 @@ const StudentManagement: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleViewStudent = (student: any) => {
-    console.log("View student:", student);
-    // TODO: Implement student details view
-  };
-
   const handleFormClose = () => {
     setShowForm(false);
     setSelectedStudent(null);
@@ -316,7 +311,6 @@ const StudentManagement: React.FC = () => {
         ref={studentListRef}
         onCreateStudent={handleCreateStudent}
         onEditStudent={handleEditStudent}
-        onViewStudent={handleViewStudent}
         onStudentCreated={handleStudentCreated}
         onStudentUpdated={handleStudentUpdated}
         onStudentDeleted={handleStudentDeleted}

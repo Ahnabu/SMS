@@ -18,35 +18,61 @@ import { showApiError, showToast } from "../../utils/toast";
 import { CredentialsModal } from "./CredentialsModal";
 
 interface Student {
+  address: any;
   id?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
+  studentId?: string;
   grade: number;
-  section?: string; // Made optional - will be auto-assigned
-  rollNumber?: number; // Auto-generated
-  dob?: string;
+  section?: string;
+  rollNumber?: number;
   bloodGroup?: string;
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    country: string;
-    postalCode: string;
-  };
-  parent: {
-    id?: string;
-    name: string;
+  dob?: string;
+  admissionDate?: string;
+  isActive?: boolean;
+  age?: number;
+  user?: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
     email: string;
-    phone: string;
+    phone?: string;
+  };
+  school?: {
+    id: string;
+    name: string;
+  };
+  parent?: {
+    id: string;
+    userId?: string;
+    fullName: string;
+    name?: string; // For form compatibility
+    email?: string;
+    phone?: string;
     address?: string;
     occupation?: string;
+    relationship?: string;
   };
-  isActive: boolean;
-  admissionDate: string;
-  schoolId: string;
-  photos?: File[]; // For photo upload
+  photos?:
+    | Array<{
+        id: string;
+        photoPath: string;
+        photoNumber: number;
+        filename: string;
+        size: number;
+        createdAt: string;
+      }>
+    | File[]; // Support both response and upload
+  photoCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Form-specific fields for compatibility
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  schoolId?: string;
 }
 
 interface StudentFormProps {
@@ -64,14 +90,29 @@ const StudentForm: React.FC<StudentFormProps> = ({
 }) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState<Student>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
     grade: 9,
     section: "A",
     dob: "",
     bloodGroup: "A+",
+    isActive: true,
+    admissionDate: new Date().toISOString().split("T")[0],
+    schoolId: user?.schoolId || "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    user: undefined,
+    parent: {
+      id: "",
+      userId: "",
+      fullName: "",
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      occupation: "",
+      relationship: "",
+    },
     address: {
       street: "",
       city: "",
@@ -79,16 +120,6 @@ const StudentForm: React.FC<StudentFormProps> = ({
       country: "",
       postalCode: "",
     },
-    parent: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      occupation: "",
-    },
-    isActive: true,
-    admissionDate: new Date().toISOString().split("T")[0],
-    schoolId: user?.schoolId || "",
     photos: [],
   });
 
@@ -141,27 +172,62 @@ const StudentForm: React.FC<StudentFormProps> = ({
     if (student) {
       setFormData({
         ...student,
-        dob: student.dob?.split("T")[0] || "", // Changed from dateOfBirth
+        firstName: student.user?.firstName || student.firstName || "",
+        lastName: student.user?.lastName || student.lastName || "",
+        email: student.user?.email || student.email || "",
+        phone: student.user?.phone || student.phone || "",
+        // Ensure date format is correct for input
+        dob: student.dob?.split("T")[0] || "",
         admissionDate: student.admissionDate?.split("T")[0] || "",
-        address: student.address || {
-          street: "",
-          city: "",
-          state: "",
-          country: "",
-          postalCode: "",
+        // Map parent data properly with all available information
+        parent: {
+          id: student.parent?.id || "",
+          userId: student.parent?.userId || "",
+          fullName: student.parent?.fullName || "",
+          name: student.parent?.fullName || student.parent?.name || "",
+          email: student.parent?.email || "",
+          phone: student.parent?.phone || "",
+          address: student.parent?.address || "",
+          occupation: student.parent?.occupation || "",
+          relationship: student.parent?.relationship || "",
         },
-        schoolId: student.schoolId || user?.schoolId || "", // Ensure schoolId is set
+        // Map student address properly - this was missing!
+        address: {
+          street: student.address?.street || "",
+          city: student.address?.city || "",
+          state: student.address?.state || "",
+          country: student.address?.country || "",
+          postalCode: student.address?.postalCode || "",
+        },
+        schoolId: student.schoolId || user?.schoolId || "",
+        photos: [],
       });
     } else {
+      // Creating new student - reset to default values
       setFormData({
+        grade: 9,
+        section: "A",
+        dob: "",
+        bloodGroup: "A+",
+        isActive: true,
+        admissionDate: new Date().toISOString().split("T")[0],
+        schoolId: user?.schoolId || "",
         firstName: "",
         lastName: "",
         email: "",
         phone: "",
-        grade: 9,
-        section: "",
-        dob: "",
-        bloodGroup: "",
+        user: undefined,
+        parent: {
+          id: "",
+          userId: "",
+          fullName: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          occupation: "",
+          relationship: "",
+        },
         address: {
           street: "",
           city: "",
@@ -169,29 +235,22 @@ const StudentForm: React.FC<StudentFormProps> = ({
           country: "",
           postalCode: "",
         },
-        parent: {
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-          occupation: "",
-        },
-        isActive: true,
-        admissionDate: new Date().toISOString().split("T")[0],
-        schoolId: user?.schoolId || "",
         photos: [],
       });
     }
     setErrors({});
+    setSelectedPhotos([]);
+    setPhotoPreview([]);
   }, [student, isOpen, user?.schoolId]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.firstName.trim())
+    if (!formData.firstName?.trim())
       newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!formData.email.trim()) newErrors.email = "Email is required";
+    if (!formData.lastName?.trim())
+      newErrors.lastName = "Last name is required";
+    if (!formData.email?.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
@@ -204,22 +263,23 @@ const StudentForm: React.FC<StudentFormProps> = ({
       newErrors.admissionDate = "Admission date is required";
     if (!formData.schoolId) newErrors.schoolId = "School ID is required";
 
-    // Photos validation
-    if (!formData.photos || formData.photos.length < 3) {
-      newErrors.photos = "Minimum 3 photos are required for registration";
-    } else if (formData.photos.length > 8) {
+    // Photos validation - only for new students or if photos are being uploaded
+    if (!student && (!formData.photos || formData.photos.length < 3)) {
+      newErrors.photos =
+        "Minimum 3 photos are required for new student registration";
+    } else if (formData.photos && formData.photos.length > 8) {
       newErrors.photos = "Maximum 8 photos allowed";
     }
 
     // Parent validation
-    if (!formData.parent.name.trim())
+    if (!formData.parent?.name?.trim())
       newErrors.parentName = "Parent name is required";
-    if (!formData.parent.email.trim())
+    if (!formData.parent?.email?.trim())
       newErrors.parentEmail = "Parent email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.parent.email)) {
       newErrors.parentEmail = "Invalid parent email format";
     }
-    if (!formData.parent.phone.trim())
+    if (!formData.parent?.phone?.trim())
       newErrors.parentPhone = "Parent phone is required";
 
     setErrors(newErrors);
@@ -235,142 +295,156 @@ const StudentForm: React.FC<StudentFormProps> = ({
 
     setLoading(true);
     try {
-      // Create FormData and ensure all required fields are present
-      const formDataToSend = new FormData();
+      if (student?.id) {
+        // Update existing student
+        const updateData = {
+          grade: formData.grade,
+          section: formData.section || "A",
+          bloodGroup: formData.bloodGroup!,
+          dob: formData.dob,
+          rollNumber: formData.rollNumber,
+          isActive: formData.isActive ?? true,
+          parentInfo: {
+            name: formData.parent?.name?.trim(),
+            email: formData.parent?.email?.trim(),
+            phone: formData.parent?.phone?.trim(),
+            address: formData.parent?.address?.trim(),
+            occupation: formData.parent?.occupation?.trim(),
+            relationship: formData.parent?.relationship?.trim(),
+          },
+        };
 
-      // Validate required fields before sending
-      if (!user?.schoolId) {
-        throw new Error("School ID is missing");
-      }
-      if (!formData.firstName?.trim()) {
-        throw new Error("First name is required");
-      }
-      if (!formData.lastName?.trim()) {
-        throw new Error("Last name is required");
-      }
-      if (!formData.grade) {
-        throw new Error("Grade is required");
-      }
-      if (!formData.bloodGroup) {
-        throw new Error("Blood group is required");
-      }
-      if (!formData.dob) {
-        throw new Error("Date of birth is required");
-      }
-      if (!formData.parent.name?.trim()) {
-        throw new Error("Parent name is required");
-      }
+        const response = await studentApi.update(student.id, updateData);
 
-      // Add student data - only add non-empty values
-      formDataToSend.append("schoolId", user.schoolId);
-      formDataToSend.append("firstName", formData.firstName.trim());
-      formDataToSend.append("lastName", formData.lastName.trim());
+        if (response.data.success) {
+          showToast.success("Student updated successfully!");
+          onSave(response.data.data);
+          onClose();
+        }
+      } else {
+        // Create new student
+        const formDataToSend = new FormData();
 
-      if (formData.email?.trim()) {
-        formDataToSend.append("email", formData.email.trim());
-      }
-      if (formData.phone?.trim()) {
-        formDataToSend.append("phone", formData.phone.trim());
-      }
-
-      formDataToSend.append("grade", formData.grade.toString());
-      formDataToSend.append("section", formData.section?.trim() || "A");
-      formDataToSend.append("bloodGroup", formData.bloodGroup);
-      formDataToSend.append("dob", formData.dob);
-      formDataToSend.append("admissionDate", formData.admissionDate);
-
-      // Add parent info
-      const parentName = formData.parent.name.trim();
-      const parentNames = parentName.split(/\s+/); // Split by any whitespace
-
-      formDataToSend.append("parentInfo[firstName]", parentNames[0]);
-      formDataToSend.append(
-        "parentInfo[lastName]",
-        parentNames.slice(1).join(" ")
-      );
-
-      if (formData.parent.email?.trim()) {
-        formDataToSend.append(
-          "parentInfo[email]",
-          formData.parent.email.trim()
-        );
-      }
-      if (formData.parent.phone?.trim()) {
-        formDataToSend.append(
-          "parentInfo[phone]",
-          formData.parent.phone.trim()
-        );
-      }
-      if (formData.parent.address?.trim()) {
-        formDataToSend.append(
-          "parentInfo[address]",
-          formData.parent.address.trim()
-        );
-      }
-      if (formData.parent.occupation?.trim()) {
-        formDataToSend.append(
-          "parentInfo[occupation]",
-          formData.parent.occupation.trim()
-        );
-      }
-
-      // Add photos
-      if (formData.photos && formData.photos.length > 0) {
-        formData.photos.forEach((photo) => {
-          formDataToSend.append("photos", photo);
-        });
-      }
-
-      // Debug log
-      console.log("=== Frontend FormData Debug ===");
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(
-          `${key}:`,
-          value instanceof File ? `File: ${value.name}` : value
-        );
-      }
-
-      // Submit the form
-      const response = await studentApi.createWithPhotos(formDataToSend);
-
-      if (response.data.success) {
-        showToast.success(
-          "Student created successfully with auto-generated credentials!"
-        );
-
-        if (response.data.data.credentials) {
-          setCredentials(response.data.data.credentials);
+        // Validate required fields before sending
+        if (!user?.schoolId) {
+          throw new Error("School ID is missing");
+        }
+        if (!formData.firstName?.trim()) {
+          throw new Error("First name is required");
+        }
+        if (!formData.lastName?.trim()) {
+          throw new Error("Last name is required");
+        }
+        if (!formData.grade) {
+          throw new Error("Grade is required");
+        }
+        if (!formData.bloodGroup) {
+          throw new Error("Blood group is required");
+        }
+        if (!formData.dob) {
+          throw new Error("Date of birth is required");
+        }
+        if (!formData.parent?.name?.trim()) {
+          throw new Error("Parent name is required");
         }
 
-        onSave({ ...formData, ...response.data.data });
-        onClose();
+        // Add student data - only add non-empty values
+        formDataToSend.append("schoolId", user.schoolId);
+        formDataToSend.append("firstName", formData.firstName.trim());
+        formDataToSend.append("lastName", formData.lastName.trim());
+
+        if (formData.email?.trim()) {
+          formDataToSend.append("email", formData.email.trim());
+        }
+        if (formData.phone?.trim()) {
+          formDataToSend.append("phone", formData.phone.trim());
+        }
+
+        formDataToSend.append("grade", formData.grade.toString());
+        formDataToSend.append("section", formData.section?.trim() || "A");
+        formDataToSend.append("bloodGroup", formData.bloodGroup);
+        formDataToSend.append("dob", formData.dob);
+        formDataToSend.append("admissionDate", formData.admissionDate || "");
+
+        // Add parent info
+        formDataToSend.append("parentInfo[name]", formData.parent.name!.trim());
+
+        if (formData.parent?.email?.trim()) {
+          formDataToSend.append(
+            "parentInfo[email]",
+            formData.parent.email.trim()
+          );
+        }
+        if (formData.parent?.phone?.trim()) {
+          formDataToSend.append(
+            "parentInfo[phone]",
+            formData.parent.phone.trim()
+          );
+        }
+        if (formData.parent?.address?.trim()) {
+          formDataToSend.append(
+            "parentInfo[address]",
+            formData.parent.address.trim()
+          );
+        }
+        if (formData.parent?.occupation?.trim()) {
+          formDataToSend.append(
+            "parentInfo[occupation]",
+            formData.parent.occupation.trim()
+          );
+        }
+        if (formData.parent?.relationship?.trim()) {
+          formDataToSend.append(
+            "parentInfo[relationship]",
+            formData.parent.relationship.trim()
+          );
+        }
+
+        // Add photos
+        if (formData.photos && formData.photos.length > 0) {
+          (formData.photos as File[]).forEach((photo) => {
+            formDataToSend.append("photos", photo);
+          });
+        }
+
+        // Submit the form
+        const response = await studentApi.createWithPhotos(formDataToSend);
+
+        if (response.data.success) {
+          showToast.success(
+            "Student created successfully with auto-generated credentials!"
+          );
+
+          if (response.data.data.credentials) {
+            setCredentials(response.data.data.credentials);
+          }
+
+          onSave(response.data.data);
+          onClose();
+        }
       }
     } catch (error: any) {
       console.error("Failed to save student:", error);
-      showApiError(error, "Failed to save student");
+      showApiError(
+        error,
+        `Failed to ${student?.id ? "update" : "create"} student`
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: any) => {
-    if (field.startsWith("address.")) {
-      const addressField = field.replace("address.", "");
-      setFormData((prev) => ({
-        ...prev,
-        address: {
-          ...prev.address!,
-          [addressField]: value,
-        },
-      }));
-    } else if (field.startsWith("parent.")) {
+    if (field.startsWith("parent.")) {
       const parentField = field.replace("parent.", "");
       setFormData((prev) => ({
         ...prev,
         parent: {
           ...prev.parent,
           [parentField]: value,
-        },
+          // Update both name and fullName for consistency
+          ...(parentField === "name" && { fullName: value }),
+        } as NonNullable<Student["parent"]>,
       }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
@@ -429,7 +503,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
     setSelectedPhotos((prev) => [...prev, ...validFiles]);
     setFormData((prev) => ({
       ...prev,
-      photos: [...(prev.photos || []), ...validFiles],
+      photos: [...((prev.photos as File[]) || []), ...validFiles] as File[],
     }));
 
     // Clear error if photos are now valid
@@ -443,7 +517,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
     setPhotoPreview((prev) => prev.filter((_, i) => i !== index));
     setFormData((prev) => ({
       ...prev,
-      photos: prev.photos?.filter((_, i) => i !== index) || [],
+      photos: (prev.photos?.filter((_, i) => i !== index) || []) as File[],
     }));
 
     // Update validation
@@ -485,7 +559,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <Input
-                    value={formData.firstName}
+                    value={formData.firstName || ""}
                     onChange={(e) =>
                       handleInputChange("firstName", e.target.value)
                     }
@@ -503,7 +577,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <Input
-                    value={formData.lastName}
+                    value={formData.lastName || ""}
                     onChange={(e) =>
                       handleInputChange("lastName", e.target.value)
                     }
@@ -525,7 +599,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                   </label>
                   <Input
                     type="email"
-                    value={formData.email}
+                    value={formData.email || ""}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="Enter email address"
                     className={errors.email ? "border-red-500" : ""}
@@ -539,7 +613,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Phone
                   </label>
                   <Input
-                    value={formData.phone}
+                    value={formData.phone || ""}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     placeholder="Enter phone number"
                   />
@@ -727,7 +801,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Admission Date <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
-                    value={formData.admissionDate}
+                    value={formData.admissionDate || ""}
                     onChange={(date) =>
                       handleInputChange("admissionDate", date)
                     }
@@ -759,7 +833,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Parent Name <span className="text-red-500">*</span>
                   </label>
                   <Input
-                    value={formData.parent.name}
+                    value={formData.parent?.name || ""}
                     onChange={(e) =>
                       handleInputChange("parent.name", e.target.value)
                     }
@@ -778,7 +852,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                   </label>
                   <Input
                     type="email"
-                    value={formData.parent.email}
+                    value={formData.parent?.email || ""}
                     onChange={(e) =>
                       handleInputChange("parent.email", e.target.value)
                     }
@@ -796,7 +870,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Parent Phone <span className="text-red-500">*</span>
                   </label>
                   <Input
-                    value={formData.parent.phone}
+                    value={formData.parent?.phone || ""}
                     onChange={(e) =>
                       handleInputChange("parent.phone", e.target.value)
                     }
@@ -811,13 +885,13 @@ const StudentForm: React.FC<StudentFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Parent Address
                   </label>
                   <Input
-                    value={formData.parent.address || ""}
+                    value={formData.parent?.address || ""}
                     onChange={(e) =>
                       handleInputChange("parent.address", e.target.value)
                     }
@@ -829,12 +903,35 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     Parent Occupation
                   </label>
                   <Input
-                    value={formData.parent.occupation || ""}
+                    value={formData.parent?.occupation || ""}
                     onChange={(e) =>
                       handleInputChange("parent.occupation", e.target.value)
                     }
                     placeholder="Enter parent occupation"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Relationship
+                  </label>
+                  <select
+                    value={formData.parent?.relationship || ""}
+                    onChange={(e) =>
+                      handleInputChange("parent.relationship", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Parent relationship"
+                  >
+                    <option value="">Select relationship</option>
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Guardian">Guardian</option>
+                    <option value="Uncle">Uncle</option>
+                    <option value="Aunt">Aunt</option>
+                    <option value="Grandfather">Grandfather</option>
+                    <option value="Grandmother">Grandmother</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
               </div>
             </CardContent>
@@ -942,7 +1039,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
         onClose={() => setCredentials(null)}
         credentials={credentials}
         studentName={`${formData.firstName} ${formData.lastName}`}
-        parentName={formData.parent.name}
+        parentName={formData.parent?.name || ""}
       />
     </div>
   );

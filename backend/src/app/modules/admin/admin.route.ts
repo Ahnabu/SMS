@@ -1,12 +1,12 @@
 import express from "express";
-import multer from "multer";
 import {
   authenticate,
   requireSchoolAdmin,
   AuthenticatedRequest,
 } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { parseBody } from "../../middlewares/parseFormData";
+import { multerUpload } from "../../config/multer.config";
+import { parseBody } from "../../middlewares/bodyParser";
 
 // Student imports
 import {
@@ -27,6 +27,9 @@ import {
   deleteTeacherValidationSchema,
 } from "../teacher/teacher.validation";
 import { TeacherController } from "../teacher/teacher.controller";
+
+// Credentials imports
+import { CredentialsController } from "../user/userCredentials.controller";
 
 // Subject imports
 import {
@@ -62,84 +65,6 @@ import { getSchool } from "../school/school.controller";
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
-    files: 10, // Maximum 10 files
-    fieldSize: 2 * 1024 * 1024, // 2MB field size
-    fieldNameSize: 100,
-    fields: 50, // Allow more fields
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  },
-});
-
-// Middleware to parse FormData with nested objects
-const parseFormData = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) => {
-  try {
-    console.log("=== Admin ParseFormData Middleware Debug ===");
-    console.log("req.body before parsing:", req.body);
-    console.log("req.files:", req.files);
-
-    // If no body, skip parsing
-    if (!req.body || Object.keys(req.body).length === 0) {
-      console.log("No req.body found, skipping parsing");
-      return next();
-    }
-
-    const parsedBody: any = {};
-
-    // Handle case where multer puts single values in arrays
-    Object.keys(req.body).forEach((key) => {
-      let value = req.body[key];
-
-      // If multer wrapped single values in arrays, unwrap them
-      if (Array.isArray(value) && value.length === 1) {
-        value = value[0];
-      }
-
-      if (key.includes("[") && key.includes("]")) {
-        // Handle nested objects like parentInfo[firstName]
-        const match = key.match(/^(\w+)\[(\w+)\]$/);
-        if (match) {
-          const [, objectKey, propertyKey] = match;
-
-          if (!parsedBody[objectKey]) {
-            parsedBody[objectKey] = {};
-          }
-
-          parsedBody[objectKey][propertyKey] = value;
-        }
-      } else {
-        // Handle regular fields
-        parsedBody[key] = value;
-      }
-    });
-
-    console.log("parsedBody after processing:", parsedBody);
-
-    // Replace req.body with parsed version
-    req.body = parsedBody;
-
-    console.log("=== End Admin ParseFormData Debug ===");
-    next();
-  } catch (error) {
-    console.error("Error in admin parseFormData middleware:", error);
-    next(error);
-  }
-};
-
 // All admin routes require authentication and admin permissions
 router.use(authenticate);
 router.use(requireSchoolAdmin);
@@ -155,26 +80,9 @@ router.get(
 // Student management routes
 router.post(
   "/students",
-  (req, res, next) => {
-    console.log("=== Admin Student Creation - Before Multer ===");
-    console.log("Content-Type:", req.headers["content-type"]);
-    next();
-  },
-  upload.any(), // Handle all files and form fields
-  (req, res, next) => {
-    console.log("=== Admin Student Creation - After Multer ===");
-    console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
-    console.log("Body keys:", Object.keys(req.body || {}));
-    next();
-  },
-  parseFormData, // Parse nested FormData objects
-  (req, res, next) => {
-    console.log("=== Admin Student Creation - After ParseFormData ===");
-    console.log("Final req.body:", req.body);
-    next();
-  },
-   validateRequest(createStudentValidationSchema),
+  multerUpload.fields([{ name: "photos" }]),
+  parseBody,
+  validateRequest(createStudentValidationSchema),
   StudentController.createStudent
 );
 
@@ -197,6 +105,13 @@ router.delete(
   "/students/:id",
   validateRequest(deleteStudentValidationSchema),
   StudentController.deleteStudent
+);
+
+// Credentials management routes (admin/superadmin only)
+router.get("/credentials", CredentialsController.getAllCredentials);
+router.get(
+  "/students/:studentId/credentials",
+  CredentialsController.getStudentCredentials
 );
 
 // Teacher management routes

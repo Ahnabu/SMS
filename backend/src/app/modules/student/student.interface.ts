@@ -1,18 +1,25 @@
 import { Document, Types, Model } from "mongoose";
 
 export interface IStudent {
-  userId: Types.ObjectId; 
+  userId: Types.ObjectId;
   schoolId: Types.ObjectId;
-  studentId: string; 
+  studentId: string;
   grade: number;
   section: string;
   bloodGroup: string;
   dob: Date;
   admissionDate: Date;
-  admissionYear: number; 
+  admissionYear: number;
   parentId?: Types.ObjectId;
   rollNumber?: number;
   isActive: boolean;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -72,6 +79,13 @@ export interface ICreateStudentRequest {
   bloodGroup: string;
   dob: string;
   admissionDate?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
   parentInfo: {
     name: string;
     email?: string;
@@ -84,11 +98,28 @@ export interface ICreateStudentRequest {
 }
 
 export interface IUpdateStudentRequest {
+  // Basic student information (no firstName/lastName/email as they are in User model)
   grade?: number;
   section?: string;
   bloodGroup?: string;
+  dob?: string; // Date string in YYYY-MM-DD format
   rollNumber?: number;
   isActive?: boolean;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
+  // Parent information updates
+  parentInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    occupation?: string;
+  };
 }
 
 export interface IStudentResponse {
@@ -106,6 +137,13 @@ export interface IStudentResponse {
   rollNumber?: number;
   isActive: boolean;
   age: number;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
   user?: {
@@ -123,8 +161,14 @@ export interface IStudentResponse {
   };
   parent?: {
     id: string;
-    userId: string;
+    userId?: string;
     fullName: string;
+    name?: string; // For form compatibility
+    email?: string;
+    phone?: string;
+    address?: string;
+    occupation?: string;
+    relationship?: string;
     username?: string; // Add parent username for display
   };
   photos?: IStudentPhotoResponse[];
