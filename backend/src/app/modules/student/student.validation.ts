@@ -75,46 +75,61 @@ const createStudentValidationSchema = z.object({
       .min(1, "Roll number must be at least 1")
       .max(60, "Roll number cannot exceed 60")
       .optional(),
-    parentInfo: z
+    address: z
       .object({
-        firstName: z
+        street: z
           .string()
-          .min(1, "Parent first name is required")
-          .max(50, "Parent first name cannot exceed 50 characters")
-          .trim(),
-        lastName: z
-          .string()
-          .max(50, "Parent last name cannot exceed 50 characters")
-          .trim()
-          .default(""),
-        email: z
-          .string()
-          .email("Invalid parent email format")
-          .toLowerCase()
-          .optional(),
-        phone: z
-          .string()
-          .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid parent phone number format")
-          .optional(),
-        address: z
-          .string()
-          .max(200, "Address cannot exceed 200 characters")
+          .max(100, "Street address cannot exceed 100 characters")
           .trim()
           .optional(),
-        occupation: z
+        city: z
           .string()
-          .max(100, "Occupation cannot exceed 100 characters")
+          .max(50, "City cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        state: z
+          .string()
+          .max(50, "State cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        country: z
+          .string()
+          .max(50, "Country cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        postalCode: z
+          .string()
+          .max(20, "Postal code cannot exceed 20 characters")
           .trim()
           .optional(),
       })
-      .transform((data) => ({
-        // Transform to match service interface
-        name: `${data.firstName} ${data.lastName}`.trim(),
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        occupation: data.occupation,
-      })),
+      .optional(),
+    parentInfo: z.object({
+      name: z
+        .string()
+        .min(1, "Parent name is required")
+        .max(100, "Parent name cannot exceed 100 characters")
+        .trim(),
+      email: z
+        .string()
+        .email("Invalid parent email format")
+        .toLowerCase()
+        .optional(),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid parent phone number format")
+        .optional(),
+      address: z
+        .string()
+        .max(200, "Address cannot exceed 200 characters")
+        .trim()
+        .optional(),
+      occupation: z
+        .string()
+        .max(100, "Occupation cannot exceed 100 characters")
+        .trim()
+        .optional(),
+    }),
   }),
 });
 
@@ -143,6 +158,19 @@ const updateStudentValidationSchema = z.object({
         errorMap: () => ({ message: "Invalid blood group" }),
       })
       .optional(),
+    dob: z
+      .string()
+      .regex(
+        /^\d{4}-\d{2}-\d{2}$/,
+        "Date of birth must be in YYYY-MM-DD format"
+      )
+      .refine((date) => {
+        const dob = new Date(date);
+        const today = new Date();
+        const age = today.getFullYear() - dob.getFullYear();
+        return age >= 3 && age <= 25;
+      }, "Student age must be between 3 and 25 years")
+      .optional(),
     rollNumber: z
       .number()
       .int("Roll number must be an integer")
@@ -150,6 +178,64 @@ const updateStudentValidationSchema = z.object({
       .max(60, "Roll number cannot exceed 60")
       .optional(),
     isActive: z.boolean().optional(),
+    address: z
+      .object({
+        street: z
+          .string()
+          .max(100, "Street address cannot exceed 100 characters")
+          .trim()
+          .optional(),
+        city: z
+          .string()
+          .max(50, "City cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        state: z
+          .string()
+          .max(50, "State cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        country: z
+          .string()
+          .max(50, "Country cannot exceed 50 characters")
+          .trim()
+          .optional(),
+        postalCode: z
+          .string()
+          .max(20, "Postal code cannot exceed 20 characters")
+          .trim()
+          .optional(),
+      })
+      .optional(),
+    parentInfo: z
+      .object({
+        name: z
+          .string()
+          .min(1, "Parent name is required")
+          .max(100, "Parent name cannot exceed 100 characters")
+          .trim()
+          .optional(),
+        email: z
+          .string()
+          .email("Invalid parent email format")
+          .toLowerCase()
+          .optional(),
+        phone: z
+          .string()
+          .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid parent phone number format")
+          .optional(),
+        address: z
+          .string()
+          .max(200, "Address cannot exceed 200 characters")
+          .trim()
+          .optional(),
+        occupation: z
+          .string()
+          .max(100, "Occupation cannot exceed 100 characters")
+          .trim()
+          .optional(),
+      })
+      .optional(),
   }),
 });
 

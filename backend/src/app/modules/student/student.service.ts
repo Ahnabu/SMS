@@ -6,6 +6,7 @@ import { School } from "../school/school.model";
 import { User } from "../user/user.model";
 import { Parent } from "../parent/parent.model";
 import { Student, StudentPhoto } from "./student.model";
+import { UserCredentials } from "../user/userCredentials.model";
 import { FileUtils } from "../../utils/fileUtils";
 import { CredentialGenerator } from "../../utils/credentialGenerator";
 
@@ -14,16 +15,15 @@ import {
   ICreateStudentRequest,
   IUpdateStudentRequest,
   IStudentResponse,
-  IStudentDocument,
   IStudentStats,
-  IPhotoUploadRequest,
   IStudentPhotoResponse,
 } from "./student.interface";
 
 class StudentService {
   async createStudent(
     studentData: ICreateStudentRequest,
-    photos?: Express.Multer.File[]
+    photos?: Express.Multer.File[],
+    adminUserId?: string
   ): Promise<IStudentResponse> {
     const session = await mongoose.startSession();
 
@@ -114,17 +114,21 @@ class StudentService {
               : new Date(),
             admissionYear,
             rollNumber: rollNumber,
+            address: studentData.address || {},
           },
         ],
         { session }
       );
+
+      // Initialize parentUser variable
+      let parentUser: any[] = [];
 
       // Create parent if parent info is provided
       if (studentData.parentInfo) {
         const { parentInfo } = studentData;
 
         // Create parent user account with generated credentials
-        const parentUser = await User.create(
+        parentUser = await User.create(
           [
             {
               schoolId: studentData.schoolId,
@@ -132,8 +136,8 @@ class StudentService {
               username: credentials.parent.username,
               passwordHash: credentials.parent.hashedPassword,
               firstName: parentInfo.name.split(" ")[0] || parentInfo.name,
-              lastName: parentInfo.name.split(" ").slice(1).join(" ") || "",
-              email: parentInfo.email,
+              lastName:
+                parentInfo.name.split(" ").slice(1).join(" ") || "Guardian", // Default lastName if not provided
               phone: parentInfo.phone,
             },
           ],
@@ -155,10 +159,10 @@ class StudentService {
               children: [newStudent[0]._id], // Link to the student
               relationship: "Guardian", // Default relationship
               address: {
-                city: "Unknown",
-                state: "Unknown",
-                zipCode: "000000",
-                country: "India",
+                city: "",
+                state: "",
+                zipCode: "",
+                country: "",
                 street: parentInfo.address || "",
               },
               preferences: {
@@ -179,7 +183,74 @@ class StudentService {
         await newStudent[0].save({ session });
       }
 
-      // Create photo folder structure
+      // Process photos - MANDATORY for student creation
+      let uploadedPhotos: any[] = [];
+      if (!photos || photos.length === 0) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          "Photos are required for student registration. Please upload at least 3 photos."
+        );
+      }
+
+      // Validate photos before upload
+      if (photos.length < 3) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          "Minimum 3 photos required for student registration"
+        );
+      }
+
+      if (photos.length > 8) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          "Maximum 8 photos allowed per student"
+        );
+      }
+
+      // Validate each photo file
+      for (const photo of photos) {
+        if (!photo.mimetype || !photo.originalname) {
+          throw new AppError(
+            httpStatus.BAD_REQUEST,
+            "Invalid photo file. Each photo must have mimetype and original filename."
+          );
+        }
+
+        if (!photo.mimetype.startsWith("image/")) {
+          throw new AppError(
+            httpStatus.BAD_REQUEST,
+            "Only image files are allowed for student photos"
+          );
+        }
+      }
+
+      // Create photo records with all required fields
+      const photoPromises = photos.map((photo, index) =>
+        StudentPhoto.create(
+          [
+            {
+              studentId: newStudent[0]._id,
+              schoolId: studentData.schoolId, // Required field
+              photoNumber: index + 1,
+              photoPath: photo.path, // Cloudinary URL
+              filename: photo.filename, // Cloudinary public_id
+              originalName: photo.originalname, // Required field
+              mimetype: photo.mimetype, // Required field
+              size: photo.size,
+            },
+          ],
+          { session }
+        )
+      );
+
+      const photoResults = await Promise.all(photoPromises);
+      uploadedPhotos = photoResults.flat();
+
+      console.log(
+        `Successfully processed ${uploadedPhotos.length} photos for student ${studentId}`
+      );
+
+      // Create photo folder structure for future uploads
       const age =
         new Date().getFullYear() - new Date(studentData.dob).getFullYear();
       const admitDate = new Date(studentData.admissionDate || Date.now())
@@ -201,6 +272,37 @@ class StudentService {
         // Don't fail the student creation if folder creation fails
       }
 
+      // Store credentials in database if adminUserId is provided
+      if (adminUserId) {
+        const credentialsToStore: any[] = [
+          {
+            userId: newUser[0]._id,
+            schoolId: studentData.schoolId,
+            initialUsername: credentials.student.username,
+            initialPassword: credentials.student.password, // Store plain password for initial access
+            hasChangedPassword: false,
+            role: "student",
+            issuedBy: new Types.ObjectId(adminUserId),
+          },
+        ];
+
+        // Add parent credentials if parent was created
+        if (parentUser && parentUser.length > 0) {
+          credentialsToStore.push({
+            userId: parentUser[0]._id,
+            schoolId: studentData.schoolId,
+            initialUsername: credentials.parent.username,
+            initialPassword: credentials.parent.password,
+            hasChangedPassword: false,
+            role: "parent",
+            associatedStudentId: newStudent[0]._id,
+            issuedBy: new Types.ObjectId(adminUserId),
+          });
+        }
+
+        await UserCredentials.insertMany(credentialsToStore, { session });
+      }
+
       // Commit transaction
       await session.commitTransaction();
 
@@ -212,6 +314,19 @@ class StudentService {
       ]);
 
       const response = this.formatStudentResponse(newStudent[0]);
+
+      // Add photo information to response
+      if (uploadedPhotos.length > 0) {
+        response.photos = uploadedPhotos.map((photo) => ({
+          id: photo._id.toString(),
+          photoPath: photo.photoPath,
+          photoNumber: photo.photoNumber,
+          filename: photo.filename,
+          size: photo.size,
+          createdAt: photo.createdAt,
+        }));
+        response.photoCount = uploadedPhotos.length;
+      }
 
       // Add generated credentials to response
       response.credentials = {
@@ -332,9 +447,16 @@ class StudentService {
       const [students, totalCount] = await Promise.all([
         Student.find(query)
           .populate("userId", "firstName lastName username email phone")
-          .populate("schoolId", "name")
-          .populate("parentId")
-          .populate("photoCount")
+          .populate("schoolId", "_id name")
+          .populate({
+            path: "parentId",
+            select: "_id userId occupation address relationship",
+            populate: {
+              path: "userId",
+              select: "_id firstName lastName username email phone",
+            },
+          })
+          .populate("photos")
           .sort(sort)
           .skip(skip)
           .limit(limit)
@@ -370,8 +492,15 @@ class StudentService {
 
       const student = await Student.findById(id)
         .populate("userId", "firstName lastName username email phone")
-        .populate("schoolId", "name")
-        .populate("parentId")
+        .populate("schoolId", "_id name")
+        .populate({
+          path: "parentId",
+          select: "_id userId occupation address relationship",
+          populate: {
+            path: "userId",
+            select: "_id firstName lastName username email phone",
+          },
+        })
         .populate("photos")
         .populate("photoCount")
         .lean();
@@ -396,29 +525,124 @@ class StudentService {
     id: string,
     updateData: IUpdateStudentRequest
   ): Promise<IStudentResponse> {
+    const session = await mongoose.startSession();
+
     try {
       if (!Types.ObjectId.isValid(id)) {
         throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
       }
 
-      const student = await Student.findById(id);
+      session.startTransaction();
+
+      const student = await Student.findById(id).session(session);
       if (!student) {
         throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
-      const updatedStudent = await Student.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      )
+      // Update student record
+      const studentUpdateData: any = {};
+      if (updateData.grade !== undefined)
+        studentUpdateData.grade = updateData.grade;
+      if (updateData.section !== undefined)
+        studentUpdateData.section = updateData.section;
+      if (updateData.bloodGroup !== undefined)
+        studentUpdateData.bloodGroup = updateData.bloodGroup;
+      if (updateData.dob !== undefined)
+        studentUpdateData.dob = new Date(updateData.dob);
+      if (updateData.rollNumber !== undefined)
+        studentUpdateData.rollNumber = updateData.rollNumber;
+      if (updateData.isActive !== undefined)
+        studentUpdateData.isActive = updateData.isActive;
+      if (updateData.address !== undefined)
+        studentUpdateData.address = updateData.address;
+
+      // Update student if there are any changes
+      if (Object.keys(studentUpdateData).length > 0) {
+        await Student.findByIdAndUpdate(
+          id,
+          { $set: studentUpdateData },
+          { new: true, runValidators: true, session }
+        );
+      }
+
+      // Update parent information if provided
+      if (updateData.parentInfo && student.parentId) {
+        const parentUpdateData: any = {};
+
+        // Update parent record
+        if (updateData.parentInfo.name) {
+          // Split parent name into first and last name
+          const nameParts = updateData.parentInfo.name.trim().split(/\s+/);
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          // Update parent user information
+          await User.findOneAndUpdate(
+            {
+              _id: {
+                $in: await Parent.findById(student.parentId).then(
+                  (p) => p?.userId
+                ),
+              },
+            },
+            {
+              $set: {
+                firstName,
+                lastName,
+                ...(updateData.parentInfo.email && {
+                  email: updateData.parentInfo.email,
+                }),
+                ...(updateData.parentInfo.phone && {
+                  phone: updateData.parentInfo.phone,
+                }),
+              },
+            },
+            { session }
+          );
+        }
+
+        // Update parent-specific information
+        if (updateData.parentInfo.address || updateData.parentInfo.occupation) {
+          await Parent.findByIdAndUpdate(
+            student.parentId,
+            {
+              $set: {
+                ...(updateData.parentInfo.address && {
+                  address: updateData.parentInfo.address,
+                }),
+                ...(updateData.parentInfo.occupation && {
+                  occupation: updateData.parentInfo.occupation,
+                }),
+              },
+            },
+            { session }
+          );
+        }
+      }
+
+      await session.commitTransaction();
+
+      // Fetch the updated student with populated fields
+      const updatedStudent = await Student.findById(id)
         .populate("userId", "firstName lastName username email phone")
-        .populate("schoolId", "name")
-        .populate("parentId")
-        .populate("photoCount")
+        .populate("schoolId", "_id name")
+        .populate({
+          path: "parentId",
+          select: "_id userId occupation address relationship",
+          populate: {
+            path: "userId",
+            select: "_id firstName lastName username email phone",
+          },
+        })
         .lean();
 
-      return this.formatStudentResponse(updatedStudent!);
+      if (!updatedStudent) {
+        throw new AppError(httpStatus.NOT_FOUND, "Updated student not found");
+      }
+
+      return this.formatStudentResponse(updatedStudent);
     } catch (error) {
+      await session.abortTransaction();
       if (error instanceof AppError) {
         throw error;
       }
@@ -426,6 +650,8 @@ class StudentService {
         httpStatus.INTERNAL_SERVER_ERROR,
         `Failed to update student: ${(error as Error).message}`
       );
+    } finally {
+      session.endSession();
     }
   }
 
@@ -437,7 +663,7 @@ class StudentService {
 
       const student = await Student.findById(id)
         .populate("userId", "firstName lastName")
-        .populate("schoolId", "name");
+        .populate("schoolId", "_id name");
 
       if (!student) {
         throw new AppError(httpStatus.NOT_FOUND, "Student not found");
@@ -496,7 +722,7 @@ class StudentService {
 
       const student = await Student.findById(studentId)
         .populate("userId", "firstName lastName")
-        .populate("schoolId", "name");
+        .populate("schoolId", "_id name");
 
       if (!student) {
         throw new AppError(httpStatus.NOT_FOUND, "Student not found");
@@ -746,7 +972,7 @@ class StudentService {
 
       const student = await Student.findById(studentId)
         .populate("userId", "firstName")
-        .populate("schoolId", "name");
+        .populate("schoolId", "_id name");
 
       if (!student) {
         throw new AppError(httpStatus.NOT_FOUND, "Student not found");
@@ -787,62 +1013,94 @@ class StudentService {
       ? new Date(student.admissionDate).getFullYear()
       : new Date().getFullYear();
 
+    // Helper function to safely extract ID
+    const extractId = (obj: any): string => {
+      if (!obj) return "";
+      if (typeof obj === "string") return obj;
+      if (obj._id) return obj._id.toString();
+      if (obj.id) return obj.id.toString();
+      return obj.toString();
+    };
+console.log(student);
     return {
-      id: student._id?.toString() || student.id,
-      userId: student.userId?._id?.toString() || student.userId?.toString(),
-      schoolId:
-        student.schoolId?._id?.toString() || student.schoolId?.toString(),
+      id: extractId(student._id || student.id),
+      userId: extractId(student.userId),
+      schoolId: extractId(student.schoolId),
       studentId: student.studentId,
       grade: student.grade,
       section: student.section,
       bloodGroup: student.bloodGroup,
-      dob: student.dob,
-      admissionDate: student.admissionDate,
+      dob: student.dob ? student.dob.toISOString().split("T")[0] : undefined,
+      admissionDate: student.admissionDate
+        ? student.admissionDate.toISOString().split("T")[0]
+        : undefined,
       admissionYear,
-      parentId:
-        student.parentId?._id?.toString() || student.parentId?.toString(),
+      parentId: extractId(student.parentId),
       rollNumber: student.rollNumber,
-      isActive: student.isActive,
+      isActive: student.isActive !== undefined ? student.isActive : true,
       age,
+      address: student.address || undefined,
       createdAt: student.createdAt,
       updatedAt: student.updatedAt,
       user: student.userId
         ? {
-            id: student.userId._id?.toString() || student.userId.id,
-            username: student.userId.username,
-            firstName: student.userId.firstName,
-            lastName: student.userId.lastName,
+            id: extractId(student.userId),
+            username: student.userId.username || "",
+            firstName: student.userId.firstName || "",
+            lastName: student.userId.lastName || "",
             fullName:
-              `${student.userId.firstName} ${student.userId.lastName}`.trim(),
+              `${student.userId.firstName || ""} ${
+                student.userId.lastName || ""
+              }`.trim() || "Unknown User",
             email: student.userId.email,
             phone: student.userId.phone,
           }
         : undefined,
-      school: student.schoolId?.name
+      school: student.schoolId
         ? {
-            id: student.schoolId._id?.toString() || student.schoolId.id,
-            name: student.schoolId.name,
+            id: extractId(student.schoolId),
+            name: student.schoolId.name || "Unknown School",
           }
         : undefined,
       parent: student.parentId
         ? {
-            id: student.parentId._id?.toString() || student.parentId.id,
-            userId: student.parentId.userId?.toString(),
+            id: extractId(student.parentId),
+            userId: student.parentId.userId
+              ? extractId(student.parentId.userId)
+              : undefined,
             fullName: student.parentId.userId
-              ? `${student.parentId.userId.firstName} ${student.parentId.userId.lastName}`.trim()
-              : "",
+              ? `${student.parentId.userId.firstName || ""} ${
+                  student.parentId.userId.lastName || ""
+                }`.trim()
+              : "Unknown Parent",
+            name: student.parentId.userId
+              ? `${student.parentId.userId.firstName || ""} ${
+                  student.parentId.userId.lastName || ""
+                }`.trim()
+              : "Unknown Parent",
+            email: student.parentId.userId?.email || undefined,
+            phone: student.parentId.userId?.phone || undefined,
+            address: student.parentId.address
+              ? `${student.parentId.address.street || ""} ${
+                  student.parentId.address.city || ""
+                } ${student.parentId.address.state || ""} ${
+                  student.parentId.address.country || ""
+                }`.trim()
+              : undefined,
+            occupation: student.parentId.occupation || undefined,
+            relationship: student.parentId.relationship || undefined,
           }
         : undefined,
       photos:
         student.photos?.map((photo: any) => ({
-          id: photo._id?.toString() || photo.id,
+          id: extractId(photo),
           photoPath: photo.photoPath,
           photoNumber: photo.photoNumber,
           filename: photo.filename,
           size: photo.size,
           createdAt: photo.createdAt,
         })) || [],
-      photoCount: student.photoCount || 0,
+      photoCount: student.photos?.length || 0,
     };
   }
 }

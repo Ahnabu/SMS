@@ -14,12 +14,20 @@ export const studentApi = {
     dob: string;
     admissionDate?: string;
     rollNumber?: number;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+    };
     parentInfo?: {
       name: string;
       email?: string;
       phone?: string;
       address?: string;
       occupation?: string;
+      relationship?: string;
     };
   }) => api.post<ApiResponse>("/admin/students", data),
 
@@ -47,8 +55,24 @@ export const studentApi = {
       grade?: number;
       section?: string;
       bloodGroup?: string;
+      dob?: string;
       rollNumber?: number;
       isActive?: boolean;
+      address?: {
+        street?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+        postalCode?: string;
+      };
+      parentInfo?: {
+        name?: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+        occupation?: string;
+        relationship?: string;
+      };
     }
   ) => api.put<ApiResponse>(`/admin/students/${id}`, data),
 
