@@ -1,18 +1,23 @@
-import { Request, Response } from 'express';
-import httpStatus from 'http-status';
-import { catchAsync } from '../../utils/catchAsync';
-import { sendResponse } from '../../utils/sendResponse';
-import { teacherService } from './teacher.service';
-import { ICreateTeacherRequest, IUpdateTeacherRequest } from './teacher.interface';
+import { Request, Response } from "express";
+import httpStatus from "http-status";
+import { catchAsync } from "../../utils/catchAsync";
+import { sendResponse } from "../../utils/sendResponse";
+import { teacherService } from "./teacher.service";
+import {
+  ICreateTeacherRequest,
+  IUpdateTeacherRequest,
+} from "./teacher.interface";
 
 const createTeacher = catchAsync(async (req: Request, res: Response) => {
   const teacherData: ICreateTeacherRequest = req.body;
-  const result = await teacherService.createTeacher(teacherData);
+  const files = req.files as Express.Multer.File[];
+
+  const result = await teacherService.createTeacher(teacherData, files);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
-    message: 'Teacher created successfully',
+    message: "Teacher created successfully",
     data: result,
   });
 });
@@ -24,7 +29,7 @@ const getAllTeachers = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teachers retrieved successfully',
+    message: "Teachers retrieved successfully",
     meta: {
       page: result.currentPage,
       limit: Number(filters.limit) || 20,
@@ -41,7 +46,7 @@ const getTeacherById = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher retrieved successfully',
+    message: "Teacher retrieved successfully",
     data: result,
   });
 });
@@ -54,7 +59,7 @@ const updateTeacher = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher updated successfully',
+    message: "Teacher updated successfully",
     data: result,
   });
 });
@@ -66,7 +71,7 @@ const deleteTeacher = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher deleted successfully',
+    message: "Teacher deleted successfully",
     data: null,
   });
 });
@@ -78,7 +83,7 @@ const getTeachersBySubject = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teachers retrieved successfully',
+    message: "Teachers retrieved successfully",
     data: result,
   });
 });
@@ -90,7 +95,7 @@ const getTeacherStats = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher statistics retrieved successfully',
+    message: "Teacher statistics retrieved successfully",
     data: result,
   });
 });
@@ -103,7 +108,7 @@ const uploadTeacherPhotos = catchAsync(async (req: Request, res: Response) => {
     return sendResponse(res, {
       statusCode: httpStatus.BAD_REQUEST,
       success: false,
-      message: 'No photos provided',
+      message: "No photos provided",
       data: null,
     });
   }
@@ -113,7 +118,7 @@ const uploadTeacherPhotos = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher photos uploaded successfully',
+    message: "Teacher photos uploaded successfully",
     data: result,
   });
 });
@@ -125,7 +130,7 @@ const deleteTeacherPhoto = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher photo deleted successfully',
+    message: "Teacher photo deleted successfully",
     data: null,
   });
 });
@@ -137,22 +142,24 @@ const getTeacherPhotos = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Teacher photos retrieved successfully',
+    message: "Teacher photos retrieved successfully",
     data: result,
   });
 });
 
-const getAvailablePhotoSlots = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await teacherService.getAvailablePhotoSlots(id);
+const getAvailablePhotoSlots = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await teacherService.getAvailablePhotoSlots(id);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Available photo slots retrieved successfully',
-    data: result,
-  });
-});
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Available photo slots retrieved successfully",
+      data: result,
+    });
+  }
+);
 
 export const TeacherController = {
   createTeacher,
