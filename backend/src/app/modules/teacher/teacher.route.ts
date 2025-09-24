@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import multer from 'multer';
-import { authenticate, authorize } from '../../middlewares/auth';
-import { validateRequest } from '../../middlewares/validateRequest';
-import { UserRole } from '../user/user.interface';
-import { TeacherController } from './teacher.controller';
+import { Router } from "express";
+import multer from "multer";
+import { authenticate, authorize } from "../../middlewares/auth";
+import { validateRequest } from "../../middlewares/validateRequest";
+import { UserRole } from "../user/user.interface";
+import { TeacherController } from "./teacher.controller";
 import {
   createTeacherValidationSchema,
   updateTeacherValidationSchema,
@@ -14,7 +14,7 @@ import {
   deletePhotoValidationSchema,
   getTeachersBySubjectSchema,
   getTeachersStatsValidationSchema,
-} from './teacher.validation';
+} from "./teacher.validation";
 
 const router = Router();
 
@@ -26,25 +26,26 @@ const upload = multer({
     files: 20, // Maximum 20 files at once
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error("Only image files are allowed"));
     }
   },
 });
 
 // Teacher CRUD routes
 router.post(
-  '/',
+  "/",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  upload.array("photos", 20), // Support up to 20 photos
   validateRequest(createTeacherValidationSchema),
   TeacherController.createTeacher
 );
 
 router.get(
-  '/',
+  "/",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TEACHER),
   validateRequest(getTeachersValidationSchema),
@@ -52,7 +53,7 @@ router.get(
 );
 
 router.get(
-  '/stats/:schoolId',
+  "/stats/:schoolId",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   validateRequest(getTeachersStatsValidationSchema),
@@ -60,7 +61,7 @@ router.get(
 );
 
 router.get(
-  '/school/:schoolId/subject/:subject',
+  "/school/:schoolId/subject/:subject",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TEACHER),
   validateRequest(getTeachersBySubjectSchema),
@@ -68,7 +69,7 @@ router.get(
 );
 
 router.get(
-  '/:id',
+  "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TEACHER),
   validateRequest(getTeacherValidationSchema),
@@ -76,7 +77,7 @@ router.get(
 );
 
 router.patch(
-  '/:id',
+  "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   validateRequest(updateTeacherValidationSchema),
@@ -84,7 +85,7 @@ router.patch(
 );
 
 router.delete(
-  '/:id',
+  "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   validateRequest(deleteTeacherValidationSchema),
@@ -93,16 +94,16 @@ router.delete(
 
 // Photo management routes
 router.post(
-  '/:id/photos',
+  "/:id/photos",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
-  upload.array('photos'),
+  upload.array("photos"),
   validateRequest(uploadPhotosValidationSchema),
   TeacherController.uploadTeacherPhotos
 );
 
 router.get(
-  '/:id/photos',
+  "/:id/photos",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TEACHER),
   validateRequest(getTeacherValidationSchema),
@@ -110,7 +111,7 @@ router.get(
 );
 
 router.get(
-  '/:id/photos/available-slots',
+  "/:id/photos/available-slots",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   validateRequest(getTeacherValidationSchema),
@@ -118,7 +119,7 @@ router.get(
 );
 
 router.delete(
-  '/:teacherId/photos/:photoId',
+  "/:teacherId/photos/:photoId",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   validateRequest(deletePhotoValidationSchema),

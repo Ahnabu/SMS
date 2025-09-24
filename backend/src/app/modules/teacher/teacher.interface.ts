@@ -1,4 +1,4 @@
-import { Document, Types, Model } from 'mongoose';
+import { Document, Types, Model } from "mongoose";
 
 export interface ITeacher {
   userId: Types.ObjectId;
@@ -265,6 +265,11 @@ export interface ITeacherResponse {
   };
   photos?: ITeacherPhotoResponse[];
   photoCount: number;
+  credentials?: {
+    username: string;
+    password: string;
+    message: string;
+  };
 }
 
 export interface ITeacherPhotoResponse {
