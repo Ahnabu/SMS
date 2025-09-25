@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { AppError } from "../../errors/AppError";
 import { teacherService } from "./teacher.service";
 import {
   ICreateTeacherRequest,
@@ -10,9 +11,22 @@ import {
 
 const createTeacher = catchAsync(async (req: Request, res: Response) => {
   const teacherData: ICreateTeacherRequest = req.body;
+  
+  // Get admin user from auth middleware
+  const adminUser = (req as any).user;
+  if (!adminUser?.id) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Admin user not found");
+  }
+  
+  // Add schoolId from authenticated admin user
+  const teacherDataWithSchoolId = {
+    ...teacherData,
+    schoolId: adminUser.schoolId,
+  };
+  
   const files = req.files as Express.Multer.File[];
 
-  const result = await teacherService.createTeacher(teacherData, files);
+  const result = await teacherService.createTeacher(teacherDataWithSchoolId, files);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,

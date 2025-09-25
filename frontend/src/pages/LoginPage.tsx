@@ -143,7 +143,6 @@ const LoginPage: React.FC = () => {
               <Button
                 type="submit"
                 className="w-full"
-                loading={isLoading}
                 disabled={!username || !password || isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}

@@ -7,26 +7,84 @@ import { apiService } from "@/services";
 
 interface Teacher {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  employeeId: string;
-  department: string;
-  designation: string;
-  dateOfJoining: string;
-  qualifications: string[];
+  userId: string;
+  schoolId: string;
+  teacherId: string;
+  employeeId?: string;
   subjects: string[];
-  address?: {
-    street: string;
+  grades: number[];
+  sections: string[];
+  designation: string;
+  bloodGroup: string;
+  dob: string;
+  joinDate: string;
+  qualifications: {
+    degree: string;
+    institution: string;
+    year: number;
+    specialization?: string;
+  }[];
+  experience: {
+    totalYears: number;
+    previousSchools?: {
+      schoolName: string;
+      position: string;
+      duration: string;
+      fromDate: string;
+      toDate: string;
+    }[];
+  };
+  address: {
+    street?: string;
     city: string;
     state: string;
+    zipCode: string;
     country: string;
-    postalCode: string;
   };
-  salary?: number;
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+  };
+  salary?: {
+    basic: number;
+    allowances?: number;
+    deductions?: number;
+    netSalary: number;
+  };
+  isClassTeacher: boolean;
+  classTeacherFor?: {
+    grade: number;
+    section: string;
+  };
   isActive: boolean;
+  age: number;
+  totalExperience: number;
   createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+  };
+  school?: {
+    id: string;
+    name: string;
+  };
+  photos?: any[];
+  photoCount: number;
+  // Legacy fields for backward compatibility
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  dateOfJoining?: string;
+  department?: string;
 }
 
 interface TeacherListProps {
@@ -137,47 +195,147 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
         setTeachers([
           {
             id: "1",
-            firstName: "Sarah",
-            lastName: "Johnson",
-            email: "sarah.johnson@school.edu",
-            phone: "+1-555-0123",
+            userId: "user1",
+            schoolId: "school1",
+            teacherId: "TCH-2025-001",
             employeeId: "EMP001",
-            department: "Mathematics",
-            designation: "Senior Teacher",
-            dateOfJoining: "2022-01-15",
-            qualifications: ["M.Sc Mathematics", "B.Ed"],
             subjects: ["Algebra", "Calculus", "Geometry"],
+            grades: [9, 10, 11],
+            sections: ["A", "B"],
+            designation: "Senior Teacher",
+            bloodGroup: "A+",
+            dob: "1985-05-15",
+            joinDate: "2022-01-15",
+            qualifications: [
+              {
+                degree: "M.Sc Mathematics",
+                institution: "State University",
+                year: 2008
+              },
+              {
+                degree: "B.Ed",
+                institution: "Education College",
+                year: 2009
+              }
+            ],
+            experience: {
+              totalYears: 5,
+              previousSchools: []
+            },
             address: {
               street: "123 Main St",
               city: "New York",
               state: "NY",
+              zipCode: "10001",
               country: "USA",
-              postalCode: "10001",
+            },
+            emergencyContact: {
+              name: "John Johnson",
+              relationship: "Spouse",
+              phone: "+1-555-0199"
+            },
+            isClassTeacher: true,
+            classTeacherFor: {
+              grade: 10,
+              section: "A"
             },
             isActive: true,
+            age: 38,
+            totalExperience: 5,
             createdAt: "2022-01-15T10:00:00Z",
+            updatedAt: "2022-01-15T10:00:00Z",
+            user: {
+              id: "user1",
+              username: "sarah.johnson",
+              firstName: "Sarah",
+              lastName: "Johnson",
+              fullName: "Sarah Johnson",
+              email: "sarah.johnson@school.edu",
+              phone: "+1-555-0123"
+            },
+            school: {
+              id: "school1",
+              name: "Demo School"
+            },
+            photos: [],
+            photoCount: 0,
+            // Legacy fields for backward compatibility
+            firstName: "Sarah",
+            lastName: "Johnson",
+            email: "sarah.johnson@school.edu",
+            phone: "+1-555-0123",
+            dateOfJoining: "2022-01-15",
+            department: "Mathematics"
           },
           {
             id: "2",
-            firstName: "Michael",
-            lastName: "Davis",
-            email: "michael.davis@school.edu",
-            phone: "+1-555-0124",
+            userId: "user2",
+            schoolId: "school1",
+            teacherId: "TCH-2025-002",
             employeeId: "EMP002",
-            department: "Science",
-            designation: "Head of Science",
-            dateOfJoining: "2021-08-20",
-            qualifications: ["Ph.D Physics", "M.Sc Physics"],
             subjects: ["Physics", "Chemistry"],
+            grades: [11, 12],
+            sections: ["A", "B", "C"],
+            designation: "Head of Science",
+            bloodGroup: "O+",
+            dob: "1980-12-10",
+            joinDate: "2021-08-20",
+            qualifications: [
+              {
+                degree: "Ph.D Physics",
+                institution: "Technical University",
+                year: 2005
+              },
+              {
+                degree: "M.Sc Physics",
+                institution: "Science College",
+                year: 2002
+              }
+            ],
+            experience: {
+              totalYears: 8,
+              previousSchools: []
+            },
             address: {
               street: "456 Oak Ave",
               city: "New York",
               state: "NY",
+              zipCode: "10002",
               country: "USA",
-              postalCode: "10002",
             },
+            emergencyContact: {
+              name: "Lisa Davis",
+              relationship: "Spouse",
+              phone: "+1-555-0198"
+            },
+            isClassTeacher: false,
             isActive: true,
+            age: 43,
+            totalExperience: 8,
             createdAt: "2021-08-20T14:30:00Z",
+            updatedAt: "2021-08-20T14:30:00Z",
+            user: {
+              id: "user2",
+              username: "michael.davis",
+              firstName: "Michael",
+              lastName: "Davis",
+              fullName: "Michael Davis",
+              email: "michael.davis@school.edu",
+              phone: "+1-555-0124"
+            },
+            school: {
+              id: "school1",
+              name: "Demo School"
+            },
+            photos: [],
+            photoCount: 0,
+            // Legacy fields for backward compatibility
+            firstName: "Michael",
+            lastName: "Davis",
+            email: "michael.davis@school.edu",
+            phone: "+1-555-0124",
+            dateOfJoining: "2021-08-20",
+            department: "Science"
           },
         ]);
         setTotalPages(1);
@@ -323,41 +481,41 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                       <div className="flex-shrink-0">
                         <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
                           <span className="text-lg font-medium text-white">
-                            {teacher.firstName[0]}
-                            {teacher.lastName[0]}
+                            {(teacher.user?.firstName || teacher.firstName)?.[0] || '?'}
+                            {(teacher.user?.lastName || teacher.lastName)?.[0] || '?'}
                           </span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {teacher.firstName} {teacher.lastName}
+                            {teacher.user?.firstName || teacher.firstName || 'Unknown'} {teacher.user?.lastName || teacher.lastName || 'Teacher'}
                           </h3>
-                          {getStatusBadge(teacher.isActive)}
+                          {getStatusBadge(teacher.isActive ?? false)}
                         </div>
                         <p className="text-sm text-gray-600 mb-1">
                           <span className="font-medium">Employee ID:</span>{" "}
-                          {teacher.employeeId} •
+                          {teacher.employeeId || 'N/A'} •
                           <span className="font-medium ml-2">Department:</span>{" "}
-                          {teacher.department}
+                          {teacher.department || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 mb-1">
                           <span className="font-medium">Designation:</span>{" "}
-                          {teacher.designation} •
+                          {teacher.designation || 'N/A'} •
                           <span className="font-medium ml-2">Joined:</span>{" "}
-                          {new Date(teacher.dateOfJoining).toLocaleDateString()}
+                          {(teacher.joinDate || teacher.dateOfJoining) ? new Date(teacher.joinDate || teacher.dateOfJoining!).toLocaleDateString() : 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 mb-2">
                           <span className="font-medium">Contact:</span>{" "}
-                          {teacher.email}{" "}
-                          {teacher.phone && `• ${teacher.phone}`}
+                          {teacher.user?.email || teacher.email || 'N/A'}{" "}
+                          {(teacher.user?.phone || teacher.phone) && `• ${teacher.user?.phone || teacher.phone}`}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-600">
                             Subjects:
                           </span>
                           <div className="flex flex-wrap gap-1">
-                            {teacher.subjects.map((subject, index) => (
+                            {(teacher.subjects || []).map((subject, index) => (
                               <span
                                 key={index}
                                 className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
@@ -390,15 +548,15 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          handleStatusChange(teacher.id, !teacher.isActive)
+                          handleStatusChange(teacher.id, !(teacher.isActive ?? false))
                         }
                         className={`p-2 ${
-                          teacher.isActive
+                          teacher.isActive ?? false
                             ? "text-red-600 hover:text-red-700"
                             : "text-green-600 hover:text-green-700"
                         }`}
                       >
-                        {teacher.isActive ? (
+                        {(teacher.isActive ?? false) ? (
                           <UserX className="w-4 h-4" />
                         ) : (
                           <UserCheck className="w-4 h-4" />
