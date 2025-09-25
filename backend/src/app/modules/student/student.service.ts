@@ -127,60 +127,167 @@ class StudentService {
       if (studentData.parentInfo) {
         const { parentInfo } = studentData;
 
-        // Create parent user account with generated credentials
-        parentUser = await User.create(
-          [
-            {
-              schoolId: studentData.schoolId,
-              role: "parent",
-              username: credentials.parent.username,
-              passwordHash: credentials.parent.hashedPassword,
-              firstName: parentInfo.name.split(" ")[0] || parentInfo.name,
-              lastName:
-                parentInfo.name.split(" ").slice(1).join(" ") || "Guardian", // Default lastName if not provided
-              phone: parentInfo.phone,
-            },
-          ],
-          { session }
-        );
+        // First check if a parent with similar details already exists to avoid duplicates
+        let existingParent = null;
+        if (parentInfo.email) {
+          const existingUser = await User.findOne({
+            email: parentInfo.email,
+            role: "parent",
+            schoolId: studentData.schoolId
+          }).session(session);
+          
+          if (existingUser) {
+            existingParent = await Parent.findOne({
+              userId: existingUser._id,
+              schoolId: studentData.schoolId
+            }).session(session);
+          }
+        }
 
-        // Generate parent ID for the Parent model
-        const parentId = await Parent.generateNextParentId(
-          studentData.schoolId
-        );
-
-        // Create basic parent record with required fields
-        const newParent = await Parent.create(
-          [
-            {
-              userId: parentUser[0]._id,
-              schoolId: studentData.schoolId,
-              parentId: parentId,
-              children: [newStudent[0]._id], // Link to the student
-              relationship: "Guardian", // Default relationship
-              address: {
-                city: "",
-                state: "",
-                zipCode: "",
-                country: "",
-                street: parentInfo.address || "",
+        if (existingParent) {
+          // Use existing parent and add this student to their children
+          if (!existingParent.children.includes(newStudent[0]._id)) {
+            existingParent.children.push(newStudent[0]._id);
+            await existingParent.save({ session });
+          }
+          
+          // Update student with existing parent reference
+          newStudent[0].parentId = existingParent._id;
+          await newStudent[0].save({ session });
+          
+          console.log(`Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`);
+        } else {
+          // Create new parent user account with generated credentials
+          parentUser = await User.create(
+            [
+              {
+                schoolId: studentData.schoolId,
+                role: "parent",
+                username: credentials.parent.username,
+                passwordHash: credentials.parent.hashedPassword,
+                firstName: parentInfo.name.split(" ")[0] || parentInfo.name,
+                lastName:
+                  parentInfo.name.split(" ").slice(1).join(" ") || "Guardian", // Default lastName if not provided
+                phone: parentInfo.phone,
+                email: parentInfo.email, // Make sure to save the email
               },
-              preferences: {
-                communicationMethod: "All",
-                receiveNewsletters: true,
-                receiveAttendanceAlerts: true,
-                receiveExamResults: true,
-                receiveEventNotifications: true,
-              },
-              occupation: parentInfo.occupation,
-            },
-          ],
-          { session }
-        );
+            ],
+            { session }
+          );
 
-        // Update student with parent reference
-        newStudent[0].parentId = newParent[0]._id;
-        await newStudent[0].save({ session });
+          // Generate parent ID for the Parent model - with retry logic for duplicates
+          let parentId: string;
+          let attempts = 0;
+          const maxAttempts = 5;
+
+          do {
+            try {
+              parentId = await Parent.generateNextParentId(
+                studentData.schoolId,
+                undefined, // use current year
+                session // pass the session for transaction consistency
+              );
+              
+              // Verify this ID is not already taken
+              const existingParent = await Parent.findOne({ parentId }).session(session);
+              if (!existingParent) {
+                break; // We found a unique ID
+              }
+              
+              attempts++;
+              if (attempts >= maxAttempts) {
+                // Use timestamp-based fallback for absolute uniqueness
+                parentId = `PAR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+                break;
+              }
+              
+              // Add small delay to reduce race conditions
+              await new Promise(resolve => setTimeout(resolve, 10));
+            } catch (error) {
+              attempts++;
+              if (attempts >= maxAttempts) {
+                throw new AppError(
+                  httpStatus.INTERNAL_SERVER_ERROR,
+                  "Failed to generate unique parent ID after multiple attempts"
+                );
+              }
+            }
+          } while (attempts < maxAttempts);
+
+          // Create basic parent record with required fields
+          let newParent;
+          try {
+            newParent = await Parent.create(
+              [
+                {
+                  userId: parentUser[0]._id,
+                  schoolId: studentData.schoolId,
+                  parentId: parentId,
+                  children: [newStudent[0]._id], // Link to the student
+                  relationship: parentInfo.relationship || "Guardian", // Use provided relationship or default
+                  address: {
+                    street: parentInfo.address || "",
+                    city: "", // Optional field now
+                    state: "", // Optional field now
+                    zipCode: "", // Optional field now
+                    country: "", // Optional field now
+                  },
+                  preferences: {
+                    communicationMethod: "All",
+                    receiveNewsletters: true,
+                    receiveAttendanceAlerts: true,
+                    receiveExamResults: true,
+                    receiveEventNotifications: true,
+                  },
+                  occupation: parentInfo.occupation || "",
+                },
+              ],
+              { session }
+            );
+          } catch (parentError: any) {
+            // If we get a duplicate key error even after our checks, try one more time with timestamp
+            if (parentError.code === 11000 && parentError.keyPattern?.parentId) {
+              console.warn("Duplicate parent ID detected, retrying with timestamp-based ID");
+              parentId = `PAR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+              
+              newParent = await Parent.create(
+                [
+                  {
+                    userId: parentUser[0]._id,
+                    schoolId: studentData.schoolId,
+                    parentId: parentId,
+                    children: [newStudent[0]._id],
+                    relationship: parentInfo.relationship || "Guardian",
+                    address: {
+                      street: parentInfo.address || "",
+                      city: "",
+                      state: "",
+                      zipCode: "",
+                      country: "",
+                    },
+                    preferences: {
+                      communicationMethod: "All",
+                      receiveNewsletters: true,
+                      receiveAttendanceAlerts: true,
+                      receiveExamResults: true,
+                      receiveEventNotifications: true,
+                    },
+                    occupation: parentInfo.occupation || "",
+                  },
+                ],
+                { session }
+              );
+            } else {
+              throw parentError;
+            }
+          }
+
+          // Update student with parent reference
+          newStudent[0].parentId = newParent[0]._id;
+          await newStudent[0].save({ session });
+          
+          console.log(`Created new parent ${parentId} for student ${newStudent[0].studentId}`);
+        }
       }
 
       // Process photos - MANDATORY for student creation

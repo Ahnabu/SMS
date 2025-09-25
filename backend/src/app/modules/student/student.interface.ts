@@ -92,6 +92,7 @@ export interface ICreateStudentRequest {
     phone?: string;
     address?: string;
     occupation?: string;
+    relationship?: string; 
   };
   photos?: Express.Multer.File[];
   rollNumber?: number;

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DataTableFilter, FilterConfig } from "@/components/ui/DataTableFilter";
 import StudentDetailsModal from "./StudentDetailsModal";
-import ConfirmDialog from "../ui/ConfirmDialog";
+import ConfirmDialog from "../../ui/ConfirmDialog";
 import { showToast } from "@/utils/toast";
 import { apiService } from "@/services";
 

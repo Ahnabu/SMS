@@ -11,11 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { studentApi } from "../../services/student.api";
-import { adminApi } from "../../services/admin.api";
-import { useAuth } from "../../context/AuthContext";
-import { showApiError, showToast } from "../../utils/toast";
-import { CredentialsModal } from "./CredentialsModal";
+import { studentApi } from "../../../services/student.api";
+import { adminApi } from "../../../services/admin.api";
+import { useAuth } from "../../../context/AuthContext";
+import { showApiError, showToast } from "../../../utils/toast";
+import { CredentialsModal } from "../CredentialsModal";
 
 interface Student {
   address: any;
@@ -304,6 +304,13 @@ const StudentForm: React.FC<StudentFormProps> = ({
           dob: formData.dob,
           rollNumber: formData.rollNumber,
           isActive: formData.isActive ?? true,
+          address: {
+            street: formData.address?.street?.trim() || "",
+            city: formData.address?.city?.trim() || "",
+            state: formData.address?.state?.trim() || "",
+            country: formData.address?.country?.trim() || "",
+            postalCode: formData.address?.postalCode?.trim() || "",
+          },
           parentInfo: {
             name: formData.parent?.name?.trim(),
             email: formData.parent?.email?.trim(),
@@ -400,6 +407,23 @@ const StudentForm: React.FC<StudentFormProps> = ({
           );
         }
 
+        // Add student address information
+        if (formData.address?.street?.trim()) {
+          formDataToSend.append("address[street]", formData.address.street.trim());
+        }
+        if (formData.address?.city?.trim()) {
+          formDataToSend.append("address[city]", formData.address.city.trim());
+        }
+        if (formData.address?.state?.trim()) {
+          formDataToSend.append("address[state]", formData.address.state.trim());
+        }
+        if (formData.address?.country?.trim()) {
+          formDataToSend.append("address[country]", formData.address.country.trim());
+        }
+        if (formData.address?.postalCode?.trim()) {
+          formDataToSend.append("address[postalCode]", formData.address.postalCode.trim());
+        }
+
         // Add photos
         if (formData.photos && formData.photos.length > 0) {
           (formData.photos as File[]).forEach((photo) => {
@@ -445,6 +469,15 @@ const StudentForm: React.FC<StudentFormProps> = ({
           // Update both name and fullName for consistency
           ...(parentField === "name" && { fullName: value }),
         } as NonNullable<Student["parent"]>,
+      }));
+    } else if (field.startsWith("address.")) {
+      const addressField = field.replace("address.", "");
+      setFormData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [addressField]: value,
+        },
       }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));

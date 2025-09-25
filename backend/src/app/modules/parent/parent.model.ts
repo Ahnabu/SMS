@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+import mongoose from 'mongoose';
 import {
   IParent,
   IParentDocument,
@@ -86,25 +87,27 @@ const parentSchema = new Schema<IParentDocument, IParentModel, IParentMethods>(
       },
       city: {
         type: String,
-        required: [true, 'City is required'],
         trim: true,
         maxlength: [100, 'City cannot exceed 100 characters'],
       },
       state: {
         type: String,
-        required: [true, 'State is required'],
         trim: true,
         maxlength: [100, 'State cannot exceed 100 characters'],
       },
       zipCode: {
         type: String,
-        required: [true, 'Zip code is required'],
         trim: true,
-        match: [/^\d{5,6}$/, 'Invalid zip code format'],
+        validate: {
+          validator: function(v: string) {
+            // Allow empty string or valid zip code format
+            return !v || /^\d{5,6}$/.test(v);
+          },
+          message: 'Invalid zip code format (should be 5-6 digits)'
+        },
       },
       country: {
         type: String,
-        required: [true, 'Country is required'],
         trim: true,
         maxlength: [100, 'Country cannot exceed 100 characters'],
       },
@@ -223,24 +226,62 @@ parentSchema.statics.findByParentId = function (parentId: string): Promise<IPare
 
 parentSchema.statics.generateNextParentId = async function (
   schoolId: string,
-  year: number = new Date().getFullYear()
+  year: number = new Date().getFullYear(),
+  session?: any
 ): Promise<string> {
   const prefix = `PAR-${year}-`;
 
-  // Find the highest sequence number for this school and year
-  const lastParent = await this.findOne({
-    schoolId,
-    parentId: { $regex: `^${prefix}` }
-  }).sort({ parentId: -1 });
+  // Use an aggregation pipeline to find the highest sequence number more reliably
+  const pipeline = [
+    {
+      $match: {
+        schoolId: new mongoose.Types.ObjectId(schoolId),
+        parentId: { $regex: `^${prefix}` }
+      }
+    },
+    {
+      $addFields: {
+        sequenceNumber: {
+          $toInt: {
+            $arrayElemAt: [
+              { $split: ["$parentId", "-"] },
+              2
+            ]
+          }
+        }
+      }
+    },
+    {
+      $sort: { sequenceNumber: -1 }
+    },
+    {
+      $limit: 1
+    }
+  ];
 
+  const result = await this.aggregate(pipeline).session(session);
+  
   let nextSequence = 1;
-  if (lastParent) {
-    const lastSequence = parseInt(lastParent.parentId.split('-')[2]);
-    nextSequence = lastSequence + 1;
+  if (result.length > 0 && result[0].sequenceNumber) {
+    nextSequence = result[0].sequenceNumber + 1;
   }
 
-  const sequenceStr = nextSequence.toString().padStart(3, '0');
-  return `${prefix}${sequenceStr}`;
+  // Add some randomness for concurrent requests to reduce collision probability
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const sequenceStr = (nextSequence + attempt).toString().padStart(3, '0');
+    const candidateId = `${prefix}${sequenceStr}`;
+    
+    // Check if this ID already exists
+    const existing = await this.findOne({ parentId: candidateId }).session(session);
+    if (!existing) {
+      return candidateId;
+    }
+  }
+
+  // If all attempts failed, use a timestamp-based fallback
+  const timestamp = Date.now().toString().slice(-6);
+  return `${prefix}${timestamp}`;
 };
 
 // Indexes for performance

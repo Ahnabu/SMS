@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { AppError } from "../../errors/AppError";
 import { Organization } from "../organization/organization.model";
 import { User } from "../user/user.model";
+import { UserRole } from "../user/user.interface";
 import { School } from "./school.model";
 import {
   ICreateSchoolRequest,
@@ -723,45 +724,38 @@ class SchoolService {
     };
   }> {
     try {
+      // Import the required models
+      const { Student } = await import('../student/student.model');
+      const { Teacher } = await import('../teacher/teacher.model');
+      const { User } = await import('../user/user.model');
+
       const [
         totalSchools,
         activeSchools,
         pendingSchools,
         suspendedSchools,
-        schoolStats,
+        totalStudents,
+        totalTeachers,
+        totalParents,
       ] = await Promise.all([
         School.countDocuments({ isActive: true }),
         School.countDocuments({ status: SchoolStatus.ACTIVE }),
         School.countDocuments({ status: SchoolStatus.PENDING_APPROVAL }),
         School.countDocuments({ status: SchoolStatus.SUSPENDED }),
-        School.find({ isActive: true }).select("stats").lean(),
+        Student.countDocuments({ isActive: true }),
+        Teacher.countDocuments({ isActive: true }),
+        User.countDocuments({ role: UserRole.PARENT, isActive: true }),
       ]);
-
-      const totalStudents = schoolStats.reduce(
-        (sum, school) => sum + (school.stats?.totalStudents || 0),
-        0
-      );
-      const totalTeachers = schoolStats.reduce(
-        (sum, school) => sum + (school.stats?.totalTeachers || 0),
-        0
-      );
-      const totalParents = schoolStats.reduce(
-        (sum, school) => sum + (school.stats?.totalParents || 0),
-        0
-      );
 
       // Calculate recent activity (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const [recentSchools, recentStudents, recentTeachers] = await Promise.all(
-        [
-          School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-          // TODO: Add student and teacher count queries when those collections are available
-          Promise.resolve(0),
-          Promise.resolve(0),
-        ]
-      );
+      const [recentSchools, recentStudents, recentTeachers] = await Promise.all([
+        School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Student.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Teacher.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      ]);
 
       return {
         totalSchools,
@@ -778,10 +772,39 @@ class SchoolService {
         },
       };
     } catch (error) {
-      throw new AppError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to get system stats: ${(error as Error).message}`
-      );
+      // If Student or Teacher models don't exist yet, return basic stats
+      console.warn('Some models not available, returning basic stats:', (error as Error).message);
+      
+      const [
+        totalSchools,
+        activeSchools,
+        pendingSchools,
+        suspendedSchools,
+      ] = await Promise.all([
+        School.countDocuments({ isActive: true }),
+        School.countDocuments({ status: SchoolStatus.ACTIVE }),
+        School.countDocuments({ status: SchoolStatus.PENDING_APPROVAL }),
+        School.countDocuments({ status: SchoolStatus.SUSPENDED }),
+      ]);
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentSchools = await School.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
+
+      return {
+        totalSchools,
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalParents: 0,
+        activeSchools,
+        pendingSchools,
+        suspendedSchools,
+        recentActivity: {
+          schoolsCreated: recentSchools,
+          studentsEnrolled: 0,
+          teachersAdded: 0,
+        },
+      };
     }
   }
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { adminApi } from "../services/admin.api";
-import StudentList, { StudentListRef } from "../components/admin/StudentList";
-import StudentForm from "../components/admin/StudentForm";
+import StudentList, { StudentListRef } from "../components/admin/student/StudentList";
+import StudentForm from "../components/admin/student/StudentForm";
 import TeacherList, { TeacherListRef } from "../components/admin/TeacherList";
 import TeacherForm from "../components/admin/TeacherForm";
 
@@ -248,18 +248,26 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Add Student
-            </button>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Add Teacher
-            </button>
-            <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Create Schedule
-            </button>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              View Reports
-            </button>
+            <Link to="/admin/students">
+              <button className="bg-blue-600 hover:bg-blue-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
+                Add Student
+              </button>
+            </Link>
+            <Link to="/admin/teachers">
+              <button className="bg-green-600 hover:bg-green-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
+                Add Teacher
+              </button>
+            </Link>
+            <Link to="/admin/schedule">
+              <button className="bg-yellow-600 hover:bg-yellow-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
+                Create Schedule
+              </button>
+            </Link>
+            <Link to="/admin/reports">
+              <button className="bg-purple-600 hover:bg-purple-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
+                View Reports
+              </button>
+            </Link>
           </div>
         </div>
       </div>

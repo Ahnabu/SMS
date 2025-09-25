@@ -14,10 +14,10 @@ export interface IParent {
   };
   address: {
     street?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
   };
   emergencyContact?: {
     name: string;
@@ -53,7 +53,7 @@ export interface IParentModel extends Model<IParentDocument> {
   findBySchool(schoolId: string): Promise<IParentDocument[]>;
   findByStudent(studentId: string): Promise<IParentDocument[]>;
   findByParentId(parentId: string): Promise<IParentDocument | null>;
-  generateNextParentId(schoolId: string, year?: number): Promise<string>;
+  generateNextParentId(schoolId: string, year?: number, session?: any): Promise<string>;
 }
 
 // Request/Response interfaces

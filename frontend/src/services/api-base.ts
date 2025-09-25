@@ -7,19 +7,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   timeout: 30000,
-  withCredentials: true,
+  withCredentials: true, // Include cookies in requests
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor (no longer needed for token, but kept for future extensions)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Since we're using HTTP-only cookies, no need to manually add auth headers
+    // The cookie will be automatically included with withCredentials: true
     return config;
   },
   (error) => {
@@ -33,12 +31,8 @@ api.interceptors.response.use(
     return response;
   },
   (error: any) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
-    }
+    // Remove the automatic redirect on 401 - let the AuthContext handle authentication state
+    // The 401 error will be passed through to the calling code to handle appropriately
     return Promise.reject(error);
   }
 );
