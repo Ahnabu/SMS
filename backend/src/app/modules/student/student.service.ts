@@ -74,29 +74,75 @@ class StudentService {
       const admissionYear = new Date(admissionDate).getFullYear();
 
       // Generate student ID and credentials using CredentialGenerator
-      const { studentId, rollNumber, credentials } =
-        await CredentialGenerator.generateStudentRegistration(
-          admissionYear,
-          studentData.grade.toString(),
-          studentData.schoolId
-        );
+      let studentId: string | undefined = undefined;
+      let rollNumber: number | undefined = undefined;
+      let credentials: {
+        student: any;
+        parent: any;
+      } | undefined = undefined;
+      let userCreationAttempts = 0;
+      const maxUserCreationAttempts = 3;
+      let newUser;
 
-      // Create user account for student
-      const newUser = await User.create(
-        [
-          {
-            schoolId: studentData.schoolId,
-            role: "student",
-            username: credentials.student.username,
-            passwordHash: credentials.student.hashedPassword,
-            firstName: studentData.firstName,
-            lastName: studentData.lastName,
-            email: studentData.email,
-            phone: studentData.phone,
-          },
-        ],
-        { session }
-      );
+      while (userCreationAttempts < maxUserCreationAttempts) {
+        try {
+          userCreationAttempts++;
+          
+          // Generate fresh credentials for each attempt
+          const registration = await CredentialGenerator.generateStudentRegistration(
+            admissionYear,
+            studentData.grade.toString(),
+            studentData.schoolId
+          );
+          
+          studentId = registration.studentId;
+          rollNumber = registration.rollNumber;
+          credentials = registration.credentials;
+
+          // Create user account for student
+          newUser = await User.create(
+            [
+              {
+                schoolId: studentData.schoolId,
+                role: "student",
+                username: credentials.student.username,
+                passwordHash: credentials.student.hashedPassword,
+                firstName: studentData.firstName,
+                lastName: studentData.lastName,
+                email: studentData.email,
+                phone: studentData.phone,
+              },
+            ],
+            { session }
+          );
+
+          break; // Success, exit retry loop
+        } catch (error: any) {
+          if (error.code === 11000 && userCreationAttempts < maxUserCreationAttempts) {
+            // Duplicate key error, retry with new credentials
+            console.log(`Duplicate username detected, retrying... (Attempt ${userCreationAttempts}/${maxUserCreationAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+            continue;
+          } else {
+            // Re-throw if not a duplicate key error or if we've exhausted retries
+            throw error;
+          }
+        }
+      }
+
+      if (!newUser) {
+        throw new AppError(
+          httpStatus.INTERNAL_SERVER_ERROR,
+          `Failed to create student user after ${maxUserCreationAttempts} attempts. Please try again.`
+        );
+      }
+
+      if (!studentId || !credentials || rollNumber === undefined) {
+        throw new AppError(
+          httpStatus.INTERNAL_SERVER_ERROR,
+          "Failed to generate student credentials. Please try again."
+        );
+      }
 
       // Create student record
       const newStudent = await Student.create(
@@ -157,6 +203,11 @@ class StudentService {
           
           console.log(`Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`);
         } else {
+          // Ensure credentials are available
+          if (!credentials) {
+            throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to generate credentials");
+          }
+          
           // Create new parent user account with generated credentials
           parentUser = await User.create(
             [
@@ -176,7 +227,7 @@ class StudentService {
           );
 
           // Generate parent ID for the Parent model - with retry logic for duplicates
-          let parentId: string;
+          let parentId: string = "";
           let attempts = 0;
           const maxAttempts = 5;
 
@@ -189,8 +240,8 @@ class StudentService {
               );
               
               // Verify this ID is not already taken
-              const existingParent = await Parent.findOne({ parentId }).session(session);
-              if (!existingParent) {
+              const existingParentCheck = await Parent.findOne({ parentId }).session(session);
+              if (!existingParentCheck) {
                 break; // We found a unique ID
               }
               
@@ -365,6 +416,10 @@ class StudentService {
         .split("T")[0];
 
       try {
+        if (!studentId) {
+          throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Student ID is required for folder creation");
+        }
+        
         await FileUtils.createStudentPhotoFolder(school.name, {
           firstName: studentData.firstName,
           age,
@@ -381,6 +436,10 @@ class StudentService {
 
       // Store credentials in database if adminUserId is provided
       if (adminUserId) {
+        if (!credentials) {
+          throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Credentials are required for storage");
+        }
+        
         const credentialsToStore: any[] = [
           {
             userId: newUser[0]._id,
@@ -436,16 +495,18 @@ class StudentService {
       }
 
       // Add generated credentials to response
-      response.credentials = {
-        student: {
-          username: credentials.student.username,
-          password: credentials.student.password,
-        },
-        parent: {
-          username: credentials.parent.username,
-          password: credentials.parent.password,
-        },
-      };
+      if (credentials) {
+        response.credentials = {
+          student: {
+            username: credentials.student.username,
+            password: credentials.student.password,
+          },
+          parent: {
+            username: credentials.parent.username,
+            password: credentials.parent.password,
+          },
+        };
+      }
 
       return response;
     } catch (error: unknown) {

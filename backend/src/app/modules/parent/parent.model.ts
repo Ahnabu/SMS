@@ -232,7 +232,7 @@ parentSchema.statics.generateNextParentId = async function (
   const prefix = `PAR-${year}-`;
 
   // Use an aggregation pipeline to find the highest sequence number more reliably
-  const pipeline = [
+  const pipeline: any[] = [
     {
       $match: {
         schoolId: new mongoose.Types.ObjectId(schoolId),

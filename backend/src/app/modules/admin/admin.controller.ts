@@ -39,14 +39,12 @@ export const getAdminDashboard = catchAsync(async (req: AuthenticatedRequest, re
   ]);
 
   const dashboardData = {
-    statistics: {
-      totalStudents,
-      totalTeachers,
-      totalSubjects,
-      totalSchedules,
-      upcomingEvents: upcomingEvents.length
-    },
-    upcomingEvents
+    totalStudents,
+    totalTeachers,
+    totalSubjects,
+    activeClasses: totalSchedules, // Map totalSchedules to activeClasses for frontend consistency
+    upcomingEvents: upcomingEvents.length,
+    upcomingEventsDetails: upcomingEvents
   };
 
   sendResponse(res, {

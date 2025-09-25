@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { Student } from "../modules/student/student.model";
 import { Teacher } from "../modules/teacher/teacher.model";
 import { User } from "../modules/user/user.model";
@@ -51,60 +52,69 @@ export class CredentialGenerator {
     // Convert grade to 2-digit number (pad with zero if needed)
     const gradeNumber = grade.toString().padStart(2, "0");
 
-    // Find all existing students for this year, grade, and school
-    // Sort by creation time to maintain sequential registration order
-    const existingStudents = await Student.find({
-      schoolId,
-      admissionYear,
-      grade,
-      isActive: true,
-    })
-      .sort({ createdAt: 1, rollNumber: 1 }) // Sequential by registration time
-      .exec();
+    // Use aggregation to get the next roll number atomically
+    const result = await Student.aggregate([
+      {
+        $match: {
+          schoolId: new mongoose.Types.ObjectId(schoolId),
+          admissionYear,
+          grade,
+          isActive: true,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          maxRollNumber: { $max: "$rollNumber" },
+          count: { $sum: 1 }
+        },
+      },
+    ]);
 
-    let nextRoll = 1;
-
-    if (existingStudents.length > 0) {
-      // Find the highest roll number for this specific grade
-      const rollNumbers = existingStudents
-        .map((student) => student.rollNumber)
-        .filter(
-          (roll): roll is number =>
-            roll !== undefined && roll !== null && roll > 0
-        )
-        .sort((a, b) => a - b);
-
-      if (rollNumbers.length > 0) {
-        nextRoll = Math.max(...rollNumbers) + 1;
-      }
-
-      // Ensure sequential numbering within grade
-      // Check for gaps and fill them for better organization
-      for (let i = 1; i <= rollNumbers.length + 1; i++) {
-        if (!rollNumbers.includes(i)) {
-          nextRoll = i;
-          break;
-        }
-      }
-    }
+    const nextRoll = result.length > 0 ? (result[0].maxRollNumber || 0) + 1 : 1;
 
     // Format roll number as 4-digit string (0001, 0002, etc.)
     const rollNumberStr = nextRoll.toString().padStart(4, "0");
-    const studentId = `${admissionYear}${gradeNumber}${rollNumberStr}`;
+    const baseStudentId = `${admissionYear}${gradeNumber}${rollNumberStr}`;
 
-    // Double-check uniqueness (extra safety)
-    const existingWithId = await Student.findOne({
-      studentId,
-      schoolId,
-      isActive: true,
-    });
+    // Add additional uniqueness check with retry mechanism
+    let attempts = 0;
+    let studentId = baseStudentId;
+    
+    while (attempts < 10) {
+      // Double-check uniqueness (extra safety)
+      const existingWithId = await Student.findOne({
+        studentId,
+        schoolId,
+        isActive: true,
+      });
 
-    if (existingWithId) {
-      // If somehow this ID exists, recursively try the next number
-      return this.generateUniqueStudentId(admissionYear, grade, schoolId);
+      if (!existingWithId) {
+        // Also check if this ID exists in User collection as a username
+        const existingUser = await User.findOne({
+          username: { $in: [`student_${studentId}`, `parent_${studentId}`] },
+          isActive: true,
+        });
+
+        if (!existingUser) {
+          return { studentId, rollNumber: nextRoll + attempts };
+        }
+      }
+
+      // If ID exists, try with incremented number
+      attempts++;
+      const newRoll = nextRoll + attempts;
+      const newRollStr = newRoll.toString().padStart(4, "0");
+      studentId = `${admissionYear}${gradeNumber}${newRollStr}`;
     }
 
-    return { studentId, rollNumber: nextRoll };
+    // If we still can't find a unique ID, add timestamp
+    const timestamp = Date.now().toString().slice(-4);
+    const fallbackRoll = nextRoll + parseInt(timestamp.slice(-2));
+    const fallbackRollStr = fallbackRoll.toString().padStart(4, "0");
+    studentId = `${admissionYear}${gradeNumber}${fallbackRollStr}`;
+
+    return { studentId, rollNumber: fallbackRoll };
   }
 
   /**
@@ -304,33 +314,58 @@ export class CredentialGenerator {
       parent: GeneratedCredentials;
     };
   }> {
-    // Generate unique student ID
-    const { studentId, rollNumber } = await this.generateUniqueStudentId(
-      admissionYear,
-      grade,
-      schoolId
-    );
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    // Generate credentials
-    const credentials = await this.generateBothCredentials(studentId);
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
 
-    // Verify usernames are available
-    const usernames = [
-      credentials.student.username,
-      credentials.parent.username,
-    ];
-    const available = await this.checkUsernameAvailability(usernames);
+        // Generate unique student ID with timestamp to ensure uniqueness
+        const { studentId, rollNumber } = await this.generateUniqueStudentId(
+          admissionYear,
+          grade,
+          schoolId
+        );
 
-    if (!available) {
-      // This should be rare but handle it by regenerating
-      throw new Error("Generated usernames already exist. Please try again.");
+        // Add a small random suffix to student ID if this is a retry
+        const finalStudentId = attempts > 1 
+          ? `${studentId}_${Date.now().toString().slice(-3)}${Math.random().toString(36).substring(2, 4)}`
+          : studentId;
+
+        // Generate credentials based on final student ID
+        const credentials = await this.generateBothCredentials(finalStudentId);
+
+        // Verify usernames are available
+        const usernames = [
+          credentials.student.username,
+          credentials.parent.username,
+        ];
+        const available = await this.checkUsernameAvailability(usernames);
+
+        if (available) {
+          return {
+            studentId: finalStudentId,
+            rollNumber,
+            credentials,
+          };
+        }
+
+        // If not available, wait a short random time before retry
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
+
+      } catch (error) {
+        if (attempts === maxAttempts) {
+          throw error;
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+      }
     }
 
-    return {
-      studentId,
-      rollNumber,
-      credentials,
-    };
+    // If we've exhausted all attempts, throw an error with timestamp
+    const timestamp = Date.now().toString().slice(-6);
+    throw new Error(`Failed to generate unique credentials after ${maxAttempts} attempts. Please try again. (Ref: ${timestamp})`);
   }
 
   /**
