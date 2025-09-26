@@ -6,17 +6,21 @@ export const adminApi = {
   getDashboard: () => api.get<ApiResponse>("/admin/dashboard"),
   getSchool: (id: string) => api.get<ApiResponse>(`/admin/school/${id}`),
 
-  // Subject management
+  // Subject management (matches backend schema)
   createSubject: (data: {
     name: string;
     code: string;
     description?: string;
-    credits?: number;
     grades: number[];
-  }) => api.post<ApiResponse>("/admin/subjects", data),
+    isCore: boolean;
+    credits?: number;
+  }) => api.post<ApiResponse>("/subjects", data),
 
-  getSubjects: (params?: { grade?: number; search?: string }) =>
-    api.get<ApiResponse>("/admin/subjects", { params }),
+  getSubjects: (params?: {
+    grade?: string;
+    isCore?: boolean;
+    search?: string;
+  }) => api.get<ApiResponse>("/subjects", { params }),
 
   updateSubject: (
     id: string,
@@ -24,78 +28,119 @@ export const adminApi = {
       name?: string;
       code?: string;
       description?: string;
-      credits?: number;
       grades?: number[];
+      isCore?: boolean;
+      credits?: number;
     }
-  ) => api.put<ApiResponse>(`/admin/subjects/${id}`, data),
+  ) => api.put<ApiResponse>(`/subjects/${id}`, data),
 
-  deleteSubject: (id: string) =>
-    api.delete<ApiResponse>(`/admin/subjects/${id}`),
+  deleteSubject: (id: string) => api.delete<ApiResponse>(`/subjects/${id}`),
 
-  // Schedule management
+  getSubjectsByGrade: (schoolId: string, grade: string) =>
+    api.get<ApiResponse>(`/subjects/school/${schoolId}/grade/${grade}`),
+
+  // Schedule management (matches backend validation schema)
   createSchedule: (data: {
-    classId: string;
-    subjectId: string;
-    teacherId: string;
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-    room?: string;
-  }) => api.post<ApiResponse>("/admin/schedules", data),
+    schoolId: string;
+    dayOfWeek: string;
+    grade: number;
+    section: string;
+    academicYear: string;
+    periods: Array<{
+      periodNumber: number;
+      subjectId?: string;
+      teacherId?: string;
+      roomNumber?: string;
+      startTime: string;
+      endTime: string;
+      isBreak?: boolean;
+      breakType?: "short" | "lunch" | "long";
+      breakDuration?: number;
+    }>;
+  }) => api.post<ApiResponse>("/schedules", data),
 
   getSchedules: (params?: {
-    classId?: string;
-    teacherId?: string;
-    dayOfWeek?: number;
-  }) => api.get<ApiResponse>("/admin/schedules", { params }),
+    dayOfWeek?: string;
+    grade?: string;
+    section?: string;
+    academicYear?: string;
+  }) => api.get<ApiResponse>("/schedules", { params }),
 
   updateSchedule: (
     id: string,
     data: {
-      subjectId?: string;
-      teacherId?: string;
-      dayOfWeek?: number;
-      startTime?: string;
-      endTime?: string;
-      room?: string;
+      schoolId?: string;
+      dayOfWeek?: string;
+      grade?: number;
+      section?: string;
+      academicYear?: string;
+      periods?: Array<{
+        periodNumber: number;
+        subjectId?: string;
+        teacherId?: string;
+        roomNumber?: string;
+        startTime: string;
+        endTime: string;
+        isBreak?: boolean;
+        breakType?: "short" | "lunch" | "long";
+        breakDuration?: number;
+      }>;
     }
-  ) => api.put<ApiResponse>(`/admin/schedules/${id}`, data),
+  ) => api.put<ApiResponse>(`/schedules/${id}`, data),
 
-  deleteSchedule: (id: string) =>
-    api.delete<ApiResponse>(`/admin/schedules/${id}`),
+  deleteSchedule: (id: string) => api.delete<ApiResponse>(`/schedules/${id}`),
 
-  // Calendar management
+  // Academic Calendar management (matches backend routes)
   createCalendarEvent: (data: {
     title: string;
     description?: string;
-    date: string;
+    type: "exam" | "holiday" | "event" | "meeting" | "activity";
+    startDate: string;
+    endDate: string;
+    isAllDay: boolean;
     startTime?: string;
     endTime?: string;
-    type: "exam" | "holiday" | "event" | "meeting";
-    targetAudience: "all" | "students" | "teachers" | "parents";
-  }) => api.post<ApiResponse>("/admin/calendar", data),
+    venue?: string;
+    targetAudience: "all" | "specific";
+    priority: "low" | "medium" | "high";
+    color: string;
+  }) => api.post<ApiResponse>("/calendar", data),
 
   getCalendarEvents: (params?: {
-    month?: number;
-    year?: number;
     type?: string;
-  }) => api.get<ApiResponse>("/admin/calendar", { params }),
+    startDate?: string;
+    endDate?: string;
+    targetAudience?: string;
+  }) => api.get<ApiResponse>("/calendar", { params }),
 
   updateCalendarEvent: (
     id: string,
     data: {
       title?: string;
       description?: string;
-      date?: string;
+      type?: "exam" | "holiday" | "event" | "meeting" | "activity";
+      startDate?: string;
+      endDate?: string;
+      isAllDay?: boolean;
       startTime?: string;
       endTime?: string;
-      type?: string;
-      targetAudience?: string;
+      venue?: string;
+      targetAudience?: "all" | "specific";
+      priority?: "low" | "medium" | "high";
+      color?: string;
     }
-  ) => api.put<ApiResponse>(`/admin/calendar/${id}`, data),
+  ) => api.put<ApiResponse>(`/calendar/${id}`, data),
 
   deleteCalendarEvent: (id: string) =>
-    api.delete<ApiResponse>(`/admin/calendar/${id}`),
+    api.delete<ApiResponse>(`/calendar/${id}`),
+
+  // Teacher management (needed by schedule component)
+  getTeachers: (params?: {
+    grade?: string;
+    subject?: string;
+    search?: string;
+    isActive?: boolean;
+  }) => api.get<ApiResponse>("/teachers", { params }),
 
   // Class management
   createClass: (data: {
