@@ -27,9 +27,6 @@ const AdminDashboard: React.FC = () => {
       setLoading(true);
       const response = await adminApi.getDashboard();
       
-      console.log('Dashboard API Response:', response);
-      console.log('Dashboard data:', response.data);
-
       if (response.data.success) {
         console.log('Setting dashboard data:', response.data.data);
         setDashboardData(response.data.data);

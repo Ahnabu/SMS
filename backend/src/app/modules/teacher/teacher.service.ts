@@ -37,7 +37,6 @@ class TeacherService {
           "Cannot create teacher for inactive school"
         );
       }
-      console.log(school)
 
       // Generate teacher ID and employee ID
       const joiningYear = teacherData.joinDate
@@ -59,6 +58,7 @@ class TeacherService {
       );
 
       // Create user account for teacher FIRST (similar to school-admin creation)
+
       const newUser = await User.create(
         [
           {
@@ -923,18 +923,25 @@ class TeacherService {
       totalExperience,
       createdAt: teacher.createdAt,
       updatedAt: teacher.updatedAt,
-      user: teacher.userId
+      user: teacher.userId || teacher.user
         ? {
-            id: teacher.userId._id?.toString() || teacher.userId.id,
-            username: teacher.userId.username,
-            firstName: teacher.userId.firstName,
-            lastName: teacher.userId.lastName,
-            fullName:
-              `${teacher.userId.firstName} ${teacher.userId.lastName}`.trim(),
-            email: teacher.userId.email,
-            phone: teacher.userId.phone,
+            id: (teacher.userId?._id || teacher.user?._id || teacher.userId?.id || teacher.user?.id)?.toString(),
+            username: teacher.userId?.username || teacher.user?.username,
+            firstName: teacher.userId?.firstName || teacher.user?.firstName,
+            lastName: teacher.userId?.lastName || teacher.user?.lastName,
+            fullName: `${teacher.userId?.firstName || teacher.user?.firstName || ''} ${teacher.userId?.lastName || teacher.user?.lastName || ''}`.trim() || 'Unknown User',
+            email: teacher.userId?.email || teacher.user?.email,
+            phone: teacher.userId?.phone || teacher.user?.phone,
           }
-        : undefined,
+        : {
+            id: '',
+            username: 'unknown',
+            firstName: 'Unknown',
+            lastName: 'User',
+            fullName: 'Unknown User',
+            email: '',
+            phone: '',
+          },
       school: teacher.schoolId?.name
         ? {
             id: teacher.schoolId._id?.toString() || teacher.schoolId.id,

@@ -165,23 +165,25 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
 
         if (response.data.success) {
           const responseData = response.data.data;
-          console.log("API Response:", responseData);
 
           // Check if responseData has students array or is itself the array
+          let studentsArray;
           if (Array.isArray(responseData)) {
-            setStudents(responseData);
+            studentsArray = responseData;
           } else if (
             responseData.students &&
             Array.isArray(responseData.students)
           ) {
-            setStudents(responseData.students);
+            studentsArray = responseData.students;
             setTotalPages(
               responseData.totalPages || Math.ceil(responseData.totalCount / 10)
             );
           } else {
             console.warn("Unexpected response format:", responseData);
-            setStudents([]);
+            studentsArray = [];
           }
+
+          setStudents(studentsArray);
 
           // Handle pagination meta
           if (response.data.meta) {
@@ -197,6 +199,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
         }
       } catch (error) {
         console.error("Failed to load students:", error);
+        
         // Set demo data for testing when API is not available
         const demoStudents = [
           {
@@ -306,8 +309,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
 
     useEffect(() => {
       loadStudents();
-    }, [loadStudents]);
-    console.log(students);
+    }, [currentPage, classFilter, searchTerm, loadStudents]);
 
     // Handle view student details
     const handleViewStudent = (student: Student) => {

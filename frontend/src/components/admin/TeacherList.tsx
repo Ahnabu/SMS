@@ -181,9 +181,9 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
 
         if (response.data.success) {
           const responseData = response.data.data;
-          setTeachers(
-            Array.isArray(responseData.teachers) ? responseData.teachers : []
-          );
+          const teachersArray = Array.isArray(responseData.teachers) ? responseData.teachers : Array.isArray(responseData) ? responseData : [];
+          
+          setTeachers(teachersArray);
           setTotalPages(responseData.totalPages || 1);
         } else {
           setTeachers([]);
