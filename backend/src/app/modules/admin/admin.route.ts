@@ -7,6 +7,7 @@ import {
 import { validateRequest } from "../../middlewares/validateRequest";
 import { multerUpload } from "../../config/multer.config";
 import { parseBody } from "../../middlewares/bodyParser";
+import { parseTeacherData } from "../../middlewares/parseTeacherData";
 
 // Student imports
 import {
@@ -117,6 +118,8 @@ router.get(
 // Teacher management routes
 router.post(
   "/teachers",
+  multerUpload.fields([{ name: "photo" }]),
+  parseTeacherData,
   validateRequest(createTeacherValidationSchema),
   TeacherController.createTeacher
 );

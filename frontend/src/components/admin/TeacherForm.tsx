@@ -378,27 +378,7 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
     }));
   };
 
-  const addQualification = () => {
-    setFormData((prev) => ({
-      ...prev,
-      qualifications: [
-        ...prev.qualifications,
-        {
-          degree: "",
-          institution: "",
-          year: new Date().getFullYear(),
-          specialization: "",
-        },
-      ],
-    }));
-  };
 
-  const removeQualification = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      qualifications: prev.qualifications.filter((_, i) => i !== index),
-    }));
-  };
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

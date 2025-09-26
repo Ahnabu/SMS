@@ -12,6 +12,8 @@ import SubjectManagement from "../components/admin/SubjectManagement";
 import ScheduleManagement from "../components/admin/ScheduleManagement";
 import AcademicCalendar from "../components/admin/AcademicCalendar";
 
+import MinimalTeacherForm from "../components/admin/teacher/MinimalTeacherForm";
+
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -120,7 +122,7 @@ const AdminDashboard: React.FC = () => {
             path="/"
             element={<AdminHome dashboardData={dashboardData} />}
           />
-          <Route path="/students" element={<StudentManagement />} />
+                    <Route path="/students" element={<StudentManagement onDataChange={loadDashboardData} />} />
           <Route path="/teachers" element={<TeacherManagement />} />
           <Route path="/subjects" element={<SubjectManagementPage />} />
           <Route path="/schedules" element={<ScheduleManagementPage />} />
@@ -281,7 +283,7 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
 };
 
 // Placeholder components for other routes
-const StudentManagement: React.FC = () => {
+const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChange }) => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const studentListRef = useRef<StudentListRef>(null);
@@ -308,14 +310,39 @@ const StudentManagement: React.FC = () => {
 
   const handleStudentCreated = (student: any) => {
     console.log("Student created optimistically:", student);
+    // Add the student optimistically to the list
+    if (studentListRef.current) {
+      studentListRef.current.addStudentOptimistically(student);
+    }
+    // Refresh dashboard data to update stats
+    if (onDataChange) {
+      onDataChange();
+    }
   };
 
   const handleStudentUpdated = (student: any) => {
     console.log("Student updated optimistically:", student);
+    // Update the student optimistically in the list
+    if (studentListRef.current) {
+      studentListRef.current.updateStudentOptimistically(student);
+    }
+    // Refresh dashboard data to update stats
+    if (onDataChange) {
+      onDataChange();
+    }
   };
 
   const handleStudentDeleted = (studentId: string) => {
     console.log("Student deleted optimistically:", studentId);
+    // Remove the student optimistically from the list
+    // Note: removeStudentOptimistically is not implemented yet
+    // if (studentListRef.current) {
+    //   studentListRef.current.removeStudentOptimistically(studentId);
+    // }
+    // Refresh dashboard data to update stats
+    if (onDataChange) {
+      onDataChange();
+    }
   };
 
   return (
@@ -400,12 +427,16 @@ const TeacherManagement: React.FC = () => {
         onTeacherDeleted={handleTeacherDeleted}
       />
 
-      <TeacherForm
-        teacher={selectedTeacher}
-        isOpen={showForm}
-        onClose={handleFormClose}
-        onSave={handleSaveTeacher}
-      />
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-auto">
+            <MinimalTeacherForm
+              onBack={handleFormClose}
+              onSave={handleSaveTeacher}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

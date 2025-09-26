@@ -52,69 +52,89 @@ export class CredentialGenerator {
     // Convert grade to 2-digit number (pad with zero if needed)
     const gradeNumber = grade.toString().padStart(2, "0");
 
-    // Use aggregation to get the next roll number atomically
+    // Use aggregation to get the next roll number atomically with a more robust query
     const result = await Student.aggregate([
       {
         $match: {
           schoolId: new mongoose.Types.ObjectId(schoolId),
           admissionYear,
-          grade,
-          isActive: true,
+          grade: parseInt(grade), // Ensure grade matching is consistent
+          $or: [
+            { isDeleted: { $exists: false } },
+            { isDeleted: false }
+          ]
         },
       },
       {
         $group: {
           _id: null,
           maxRollNumber: { $max: "$rollNumber" },
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          existingRollNumbers: { $push: "$rollNumber" }
         },
       },
     ]);
 
-    const nextRoll = result.length > 0 ? (result[0].maxRollNumber || 0) + 1 : 1;
-
-    // Format roll number as 4-digit string (0001, 0002, etc.)
-    const rollNumberStr = nextRoll.toString().padStart(4, "0");
-    const baseStudentId = `${admissionYear}${gradeNumber}${rollNumberStr}`;
-
-    // Add additional uniqueness check with retry mechanism
-    let attempts = 0;
-    let studentId = baseStudentId;
+    let nextRoll = 1;
+    let existingRolls: number[] = [];
     
-    while (attempts < 10) {
-      // Double-check uniqueness (extra safety)
-      const existingWithId = await Student.findOne({
-        studentId,
-        schoolId,
-        isActive: true,
-      });
-
-      if (!existingWithId) {
-        // Also check if this ID exists in User collection as a username
-        const existingUser = await User.findOne({
-          username: { $in: [`student_${studentId}`, `parent_${studentId}`] },
-          isActive: true,
-        });
-
-        if (!existingUser) {
-          return { studentId, rollNumber: nextRoll + attempts };
+    if (result.length > 0) {
+      existingRolls = result[0].existingRollNumbers || [];
+      nextRoll = (result[0].maxRollNumber || 0) + 1;
+      
+      // Find the first available roll number in case of gaps
+      for (let i = 1; i <= nextRoll; i++) {
+        if (!existingRolls.includes(i)) {
+          nextRoll = i;
+          break;
         }
       }
-
-      // If ID exists, try with incremented number
-      attempts++;
-      const newRoll = nextRoll + attempts;
-      const newRollStr = newRoll.toString().padStart(4, "0");
-      studentId = `${admissionYear}${gradeNumber}${newRollStr}`;
     }
 
-    // If we still can't find a unique ID, add timestamp
-    const timestamp = Date.now().toString().slice(-4);
-    const fallbackRoll = nextRoll + parseInt(timestamp.slice(-2));
-    const fallbackRollStr = fallbackRoll.toString().padStart(4, "0");
-    studentId = `${admissionYear}${gradeNumber}${fallbackRollStr}`;
+    // Try multiple roll numbers to find an available one
+    let attempts = 0;
+    const maxAttempts = 20; // Check up to 20 consecutive numbers
+    
+    while (attempts < maxAttempts) {
+      const candidateRoll = nextRoll + attempts;
+      
+      // Format roll number as 4-digit string (0001, 0002, etc.)
+      const rollNumberStr = candidateRoll.toString().padStart(4, "0");
+      const candidateStudentId = `${admissionYear}${gradeNumber}${rollNumberStr}`;
 
-    return { studentId, rollNumber: fallbackRoll };
+      // Check uniqueness in both Student and User collections
+      const [existingStudent, existingUser] = await Promise.all([
+        Student.findOne({
+          studentId: candidateStudentId,
+          schoolId,
+          $or: [
+            { isDeleted: { $exists: false } },
+            { isDeleted: false }
+          ]
+        }),
+        User.findOne({
+          username: { $in: [`student_${candidateStudentId}`, `parent_${candidateStudentId}`] },
+          $or: [
+            { isDeleted: { $exists: false } },
+            { isDeleted: false }
+          ]
+        })
+      ]);
+
+      if (!existingStudent && !existingUser) {
+        return { studentId: candidateStudentId, rollNumber: candidateRoll };
+      }
+
+      attempts++;
+    }
+
+    // If we still can't find a unique ID, use timestamp-based approach
+    const timestamp = Date.now().toString().slice(-4);
+    const timestampRoll = parseInt(timestamp.slice(-2)) + nextRoll;
+    const timestampRollStr = timestampRoll.toString().padStart(4, "0");
+    const fallbackStudentId = `${admissionYear}${gradeNumber}${timestampRollStr}`;
+
+    return { studentId: fallbackStudentId, rollNumber: timestampRoll };
   }
 
   /**
@@ -315,57 +335,71 @@ export class CredentialGenerator {
     };
   }> {
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 10; // Increased attempts
+    let lastError: any = null;
 
     while (attempts < maxAttempts) {
       try {
         attempts++;
+        console.log(`Credential generation attempt ${attempts}/${maxAttempts}`);
 
-        // Generate unique student ID with timestamp to ensure uniqueness
+        // Generate unique student ID - each attempt gets a fresh ID
         const { studentId, rollNumber } = await this.generateUniqueStudentId(
           admissionYear,
           grade,
           schoolId
         );
 
-        // Add a small random suffix to student ID if this is a retry
-        const finalStudentId = attempts > 1 
-          ? `${studentId}_${Date.now().toString().slice(-3)}${Math.random().toString(36).substring(2, 4)}`
-          : studentId;
+        console.log(`Generated student ID: ${studentId}, roll: ${rollNumber}`);
 
-        // Generate credentials based on final student ID
-        const credentials = await this.generateBothCredentials(finalStudentId);
+        // Generate credentials based on student ID (no modifications)
+        const credentials = await this.generateBothCredentials(studentId);
 
         // Verify usernames are available
         const usernames = [
           credentials.student.username,
           credentials.parent.username,
         ];
+        
+        console.log(`Checking availability for usernames:`, usernames);
         const available = await this.checkUsernameAvailability(usernames);
 
         if (available) {
+          console.log(`Success! Generated credentials on attempt ${attempts}`);
           return {
-            studentId: finalStudentId,
+            studentId,
             rollNumber,
             credentials,
           };
         }
 
-        // If not available, wait a short random time before retry
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
+        console.log(`Attempt ${attempts}: Usernames not available, retrying...`);
+        
+        // If not available, wait before retry with exponential backoff
+        const waitTime = Math.min(1000, 100 * Math.pow(2, attempts - 1)) + Math.random() * 100;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
 
       } catch (error) {
+        lastError = error;
+        console.error(`Attempt ${attempts} failed:`, error);
+        
         if (attempts === maxAttempts) {
           throw error;
         }
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+        
+        // Wait before retry with exponential backoff
+        const waitTime = Math.min(2000, 200 * Math.pow(2, attempts - 1)) + Math.random() * 200;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
 
-    // If we've exhausted all attempts, throw an error with timestamp
-    const timestamp = Date.now().toString().slice(-6);
-    throw new Error(`Failed to generate unique credentials after ${maxAttempts} attempts. Please try again. (Ref: ${timestamp})`);
+    // If we've exhausted all attempts, throw a descriptive error
+    const timestamp = new Date().toISOString();
+    const errorMessage = lastError 
+      ? `Failed to generate unique credentials after ${maxAttempts} attempts. Last error: ${lastError.message} (${timestamp})`
+      : `Failed to generate unique credentials after ${maxAttempts} attempts. Please try again. (${timestamp})`;
+    
+    throw new Error(errorMessage);
   }
 
   /**

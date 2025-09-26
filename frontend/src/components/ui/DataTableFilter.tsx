@@ -1,6 +1,6 @@
 import React from "react";
 import { Search, Filter } from "lucide-react";
-import { Card, CardContent } from "./Card";
+import { Card } from "./Card";
 import { Input } from "./Input";
 import {
   Select,

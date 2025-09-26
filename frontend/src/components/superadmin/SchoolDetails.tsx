@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { X, Edit } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { apiService } from "@/services";
@@ -17,18 +17,11 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
   schoolId,
   isOpen,
   onClose,
-  onEdit,
 }) => {
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (schoolId && isOpen) {
-      loadSchoolDetails();
-    }
-  }, [schoolId, isOpen]);
-
-  const loadSchoolDetails = async () => {
+  const loadSchoolDetails = useCallback(async () => {
     try {
       setLoading(true);
       // Try to get detailed school info including admin credentials
@@ -115,7 +108,13 @@ const SchoolDetails: React.FC<SchoolDetailsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [schoolId]);
+
+  useEffect(() => {
+    if (schoolId && isOpen) {
+      loadSchoolDetails();
+    }
+  }, [schoolId, isOpen, loadSchoolDetails]);
 
   const handleResetPassword = async () => {
     if (

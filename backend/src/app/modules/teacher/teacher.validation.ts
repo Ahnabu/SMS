@@ -71,17 +71,21 @@ const createTeacherValidationSchema = z.object({
       .string({
         required_error: 'Date of birth is required',
       })
-      .datetime('Invalid date format')
+      .date('Invalid date format')
       .refine((date) => {
         const dob = new Date(date);
         const today = new Date();
-        const age = today.getFullYear() - dob.getFullYear();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
         return age >= 21 && age <= 65;
       }, 'Teacher age must be between 21 and 65 years'),
     joinDate: z
       .string()
-      .datetime('Invalid date format')
-      .optional(),
+      .optional()
+      .refine((date) => !date || date.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(date), 'Invalid date format'),
     qualifications: z
       .array(z.object({
         degree: z
@@ -133,10 +137,10 @@ const createTeacherValidationSchema = z.object({
             .trim(),
           fromDate: z
             .string()
-            .datetime('Invalid from date format'),
+            .date('Invalid from date format'),
           toDate: z
             .string()
-            .datetime('Invalid to date format'),
+            .date('Invalid to date format'),
         }))
         .optional(),
     }),
@@ -164,7 +168,9 @@ const createTeacherValidationSchema = z.object({
         .string({
           required_error: 'Zip code is required',
         })
-        .regex(/^\d{5,6}$/, 'Invalid zip code format'),
+        .min(1, 'Zip code is required')
+        .max(20, 'Zip code cannot exceed 20 characters')
+        .trim(),
       country: z
         .string()
         .max(100, 'Country cannot exceed 100 characters')

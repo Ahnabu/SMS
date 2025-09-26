@@ -250,8 +250,8 @@ const StudentForm: React.FC<StudentFormProps> = ({
       newErrors.firstName = "First name is required";
     if (!formData.lastName?.trim())
       newErrors.lastName = "Last name is required";
-    if (!formData.email?.trim()) newErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email is optional, but if provided, should be valid
+    if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
     if (!formData.grade || formData.grade < 1 || formData.grade > 12)
@@ -263,24 +263,21 @@ const StudentForm: React.FC<StudentFormProps> = ({
       newErrors.admissionDate = "Admission date is required";
     if (!formData.schoolId) newErrors.schoolId = "School ID is required";
 
-    // Photos validation - only for new students or if photos are being uploaded
-    if (!student && (!formData.photos || formData.photos.length < 3)) {
-      newErrors.photos =
-        "Minimum 3 photos are required for new student registration";
-    } else if (formData.photos && formData.photos.length > 8) {
+    // Photos validation - photos are optional but max 8 allowed
+    if (formData.photos && formData.photos.length > 8) {
       newErrors.photos = "Maximum 8 photos allowed";
     }
 
     // Parent validation
     if (!formData.parent?.name?.trim())
       newErrors.parentName = "Parent name is required";
-    if (!formData.parent?.email?.trim())
-      newErrors.parentEmail = "Parent email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.parent.email)) {
+    // Parent email is optional, but if provided, should be valid
+    if (formData.parent?.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.parent.email)) {
       newErrors.parentEmail = "Invalid parent email format";
     }
-    if (!formData.parent?.phone?.trim())
-      newErrors.parentPhone = "Parent phone is required";
+    // Parent phone is optional
+    // if (!formData.parent?.phone?.trim())
+    //   newErrors.parentPhone = "Parent phone is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

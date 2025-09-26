@@ -15,7 +15,7 @@ const AccountantDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await apiService.accountant.getDashboard();
+      const response = await apiService.accountant.getDashboard() as any;
       if (response.data.success) {
         setDashboardData(response.data.data);
       }

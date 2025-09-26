@@ -182,7 +182,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ onUpdate }) => {
 
     setLoading(true);
     try {
-      await apiService.superadmin.updateSystemSettings(settings);
+      await apiService.superadmin.updateSystemSettings(settings as any);
       onUpdate?.();
     } catch (error) {
       console.error('Failed to save settings:', error);

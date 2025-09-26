@@ -277,13 +277,16 @@ const ChildHomeworkView: React.FC<{ selectedChild: any }> = ({ selectedChild }) 
   </div>
 );
 
-const NoticesView: React.FC<{ selectedChild: any }> = ({ selectedChild }) => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Notices & Announcements</h2>
-      <p className="text-gray-500">Notices view interface will be implemented here.</p>
+const NoticesView: React.FC<{ selectedChild: any }> = ({ selectedChild: _selectedChild }) => {
+  // _selectedChild will be used to filter notices in future implementation
+  return (
+    <div className="px-4 py-6 sm:px-0">
+      <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Notices & Announcements</h2>
+        <p className="text-gray-500">Notices view interface will be implemented here.</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default ParentDashboard;

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Save, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "../../../context/AuthContext";
 import BasicInfo from "./BasicInfo";
 import AddressInfo from "./AddressInfo";
 import QualificationsInfo from "./QualificationsInfo";
@@ -9,6 +10,7 @@ import PhotoUpload from "./PhotoUpload";
 import CredentialsDisplay from "./CredentialsDisplay";
 
 interface TeacherFormData {
+  // Basic Information (Required)
   firstName: string;
   lastName: string;
   email?: string;
@@ -18,6 +20,25 @@ interface TeacherFormData {
   bloodGroup: string;
   dob: string;
   joinDate?: string;
+  
+  // Teaching Details (Required)
+  subjects: string[];
+  grades: number[];
+  sections: string[];
+  
+  // Experience (Required)
+  experience: {
+    totalYears: number;
+    previousSchools: Array<{
+      schoolName: string;
+      position: string;
+      duration: string;
+      fromDate: string;
+      toDate: string;
+    }>;
+  };
+  
+  // Address (Required)
   address: {
     street: string;
     city: string;
@@ -25,13 +46,38 @@ interface TeacherFormData {
     zipCode: string;
     country: string;
   };
+  
+  // Qualifications (Required)
   qualifications: Array<{
     degree: string;
     institution: string;
     year: string;
-    grade?: string;
+    specialization?: string;
   }>;
-  subjects: string[];
+  
+  // Emergency Contact (Required)
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+  };
+  
+  // Salary (Optional)
+  salary?: {
+    basic: number;
+    allowances?: number;
+    deductions?: number;
+  };
+  
+  // Class Teacher Assignment (Optional)
+  isClassTeacher: boolean;
+  classTeacherFor?: {
+    grade: number;
+    section: string;
+  };
+  
+  // Photo
   photo?: File | null;
   photoPreview?: string;
 }
@@ -48,7 +94,9 @@ interface TeacherFormProps {
 }
 
 const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<TeacherFormData>({
+    // Basic Information
     firstName: "",
     lastName: "",
     email: "",
@@ -58,6 +106,19 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
     bloodGroup: "O+",
     dob: "",
     joinDate: "",
+    
+    // Teaching Details
+    subjects: [""],
+    grades: [1],
+    sections: ["A"],
+    
+    // Experience
+    experience: {
+      totalYears: 0,
+      previousSchools: [],
+    },
+    
+    // Address
     address: {
       street: "",
       city: "",
@@ -65,8 +126,37 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
       zipCode: "",
       country: "Bangladesh",
     },
-    qualifications: [],
-    subjects: [],
+    
+    // Qualifications (at least one required)
+    qualifications: [
+      {
+        degree: "",
+        institution: "",
+        year: new Date().getFullYear().toString(),
+        specialization: "",
+      },
+    ],
+    
+    // Emergency Contact
+    emergencyContact: {
+      name: "",
+      relationship: "",
+      phone: "",
+      email: "",
+    },
+    
+    // Salary (optional)
+    salary: {
+      basic: 0,
+      allowances: 0,
+      deductions: 0,
+    },
+    
+    // Class Teacher Assignment
+    isClassTeacher: false,
+    classTeacherFor: undefined,
+    
+    // Photo
     photo: null,
     photoPreview: "",
   });
@@ -103,23 +193,71 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
     if (!formData.dob) {
       newErrors.dob = "Date of birth is required";
     }
+    if (!formData.designation.trim()) {
+      newErrors.designation = "Designation is required";
+    }
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
+    // Teaching details validation
+    if (formData.subjects.length === 0 || formData.subjects.every(s => !s.trim())) {
+      newErrors.subjects = "At least one subject is required";
+    }
+    if (formData.grades.length === 0) {
+      newErrors.grades = "At least one grade is required";
+    }
+    if (formData.sections.length === 0 || formData.sections.every(s => !s.trim())) {
+      newErrors.sections = "At least one section is required";
+    }
+
+    // Experience validation
+    if (formData.experience.totalYears < 0) {
+      newErrors['experience.totalYears'] = "Experience cannot be negative";
+    }
+
+    // Address validation
+    if (!formData.address.city.trim()) {
+      newErrors['address.city'] = "City is required";
+    }
+    if (!formData.address.state.trim()) {
+      newErrors['address.state'] = "State is required";
+    }
+    if (!formData.address.zipCode.trim()) {
+      newErrors['address.zipCode'] = "Zip code is required";
+    }
+
     // Qualifications validation
+    if (formData.qualifications.length === 0) {
+      newErrors.qualifications = "At least one qualification is required";
+    }
     formData.qualifications.forEach((qual, index) => {
       if (!qual.degree.trim()) {
         newErrors[`qualifications.${index}.degree`] = "Degree is required";
       }
       if (!qual.institution.trim()) {
-        newErrors[`qualifications.${index}.institution`] =
-          "Institution is required";
+        newErrors[`qualifications.${index}.institution`] = "Institution is required";
       }
-      if (!qual.year.trim()) {
-        newErrors[`qualifications.${index}.year`] = "Year is required";
+      if (!qual.year || parseInt(qual.year) < 1980) {
+        newErrors[`qualifications.${index}.year`] = "Valid year is required";
       }
     });
+
+    // Emergency contact validation
+    if (!formData.emergencyContact.name.trim()) {
+      newErrors['emergencyContact.name'] = "Emergency contact name is required";
+    }
+    if (!formData.emergencyContact.relationship.trim()) {
+      newErrors['emergencyContact.relationship'] = "Emergency contact relationship is required";
+    }
+    if (!formData.emergencyContact.phone.trim()) {
+      newErrors['emergencyContact.phone'] = "Emergency contact phone is required";
+    }
+
+    // Class teacher validation
+    if (formData.isClassTeacher && !formData.classTeacherFor) {
+      newErrors.classTeacherFor = "Class assignment is required for class teachers";
+    }
 
     // Subjects validation
     formData.subjects.forEach((subject, index) => {
@@ -140,42 +278,72 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
       return;
     }
 
+    // Check if user has schoolId
+    if (!user?.schoolId) {
+      toast.error("School ID not found. Please login again.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       // Create FormData for file upload
       const submitData = new FormData();
 
-      // Add basic fields
+      // Add schoolId from authenticated user
+      submitData.append("schoolId", user.schoolId);
+
+      // Add basic fields (all required by backend)
       submitData.append("firstName", formData.firstName);
       submitData.append("lastName", formData.lastName);
       submitData.append("designation", formData.designation);
       submitData.append("bloodGroup", formData.bloodGroup);
       submitData.append("dob", formData.dob);
 
+      // Add optional basic fields
       if (formData.email) submitData.append("email", formData.email);
       if (formData.phone) submitData.append("phone", formData.phone);
       if (formData.joinDate) submitData.append("joinDate", formData.joinDate);
+      if (formData.employeeId) submitData.append("employeeId", formData.employeeId);
 
-      // Add address
+      // Add teaching details (required)
+      submitData.append("subjects", JSON.stringify(formData.subjects.filter(s => s.trim())));
+      submitData.append("grades", JSON.stringify(formData.grades));
+      submitData.append("sections", JSON.stringify(formData.sections.filter(s => s.trim())));
+
+      // Add experience (required)
+      submitData.append("experience", JSON.stringify(formData.experience));
+
+      // Add address (required)
       submitData.append("address", JSON.stringify(formData.address));
 
-      // Add qualifications and subjects
-      submitData.append(
-        "qualifications",
-        JSON.stringify(formData.qualifications)
-      );
-      submitData.append("subjects", JSON.stringify(formData.subjects));
+      // Add qualifications (required)
+      submitData.append("qualifications", JSON.stringify(formData.qualifications));
+
+      // Add emergency contact (required)
+      submitData.append("emergencyContact", JSON.stringify(formData.emergencyContact));
+
+      // Add salary (optional)
+      if (formData.salary && formData.salary.basic > 0) {
+        submitData.append("salary", JSON.stringify(formData.salary));
+      }
+
+      // Add class teacher info (optional)
+      submitData.append("isClassTeacher", JSON.stringify(formData.isClassTeacher));
+      if (formData.classTeacherFor) {
+        submitData.append("classTeacherFor", JSON.stringify(formData.classTeacherFor));
+      }
 
       // Add photo if exists
       if (formData.photo) {
         submitData.append("photo", formData.photo);
       }
 
-      // Make API call to create teacher
-      const response = await fetch("/api/teachers", {
+      // Make API call to create teacher (with proper auth)
+      const response = await fetch("/api/admin/teachers", {
         method: "POST",
         body: submitData,
+        credentials: "include", // Include authentication cookies
       });
 
       if (!response.ok) {
@@ -200,6 +368,13 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
         bloodGroup: "O+",
         dob: "",
         joinDate: "",
+        subjects: [],
+        grades: [1],
+        sections: ["A"],
+        experience: {
+          totalYears: 0,
+          previousSchools: [],
+        },
         address: {
           street: "",
           city: "",
@@ -207,8 +382,19 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
           zipCode: "",
           country: "Bangladesh",
         },
-        qualifications: [],
-        subjects: [],
+        qualifications: [{
+          degree: "",
+          institution: "",
+          year: new Date().getFullYear().toString(),
+          specialization: "",
+        }],
+        emergencyContact: {
+          name: "",
+          relationship: "",
+          phone: "",
+          email: "",
+        },
+        isClassTeacher: false,
         photo: null,
         photoPreview: "",
       });
