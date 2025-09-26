@@ -7,7 +7,6 @@ import StudentList, {
 } from "../components/admin/student/StudentList";
 import StudentForm from "../components/admin/student/StudentForm";
 import TeacherList, { TeacherListRef } from "../components/admin/TeacherList";
-import TeacherForm from "../components/admin/TeacherForm";
 import SubjectManagement from "../components/admin/SubjectManagement";
 import ScheduleManagement from "../components/admin/ScheduleManagement";
 import AcademicCalendar from "../components/admin/AcademicCalendar";
@@ -27,9 +26,15 @@ const AdminDashboard: React.FC = () => {
     try {
       setLoading(true);
       const response = await adminApi.getDashboard();
+      
+      console.log('Dashboard API Response:', response);
+      console.log('Dashboard data:', response.data);
 
       if (response.data.success) {
+        console.log('Setting dashboard data:', response.data.data);
         setDashboardData(response.data.data);
+      } else {
+        console.error('Dashboard API returned success: false', response.data);
       }
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
@@ -135,12 +140,20 @@ const AdminDashboard: React.FC = () => {
 
 // Admin Home Component
 const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
+  console.log('AdminHome received dashboardData:', dashboardData);
+  
   return (
     <div className="px-4 sm:px-0">
       <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           School Overview
         </h2>
+
+        {/* Debug info - remove after testing */}
+        <div className="bg-gray-100 p-4 mb-6 rounded">
+          <h3 className="font-bold text-sm">Debug Info:</h3>
+          <pre className="text-xs mt-2">{JSON.stringify(dashboardData, null, 2)}</pre>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

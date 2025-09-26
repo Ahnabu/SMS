@@ -3,7 +3,7 @@ import { Document, Types, Model } from "mongoose";
 export interface ITeacher {
   userId: Types.ObjectId;
   schoolId: Types.ObjectId;
-  teacherId: string; // Auto-generated unique ID (e.g., TCH-2025-001)
+  teacherId: string; // Auto-generated unique ID (e.g., SCH001-TCH-2025-001)
   employeeId?: string; // Custom employee ID
   subjects: string[]; // Subjects the teacher teaches
   grades: number[]; // Grades the teacher handles
@@ -150,6 +150,7 @@ export interface ICreateTeacherRequest {
     grade: number;
     section: string;
   };
+  isActive?: boolean;
 }
 
 export interface IUpdateTeacherRequest {

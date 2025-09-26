@@ -163,6 +163,23 @@ export const adminApi = {
 
   deleteClass: (id: string) => api.delete<ApiResponse>(`/admin/classes/${id}`),
 
+  // Student management
+  createStudent: (data: any) => api.post<ApiResponse>("/students", data),
+  getStudents: (params?: {
+    page?: number;
+    limit?: number;
+    grade?: number;
+    section?: string;
+    search?: string;
+  }) => api.get<ApiResponse>("/students", { params }),
+  updateStudent: (id: string, data: any) => api.put<ApiResponse>(`/students/${id}`, data),
+  deleteStudent: (id: string) => api.delete<ApiResponse>(`/students/${id}`),
+
+  // Teacher management - Enhanced
+  createTeacher: (data: any) => api.post<ApiResponse>("/teachers", data),
+  updateTeacher: (id: string, data: any) => api.put<ApiResponse>(`/teachers/${id}`, data),
+  deleteTeacher: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
+
   // Reports and analytics
   getStudentStats: () => api.get<ApiResponse>("/admin/stats/students"),
   getTeacherStats: () => api.get<ApiResponse>("/admin/stats/teachers"),

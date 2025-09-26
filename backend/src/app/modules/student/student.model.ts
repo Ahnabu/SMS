@@ -88,11 +88,11 @@ const studentSchema = new Schema<
       index: true,
     },
     studentId: {
-      type: String, // Auto-generated string ID (e.g., 2025070001) - NOT a reference
+      type: String, // Auto-generated string ID (e.g., SCH001-STU-202507-0001) - NOT a reference
       required: [true, "Student ID is required"],
       unique: true,
       trim: true,
-      match: [/^\d{10}$/, "Student ID must be 10 digits (YYYYGGRRR format)"],
+      match: [/^(SCH\d{3,4}-STU-\d{6}-\d{4}|\d{10})$/, "Student ID must follow format SCH001-STU-YYYYGG-RRRR or YYYYGGRRR"],
       index: true,
     },
     grade: {

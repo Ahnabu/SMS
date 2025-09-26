@@ -3,7 +3,7 @@ import { Document, Types, Model } from "mongoose";
 export interface IStudent {
   userId: Types.ObjectId;
   schoolId: Types.ObjectId;
-  studentId: string;
+  studentId: string; // Auto-generated unique ID (e.g., SCH001-STU-202507-0001)
   grade: number;
   section: string;
   bloodGroup: string;

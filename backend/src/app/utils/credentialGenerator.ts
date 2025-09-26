@@ -16,11 +16,13 @@ export interface StudentIdComponents {
   admissionYear: number;
   grade: string;
   rollNumber: number;
+  schoolCode?: string; // Optional for backward compatibility
 }
 
 export interface TeacherIdComponents {
   joiningYear: number;
   sequenceNumber: number;
+  schoolCode?: string; // Optional for backward compatibility
 }
 
 export class CredentialGenerator {
@@ -41,7 +43,7 @@ export class CredentialGenerator {
 
   /**
    * Generate a unique student ID based on admission year, grade, and roll number
-   * Format: YYYYGGRRR (e.g., 2025070001 for Grade 7 student)
+   * Format: SCH001-STU-YYYYGG-RRRR (e.g., SCH001-STU-202507-0001 for Grade 7 student)
    * Sequential logic: Students in same grade get consecutive roll numbers
    */
   static async generateUniqueStudentId(
@@ -49,6 +51,14 @@ export class CredentialGenerator {
     grade: string,
     schoolId: string
   ): Promise<{ studentId: string; rollNumber: number }> {
+    // Get school information for school code prefix
+    const School = (await import('../modules/school/school.model')).School;
+    const school = await School.findById(schoolId);
+    if (!school) {
+      throw new Error('School not found');
+    }
+    const schoolCode = school.schoolId || 'SCH001'; // Default fallback
+    
     // Convert grade to 2-digit number (pad with zero if needed)
     const gradeNumber = grade.toString().padStart(2, "0");
 
@@ -100,7 +110,7 @@ export class CredentialGenerator {
       
       // Format roll number as 4-digit string (0001, 0002, etc.)
       const rollNumberStr = candidateRoll.toString().padStart(4, "0");
-      const candidateStudentId = `${admissionYear}${gradeNumber}${rollNumberStr}`;
+      const candidateStudentId = `${schoolCode}-STU-${admissionYear}${gradeNumber}-${rollNumberStr}`;
 
       // Check uniqueness in both Student and User collections
       const [existingStudent, existingUser] = await Promise.all([
@@ -132,7 +142,7 @@ export class CredentialGenerator {
     const timestamp = Date.now().toString().slice(-4);
     const timestampRoll = parseInt(timestamp.slice(-2)) + nextRoll;
     const timestampRollStr = timestampRoll.toString().padStart(4, "0");
-    const fallbackStudentId = `${admissionYear}${gradeNumber}${timestampRollStr}`;
+    const fallbackStudentId = `${schoolCode}-STU-${admissionYear}${gradeNumber}-${timestampRollStr}`;
 
     return { studentId: fallbackStudentId, rollNumber: timestampRoll };
   }
@@ -141,8 +151,10 @@ export class CredentialGenerator {
    * Validate student ID format
    */
   static validateStudentIdFormat(studentId: string): boolean {
-    const regex = /^\d{10}$/; // YYYYGGRRR format (10 digits)
-    return regex.test(studentId);
+    // Updated to support both old (YYYYGGRRR) and new (SCH001-STU-YYYYGG-RRRR) formats
+    const newFormatRegex = /^SCH\d{3,4}-STU-\d{6}-\d{4}$/; // SCH001-STU-YYYYGG-RRRR format
+    const oldFormatRegex = /^\d{10}$/; // YYYYGGRRR format (10 digits) - legacy
+    return newFormatRegex.test(studentId) || oldFormatRegex.test(studentId);
   }
 
   /**
@@ -151,15 +163,29 @@ export class CredentialGenerator {
   static parseStudentId(studentId: string): StudentIdComponents {
     if (!this.validateStudentIdFormat(studentId)) {
       throw new Error(
-        "Invalid student ID format. Expected: YYYYGGRRR (10 digits)"
+        "Invalid student ID format. Expected: SCH001-STU-YYYYGG-RRRR or YYYYGGRRR"
       );
     }
 
-    return {
-      admissionYear: parseInt(studentId.substring(0, 4)),
-      grade: studentId.substring(4, 6),
-      rollNumber: parseInt(studentId.substring(6, 10)),
-    };
+    // Handle both new and legacy formats
+    if (studentId.includes('SCH') && studentId.includes('STU')) {
+      // New format: SCH001-STU-YYYYGG-RRRR
+      const parts = studentId.split('-');
+      const yearGrade = parts[2]; // YYYYGG
+      return {
+        admissionYear: parseInt(yearGrade.substring(0, 4)),
+        grade: yearGrade.substring(4, 6),
+        rollNumber: parseInt(parts[3]),
+        schoolCode: parts[0]
+      };
+    } else {
+      // Legacy format: YYYYGGRRR
+      return {
+        admissionYear: parseInt(studentId.substring(0, 4)),
+        grade: studentId.substring(4, 6),
+        rollNumber: parseInt(studentId.substring(6, 10)),
+      };
+    }
   }
 
   /**
@@ -404,7 +430,7 @@ export class CredentialGenerator {
 
   /**
    * Generate a unique teacher ID and employee ID based on joining year and sequence
-   * Format: TCH-YYYY-XXX for teacherId and EMP-YYYY-XXX for employeeId
+   * Format: SCH001-TCH-YYYY-XXX for teacherId and SCH001-EMP-YYYY-XXX for employeeId
    * Sequential logic: Earlier registered teachers get lower sequence numbers
    */
   static async generateUniqueTeacherId(
@@ -416,6 +442,14 @@ export class CredentialGenerator {
     employeeId: string;
     sequenceNumber: number;
   }> {
+    // Get school information for school code prefix
+    const School = (await import('../modules/school/school.model')).School;
+    const school = await School.findById(schoolId);
+    if (!school) {
+      throw new Error('School not found');
+    }
+    const schoolCode = school.schoolId || 'SCH001'; // Default fallback
+    
     // Find all existing teachers for this year and school, ordered by registration time
     const existingTeachers = await Teacher.find({
       schoolId,
@@ -472,7 +506,8 @@ export class CredentialGenerator {
       // Extract sequence numbers from all existing teacher IDs
       const allSequences = existingTeachers
         .map((teacher) => {
-          const match = teacher.teacherId.match(/TCH-\d{4}-(\d{3})/);
+          // Updated regex pattern to match school-prefixed format: SCH001-TCH-2024-001
+          const match = teacher.teacherId.match(new RegExp(`${schoolCode}-TCH-\\d{4}-(\\d{3})`));
           return match ? parseInt(match[1]) : 0;
         })
         .filter((seq) => seq > 0);
@@ -486,7 +521,8 @@ export class CredentialGenerator {
       if (designationGroup.length > 0 && designation) {
         const groupSequences = designationGroup
           .map((teacher) => {
-            const match = teacher.teacherId.match(/TCH-\d{4}-(\d{3})/);
+            // Updated regex pattern to match school-prefixed format
+            const match = teacher.teacherId.match(new RegExp(`${schoolCode}-TCH-\\d{4}-(\\d{3})`));
             return match ? parseInt(match[1]) : 0;
           })
           .filter((seq) => seq > 0);
@@ -507,8 +543,8 @@ export class CredentialGenerator {
 
     // Format sequence as 3-digit string (001, 002, etc.)
     const sequenceStr = nextSequence.toString().padStart(3, "0");
-    const teacherId = `TCH-${joiningYear}-${sequenceStr}`;
-    const employeeId = `EMP-${joiningYear}-${sequenceStr}`;
+    const teacherId = `${schoolCode}-TCH-${joiningYear}-${sequenceStr}`;
+    const employeeId = `${schoolCode}-EMP-${joiningYear}-${sequenceStr}`;
 
     // Double-check uniqueness
     const existingWithId = await Teacher.findOne({
@@ -529,8 +565,10 @@ export class CredentialGenerator {
    * Validate teacher ID format
    */
   static validateTeacherIdFormat(teacherId: string): boolean {
-    const regex = /^TCH-\d{4}-\d{3}$/; // TCH-YYYY-XXX format
-    return regex.test(teacherId);
+    // Updated to support both old (TCH-YYYY-XXX) and new (SCH001-TCH-YYYY-XXX) formats
+    const newFormatRegex = /^SCH\d{3,4}-TCH-\d{4}-\d{3}$/; // SCH001-TCH-YYYY-XXX format
+    const oldFormatRegex = /^TCH-\d{4}-\d{3}$/; // TCH-YYYY-XXX format (legacy)
+    return newFormatRegex.test(teacherId) || oldFormatRegex.test(teacherId);
   }
 
   /**
@@ -538,13 +576,136 @@ export class CredentialGenerator {
    */
   static parseTeacherId(teacherId: string): TeacherIdComponents {
     if (!this.validateTeacherIdFormat(teacherId)) {
-      throw new Error("Invalid teacher ID format. Expected: TCH-YYYY-XXX");
+      throw new Error("Invalid teacher ID format. Expected: SCH001-TCH-YYYY-XXX or TCH-YYYY-XXX");
     }
 
-    return {
-      joiningYear: parseInt(teacherId.substring(4, 8)),
-      sequenceNumber: parseInt(teacherId.substring(9, 12)),
-    };
+    // Handle both new and legacy formats
+    if (teacherId.includes('SCH')) {
+      // New format: SCH001-TCH-YYYY-XXX
+      const parts = teacherId.split('-');
+      return {
+        joiningYear: parseInt(parts[2]), // Year is at index 2
+        sequenceNumber: parseInt(parts[3]), // Sequence is at index 3
+        schoolCode: parts[0] // School code is at index 0
+      };
+    } else {
+      // Legacy format: TCH-YYYY-XXX
+      return {
+        joiningYear: parseInt(teacherId.substring(4, 8)),
+        sequenceNumber: parseInt(teacherId.substring(9, 12))
+      };
+    }
+  }
+
+  /**
+   * Generate a unique parent ID based on registration year and sequence
+   * Format: SCH001-PAR-YYYY-XXX for parentId
+   * Sequential logic: Earlier registered parents get lower sequence numbers
+   */
+  static async generateUniqueParentId(
+    registrationYear: number,
+    schoolId: string
+  ): Promise<{
+    parentId: string;
+    sequenceNumber: number;
+  }> {
+    // Get school information for school code prefix
+    const School = (await import('../modules/school/school.model')).School;
+    const school = await School.findById(schoolId);
+    if (!school) {
+      throw new Error('School not found');
+    }
+    const schoolCode = school.schoolId || 'SCH001'; // Default fallback
+    
+    // Find all existing parents for this year and school, ordered by registration time
+    const Parent = (await import('../modules/parent/parent.model')).Parent;
+    const existingParents = await Parent.find({
+      schoolId,
+      createdAt: {
+        $gte: new Date(registrationYear, 0, 1),
+        $lt: new Date(registrationYear + 1, 0, 1),
+      },
+      isActive: true,
+    })
+      .sort({ createdAt: 1 }) // Sort by creation time for sequential order
+      .exec();
+
+    let nextSequence = 1;
+
+    if (existingParents.length > 0) {
+      // Extract sequence numbers from all existing parent IDs
+      const allSequences = existingParents
+        .map((parent) => {
+          // Updated regex pattern to match school-prefixed format: SCH001-PAR-2024-001
+          const match = parent.parentId.match(new RegExp(`${schoolCode}-PAR-\\d{4}-(\\d{3})`));
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter((seq) => seq > 0);
+
+      if (allSequences.length > 0) {
+        nextSequence = Math.max(...allSequences) + 1;
+      }
+    }
+
+    // Format sequence as 3-digit string (001, 002, etc.)
+    const sequenceStr = nextSequence.toString().padStart(3, "0");
+    const parentId = `${schoolCode}-PAR-${registrationYear}-${sequenceStr}`;
+
+    // Double-check uniqueness
+    const existingWithId = await Parent.findOne({
+      parentId,
+      schoolId,
+      isActive: true,
+    });
+
+    if (existingWithId) {
+      // If somehow this ID exists, recursively try the next number
+      return this.generateUniqueParentId(registrationYear, schoolId);
+    }
+
+    return { parentId, sequenceNumber: nextSequence };
+  }
+
+  /**
+   * Generate a unique admin ID based on school
+   * Format: SCH001-ADM-001 for adminId
+   */
+  static async generateUniqueAdminId(
+    schoolId: string
+  ): Promise<{
+    adminId: string;
+    sequenceNumber: number;
+  }> {
+    // Get school information for school code prefix
+    const School = (await import('../modules/school/school.model')).School;
+    const school = await School.findById(schoolId);
+    if (!school) {
+      throw new Error('School not found');
+    }
+    const schoolCode = school.schoolId || 'SCH001'; // Default fallback
+    
+    // Find all existing admins for this school
+    const User = (await import('../modules/user/user.model')).User;
+    const existingAdmins = await User.find({
+      schoolId,
+      role: 'admin',
+      isActive: true,
+    })
+      .sort({ createdAt: 1 }) // Sort by creation time for sequential order
+      .exec();
+
+    let nextSequence = 1;
+
+    if (existingAdmins.length > 0) {
+      // Since admins don't have a separate adminId field, we'll use a simple counter
+      nextSequence = existingAdmins.length + 1;
+    }
+
+    // Format sequence as 3-digit string (001, 002, etc.)
+    const sequenceStr = nextSequence.toString().padStart(3, "0");
+    const adminId = `${schoolCode}-ADM-${sequenceStr}`;
+
+    return { adminId, sequenceNumber: nextSequence };
   }
 
   /**

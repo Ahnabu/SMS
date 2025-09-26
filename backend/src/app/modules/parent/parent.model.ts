@@ -28,7 +28,7 @@ const parentSchema = new Schema<IParentDocument, IParentModel, IParentMethods>(
       required: [true, 'Parent ID is required'],
       unique: true,
       trim: true,
-      match: [/^PAR-\d{4}-\d{3}$/, 'Parent ID must follow format PAR-YYYY-XXX'],
+      match: [/^(SCH\d{3,4}-PAR-\d{4}-\d{3}|PAR-\d{4}-\d{3})$/, 'Parent ID must follow format SCH001-PAR-YYYY-XXX or PAR-YYYY-XXX'],
       index: true,
     },
     children: {
@@ -229,7 +229,15 @@ parentSchema.statics.generateNextParentId = async function (
   year: number = new Date().getFullYear(),
   session?: any
 ): Promise<string> {
-  const prefix = `PAR-${year}-`;
+  // Get school information for school code prefix
+  const School = mongoose.model('School');
+  const school = await School.findById(schoolId);
+  if (!school) {
+    throw new Error('School not found');
+  }
+  const schoolCode = school.schoolId || 'SCH001'; // Default fallback
+  
+  const prefix = `${schoolCode}-PAR-${year}-`;
 
   // Use an aggregation pipeline to find the highest sequence number more reliably
   const pipeline: any[] = [
@@ -245,7 +253,7 @@ parentSchema.statics.generateNextParentId = async function (
           $toInt: {
             $arrayElemAt: [
               { $split: ["$parentId", "-"] },
-              2
+              3  // Changed from 2 to 3 because of new format SCH001-PAR-YYYY-XXX
             ]
           }
         }
@@ -275,6 +283,7 @@ parentSchema.statics.generateNextParentId = async function (
     // Check if this ID already exists
     const existing = await this.findOne({ parentId: candidateId }).session(session);
     if (!existing) {
+      return candidateId;
       return candidateId;
     }
   }

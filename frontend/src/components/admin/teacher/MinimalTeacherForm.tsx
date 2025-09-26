@@ -39,11 +39,17 @@ interface MinimalTeacherFormData {
     phone: string;
     email?: string;
   };
+  salary: {
+    basic: number;
+    allowances: number;
+    deductions: number;
+  };
   isClassTeacher: boolean;
   classTeacherFor?: {
     grade: number;
     section: string;
   };
+  isActive: boolean;
 }
 
 const DESIGNATIONS = [
@@ -105,7 +111,13 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
       phone: "",
       email: "",
     },
+    salary: {
+      basic: 0,
+      allowances: 0,
+      deductions: 0,
+    },
     isClassTeacher: false,
+    isActive: true,
   });
 
   const handleChange = (field: string, value: any) => {
@@ -193,9 +205,16 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
       submitData.append("qualifications", JSON.stringify(formData.qualifications));
       submitData.append("address", JSON.stringify(formData.address));
       submitData.append("emergencyContact", JSON.stringify(formData.emergencyContact));
+      submitData.append("salary", JSON.stringify(formData.salary));
       submitData.append("isClassTeacher", JSON.stringify(formData.isClassTeacher));
+      submitData.append("isActive", JSON.stringify(formData.isActive));
+      
+      // Add class teacher assignment if applicable
+      if (formData.isClassTeacher && formData.classTeacherFor) {
+        submitData.append("classTeacherFor", JSON.stringify(formData.classTeacherFor));
+      }
 
-      const response = await fetch("/api/admin/teachers", {
+      const response = await fetch("/api/teachers", {
         method: "POST",
         body: submitData,
         credentials: "include",
@@ -583,6 +602,126 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
               />
             </div>
           </div>
+        </div>
+
+        {/* Salary Information */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Salary Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Basic Salary</label>
+              <input
+                type="number"
+                value={formData.salary.basic}
+                onChange={(e) => handleNestedChange("salary", "basic", parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Basic salary amount"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Allowances</label>
+              <input
+                type="number"
+                value={formData.salary.allowances}
+                onChange={(e) => handleNestedChange("salary", "allowances", parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Total allowances"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Deductions</label>
+              <input
+                type="number"
+                value={formData.salary.deductions}
+                onChange={(e) => handleNestedChange("salary", "deductions", parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Total deductions"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            <p className="text-sm text-gray-700">
+              <strong>Net Salary:</strong> {" "}
+              <span className="font-semibold text-blue-600">
+                {(formData.salary.basic + formData.salary.allowances - formData.salary.deductions).toLocaleString()}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Status & Class Teacher Information */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">Status & Additional Roles</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Active Status */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => handleChange("isActive", e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                Active Teacher (can login and access system)
+              </label>
+            </div>
+
+            {/* Class Teacher Status */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isClassTeacher"
+                checked={formData.isClassTeacher}
+                onChange={(e) => handleChange("isClassTeacher", e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="isClassTeacher" className="text-sm font-medium text-gray-700">
+                Class Teacher
+              </label>
+            </div>
+          </div>
+
+          {/* Class Teacher Assignment (conditional) */}
+          {formData.isClassTeacher && (
+            <div className="mt-4 p-4 border-l-4 border-blue-500 bg-blue-50">
+              <h4 className="text-md font-medium text-blue-800 mb-3">Class Teacher Assignment</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Grade *</label>
+                  <select
+                    value={formData.classTeacherFor?.grade || ""}
+                    onChange={(e) => handleNestedChange("classTeacherFor", "grade", parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Grade</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(grade => (
+                      <option key={grade} value={grade}>{grade}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Section *</label>
+                  <select
+                    value={formData.classTeacherFor?.section || ""}
+                    onChange={(e) => handleNestedChange("classTeacherFor", "section", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Section</option>
+                    {['A', 'B', 'C', 'D', 'E'].map(section => (
+                      <option key={section} value={section}>{section}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Submit Button */}

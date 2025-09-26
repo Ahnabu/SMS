@@ -74,7 +74,7 @@ export const teacherApi = {
       }
     });
 
-    return api.post<ApiResponse>("/admin/teachers", formData, {
+    return api.post<ApiResponse>("/teachers", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -88,9 +88,9 @@ export const teacherApi = {
     search?: string;
     sortBy?: string;
     sortOrder?: string;
-  }) => api.get<ApiResponse>("/admin/teachers", { params }),
+  }) => api.get<ApiResponse>("/teachers", { params }),
 
-  getById: (id: string) => api.get<ApiResponse>(`/admin/teachers/${id}`),
+  getById: (id: string) => api.get<ApiResponse>(`/teachers/${id}`),
 
   update: (
     id: string,
@@ -101,9 +101,9 @@ export const teacherApi = {
       salary?: number;
       isActive?: boolean;
     }
-  ) => api.put<ApiResponse>(`/admin/teachers/${id}`, data),
+  ) => api.put<ApiResponse>(`/teachers/${id}`, data),
 
-  delete: (id: string) => api.delete<ApiResponse>(`/admin/teachers/${id}`),
+  delete: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
 
   // Teacher dashboard endpoints
   getDashboard: () => api.get<ApiResponse>("/teacher/dashboard"),
@@ -148,7 +148,7 @@ export const teacherApi = {
   }) => api.post<ApiResponse>("/teacher/grades", data),
   getGrades: () => api.get<ApiResponse>("/teacher/grades"),
 
-  getStats: () => api.get<ApiResponse>("/admin/teachers/stats"),
+  getStats: () => api.get<ApiResponse>("/teachers/stats"),
 
   // Photo management
   uploadPhotos: (teacherId: string, photos: File[]) => {
@@ -157,7 +157,7 @@ export const teacherApi = {
       formData.append("photos", photo);
     });
     return api.post<ApiResponse>(
-      `/admin/teachers/${teacherId}/photos`,
+      `/teachers/${teacherId}/photos`,
       formData,
       {
         headers: {
@@ -168,11 +168,11 @@ export const teacherApi = {
   },
 
   getPhotos: (teacherId: string) =>
-    api.get<ApiResponse>(`/admin/teachers/${teacherId}/photos`),
+    api.get<ApiResponse>(`/teachers/${teacherId}/photos`),
 
   deletePhoto: (teacherId: string, photoId: string) =>
-    api.delete<ApiResponse>(`/admin/teachers/${teacherId}/photos/${photoId}`),
+    api.delete<ApiResponse>(`/teachers/${teacherId}/photos/${photoId}`),
 
   getAvailablePhotoSlots: (teacherId: string) =>
-    api.get<ApiResponse>(`/admin/teachers/${teacherId}/photos/available-slots`),
+    api.get<ApiResponse>(`/teachers/${teacherId}/photos/available-slots`),
 };

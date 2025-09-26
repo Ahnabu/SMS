@@ -85,7 +85,7 @@ const teacherSchema = new Schema<ITeacherDocument, ITeacherModel, ITeacherMethod
       required: [true, 'Teacher ID is required'],
       unique: true,
       trim: true,
-      match: [/^TCH-\d{4}-\d{3}$/, 'Teacher ID must follow format TCH-YYYY-XXX'],
+      match: [/^(SCH\d{3,4}-TCH-\d{4}-\d{3}|TCH-\d{4}-\d{3})$/, 'Teacher ID must follow format SCH001-TCH-YYYY-XXX or TCH-YYYY-XXX'],
       index: true,
     },
     employeeId: {

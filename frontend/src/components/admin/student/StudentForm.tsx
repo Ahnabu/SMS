@@ -263,10 +263,11 @@ const StudentForm: React.FC<StudentFormProps> = ({
       newErrors.admissionDate = "Admission date is required";
     if (!formData.schoolId) newErrors.schoolId = "School ID is required";
 
-    // Photos validation - photos are optional but max 8 allowed
+    // Photos validation - photos are optional for form submission
     if (formData.photos && formData.photos.length > 8) {
       newErrors.photos = "Maximum 8 photos allowed";
     }
+    // Note: Photos are optional - students can be created without photos and photos can be added later
 
     // Parent validation
     if (!formData.parent?.name?.trim())
@@ -536,8 +537,8 @@ const StudentForm: React.FC<StudentFormProps> = ({
       photos: [...((prev.photos as File[]) || []), ...validFiles] as File[],
     }));
 
-    // Clear error if photos are now valid
-    if (selectedPhotos.length + validFiles.length >= 3) {
+    // Clear any photo upload errors if photos become valid
+    if (selectedPhotos.length + validFiles.length <= 8) {
       setErrors((prev) => ({ ...prev, photos: "" }));
     }
   };
@@ -550,11 +551,14 @@ const StudentForm: React.FC<StudentFormProps> = ({
       photos: (prev.photos?.filter((_, i) => i !== index) || []) as File[],
     }));
 
-    // Update validation
-    if (selectedPhotos.length - 1 < 3) {
+    // Update validation - photos are now optional
+    if (selectedPhotos.length === 0) {
+      // Clear any previous photo errors if no photos selected
+      setErrors((prev) => ({ ...prev, photos: "" }));
+    } else if (selectedPhotos.length > 8) {
       setErrors((prev) => ({
         ...prev,
-        photos: "Minimum 3 photos are required",
+        photos: "Maximum 8 photos allowed",
       }));
     }
   };
@@ -722,7 +726,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
               {/* Photo Upload Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Student Photos <span className="text-red-500">*</span>
+                  Student Photos (Optional)
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                   <input
@@ -759,7 +763,7 @@ const StudentForm: React.FC<StudentFormProps> = ({
                       or drag and drop
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      PNG, JPG up to 10MB each (3-8 photos required)
+                      PNG, JPG up to 10MB each (photos are optional)
                     </p>
                   </label>
                 </div>

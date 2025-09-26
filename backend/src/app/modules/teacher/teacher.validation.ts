@@ -232,6 +232,10 @@ const createTeacherValidationSchema = z.object({
         .string()
         .regex(/^[A-Z]$/, 'Section must be a single uppercase letter'),
     }).optional(),
+    isActive: z
+      .boolean()
+      .default(true)
+      .optional(),
   }).refine((data) => {
     // If isClassTeacher is true, classTeacherFor must be provided
     if (data.isClassTeacher && !data.classTeacherFor) {

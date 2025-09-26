@@ -191,48 +191,49 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
         }
       } catch (error) {
         console.error("Failed to load teachers:", error);
-        // Set demo data for testing
-        setTeachers([
+        // Set demo data for testing when API is not available
+        const demoTeachers: Teacher[] = [
           {
-            id: "1",
-            userId: "user1",
-            schoolId: "school1",
-            teacherId: "TCH-2025-001",
+            id: "demo-1",
+            userId: "user-1",
+            schoolId: "school-1",
+            teacherId: "TCH001",
             employeeId: "EMP001",
-            subjects: ["Algebra", "Calculus", "Geometry"],
-            grades: [9, 10, 11],
+            subjects: ["Mathematics", "Physics"],
+            grades: [9, 10],
             sections: ["A", "B"],
             designation: "Senior Teacher",
             bloodGroup: "A+",
-            dob: "1985-05-15",
-            joinDate: "2022-01-15",
-            qualifications: [
-              {
-                degree: "M.Sc Mathematics",
-                institution: "State University",
-                year: 2008
-              },
-              {
-                degree: "B.Ed",
-                institution: "Education College",
-                year: 2009
-              }
-            ],
+            dob: "1985-06-15",
+            joinDate: "2020-01-15",
+            qualifications: [{
+              degree: "M.Sc Mathematics",
+              institution: "State University",
+              year: 2008,
+              specialization: "Applied Mathematics"
+            }],
             experience: {
-              totalYears: 5,
+              totalYears: 12,
               previousSchools: []
             },
             address: {
-              street: "123 Main St",
-              city: "New York",
-              state: "NY",
-              zipCode: "10001",
-              country: "USA",
+              street: "123 Teacher Lane",
+              city: "Springfield",
+              state: "IL",
+              zipCode: "62701",
+              country: "USA"
             },
             emergencyContact: {
-              name: "John Johnson",
+              name: "Jane Doe",
               relationship: "Spouse",
-              phone: "+1-555-0199"
+              phone: "+1234567899",
+              email: "jane.doe@email.com"
+            },
+            salary: {
+              basic: 50000,
+              allowances: 5000,
+              deductions: 2000,
+              netSalary: 53000
             },
             isClassTeacher: true,
             classTeacherFor: {
@@ -240,104 +241,149 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
               section: "A"
             },
             isActive: true,
-            age: 38,
-            totalExperience: 5,
-            createdAt: "2022-01-15T10:00:00Z",
-            updatedAt: "2022-01-15T10:00:00Z",
+            age: 39,
+            totalExperience: 12,
+            createdAt: "2020-01-15T10:00:00Z",
+            updatedAt: "2024-01-15T10:00:00Z",
             user: {
-              id: "user1",
-              username: "sarah.johnson",
-              firstName: "Sarah",
-              lastName: "Johnson",
-              fullName: "Sarah Johnson",
-              email: "sarah.johnson@school.edu",
-              phone: "+1-555-0123"
+              id: "user-1",
+              username: "john.doe",
+              firstName: "John",
+              lastName: "Doe",
+              fullName: "John Doe",
+              email: "john.doe@school.com",
+              phone: "+1234567890"
             },
             school: {
-              id: "school1",
-              name: "Demo School"
+              id: "school-1",
+              name: "Demo High School"
             },
             photos: [],
-            photoCount: 0,
-            // Legacy fields for backward compatibility
-            firstName: "Sarah",
-            lastName: "Johnson",
-            email: "sarah.johnson@school.edu",
-            phone: "+1-555-0123",
-            dateOfJoining: "2022-01-15",
-            department: "Mathematics"
+            photoCount: 0
           },
           {
-            id: "2",
-            userId: "user2",
-            schoolId: "school1",
-            teacherId: "TCH-2025-002",
+            id: "demo-2",
+            userId: "user-2",
+            schoolId: "school-1",
+            teacherId: "TCH002",
             employeeId: "EMP002",
-            subjects: ["Physics", "Chemistry"],
+            subjects: ["English", "Literature"],
             grades: [11, 12],
-            sections: ["A", "B", "C"],
-            designation: "Head of Science",
-            bloodGroup: "O+",
-            dob: "1980-12-10",
-            joinDate: "2021-08-20",
-            qualifications: [
-              {
-                degree: "Ph.D Physics",
-                institution: "Technical University",
-                year: 2005
-              },
-              {
-                degree: "M.Sc Physics",
-                institution: "Science College",
-                year: 2002
-              }
-            ],
+            sections: ["A"],
+            designation: "Head of Department",
+            bloodGroup: "B+",
+            dob: "1982-03-22",
+            joinDate: "2018-08-01",
+            qualifications: [{
+              degree: "M.A English",
+              institution: "University College",
+              year: 2005,
+              specialization: "Modern Literature"
+            }],
             experience: {
-              totalYears: 8,
-              previousSchools: []
+              totalYears: 15,
+              previousSchools: [{
+                schoolName: "City High School",
+                position: "English Teacher",
+                duration: "3 years",
+                fromDate: "2015-06-01",
+                toDate: "2018-07-31"
+              }]
             },
             address: {
-              street: "456 Oak Ave",
-              city: "New York",
-              state: "NY",
-              zipCode: "10002",
-              country: "USA",
+              street: "456 Education Ave",
+              city: "Springfield",
+              state: "IL",
+              zipCode: "62702",
+              country: "USA"
             },
             emergencyContact: {
-              name: "Lisa Davis",
-              relationship: "Spouse",
-              phone: "+1-555-0198"
+              name: "Robert Smith",
+              relationship: "Brother",
+              phone: "+1234567898",
+              email: "robert.smith@email.com"
             },
             isClassTeacher: false,
             isActive: true,
-            age: 43,
-            totalExperience: 8,
-            createdAt: "2021-08-20T14:30:00Z",
-            updatedAt: "2021-08-20T14:30:00Z",
+            age: 42,
+            totalExperience: 15,
+            createdAt: "2018-08-01T10:00:00Z",
+            updatedAt: "2024-01-15T10:00:00Z",
             user: {
-              id: "user2",
-              username: "michael.davis",
-              firstName: "Michael",
-              lastName: "Davis",
-              fullName: "Michael Davis",
-              email: "michael.davis@school.edu",
-              phone: "+1-555-0124"
+              id: "user-2",
+              username: "jane.smith",
+              firstName: "Jane",
+              lastName: "Smith",
+              fullName: "Jane Smith",
+              email: "jane.smith@school.com",
+              phone: "+1234567891"
             },
             school: {
-              id: "school1",
-              name: "Demo School"
+              id: "school-1",
+              name: "Demo High School"
             },
             photos: [],
-            photoCount: 0,
-            // Legacy fields for backward compatibility
-            firstName: "Michael",
-            lastName: "Davis",
-            email: "michael.davis@school.edu",
-            phone: "+1-555-0124",
-            dateOfJoining: "2021-08-20",
-            department: "Science"
+            photoCount: 0
           },
-        ]);
+          {
+            id: "demo-3",
+            userId: "user-3",
+            schoolId: "school-1",
+            teacherId: "TCH003",
+            employeeId: "EMP003",
+            subjects: ["Chemistry", "Biology"],
+            grades: [9, 10, 11],
+            sections: ["A", "B", "C"],
+            designation: "Teacher",
+            bloodGroup: "O+",
+            dob: "1990-12-10",
+            joinDate: "2021-06-01",
+            qualifications: [{
+              degree: "M.Sc Chemistry",
+              institution: "Tech Institute",
+              year: 2013,
+              specialization: "Organic Chemistry"
+            }],
+            experience: {
+              totalYears: 6,
+              previousSchools: []
+            },
+            address: {
+              street: "789 Science St",
+              city: "Springfield",
+              state: "IL",
+              zipCode: "62703",
+              country: "USA"
+            },
+            emergencyContact: {
+              name: "Mary Johnson",
+              relationship: "Mother",
+              phone: "+1234567897"
+            },
+            isClassTeacher: false,
+            isActive: false,
+            age: 33,
+            totalExperience: 6,
+            createdAt: "2021-06-01T10:00:00Z",
+            updatedAt: "2024-01-15T10:00:00Z",
+            user: {
+              id: "user-3",
+              username: "mike.johnson",
+              firstName: "Mike",
+              lastName: "Johnson",
+              fullName: "Mike Johnson",
+              email: "mike.johnson@school.com",
+              phone: "+1234567892"
+            },
+            school: {
+              id: "school-1",
+              name: "Demo High School"
+            },
+            photos: [],
+            photoCount: 0
+          }
+        ];
+        setTeachers(demoTeachers);
         setTotalPages(1);
       } finally {
         setLoading(false);
@@ -441,6 +487,34 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
           filters={filterConfigs}
         />
 
+        {/* Quick Stats */}
+        {teachers.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-blue-600 text-2xl font-bold">{teachers.length}</div>
+              <div className="text-blue-800 text-sm font-medium">Total Teachers</div>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="text-green-600 text-2xl font-bold">
+                {teachers.filter(t => t.isActive !== false).length}
+              </div>
+              <div className="text-green-800 text-sm font-medium">Active Teachers</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="text-purple-600 text-2xl font-bold">
+                {teachers.filter(t => t.isClassTeacher).length}
+              </div>
+              <div className="text-purple-800 text-sm font-medium">Class Teachers</div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="text-orange-600 text-2xl font-bold">
+                {[...new Set(teachers.flatMap(t => t.subjects || []))].length}
+              </div>
+              <div className="text-orange-800 text-sm font-medium">Subjects Covered</div>
+            </div>
+          </div>
+        )}
+
         {/* Teachers List */}
         {loading ? (
           <div className="text-center py-8">
@@ -479,60 +553,119 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
-                        <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
-                          <span className="text-lg font-medium text-white">
-                            {(teacher.user?.firstName || teacher.firstName)?.[0] || '?'}
-                            {(teacher.user?.lastName || teacher.lastName)?.[0] || '?'}
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                          <span className="text-xl font-bold text-white">
+                            {(teacher.user?.firstName || teacher.firstName)?.[0] || 'T'}
+                            {(teacher.user?.lastName || teacher.lastName)?.[0] || 'R'}
                           </span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {teacher.user?.firstName || teacher.firstName || 'Unknown'} {teacher.user?.lastName || teacher.lastName || 'Teacher'}
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-bold text-gray-900">
+                            {teacher.user?.fullName || `${teacher.user?.firstName || teacher.firstName || 'Unknown'} ${teacher.user?.lastName || teacher.lastName || 'Teacher'}`}
                           </h3>
                           {getStatusBadge(teacher.isActive ?? false)}
                         </div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Employee ID:</span>{" "}
-                          {teacher.employeeId || 'N/A'} •
-                          <span className="font-medium ml-2">Department:</span>{" "}
-                          {teacher.department || 'N/A'}
-                        </p>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Designation:</span>{" "}
-                          {teacher.designation || 'N/A'} •
-                          <span className="font-medium ml-2">Joined:</span>{" "}
-                          {(teacher.joinDate || teacher.dateOfJoining) ? new Date(teacher.joinDate || teacher.dateOfJoining!).toLocaleDateString() : 'N/A'}
-                        </p>
-                        <p className="text-sm text-gray-600 mb-2">
-                          <span className="font-medium">Contact:</span>{" "}
-                          {teacher.user?.email || teacher.email || 'N/A'}{" "}
-                          {(teacher.user?.phone || teacher.phone) && `• ${teacher.user?.phone || teacher.phone}`}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-600">
-                            Subjects:
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {(teacher.subjects || []).map((subject, index) => (
-                              <span
-                                key={index}
-                                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-                              >
-                                {subject}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Employee ID:</span>
+                              <span className="text-gray-600">{teacher.employeeId || teacher.teacherId || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Designation:</span>
+                              <span className="text-gray-600">{teacher.designation || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Department:</span>
+                              <span className="text-gray-600">{teacher.department || 'General'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Joined:</span>
+                              <span className="text-gray-600">
+                                {(teacher.joinDate || teacher.dateOfJoining) ? new Date(teacher.joinDate || teacher.dateOfJoining!).toLocaleDateString() : 'N/A'}
                               </span>
-                            ))}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Email:</span>
+                              <span className="text-gray-600 truncate">{teacher.user?.email || teacher.email || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Phone:</span>
+                              <span className="text-gray-600">{teacher.user?.phone || teacher.phone || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Blood Group:</span>
+                              <span className="text-gray-600">{teacher.bloodGroup || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Class Teacher:</span>
+                              <span className="text-gray-600">
+                                {teacher.isClassTeacher ? 
+                                  `${teacher.classTeacherFor?.grade || 'N/A'}-${teacher.classTeacherFor?.section || 'N/A'}` : 
+                                  'No'
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Subjects */}
+                        <div className="mt-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-medium text-gray-700">Subjects:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(teacher.subjects || []).length > 0 ? (
+                              teacher.subjects.map((subject, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium"
+                                >
+                                  {subject}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-gray-500 text-sm">No subjects assigned</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Grades */}
+                        <div className="mt-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-medium text-gray-700">Teaching Grades:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(teacher.grades || []).length > 0 ? (
+                              teacher.grades.map((grade, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-medium"
+                                >
+                                  Grade {grade}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-gray-500 text-sm">No grades assigned</span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
+                    
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onViewTeacher(teacher)}
                         className="p-2"
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -541,6 +674,7 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                         size="sm"
                         onClick={() => onEditTeacher(teacher)}
                         className="p-2"
+                        title="Edit Teacher"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -555,6 +689,11 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                             ? "text-red-600 hover:text-red-700"
                             : "text-green-600 hover:text-green-700"
                         }`}
+                        title={
+                          (teacher.isActive ?? false)
+                            ? "Deactivate Teacher"
+                            : "Activate Teacher"
+                        }
                       >
                         {(teacher.isActive ?? false) ? (
                           <UserX className="w-4 h-4" />
@@ -567,6 +706,7 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                         size="sm"
                         onClick={() => handleDeleteTeacher(teacher.id)}
                         className="p-2 text-red-600 hover:text-red-700"
+                        title="Delete Teacher"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

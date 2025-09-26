@@ -25,8 +25,8 @@ class TeacherService {
     session.startTransaction();
 
     try {
-      // Verify school exists and is active
-      const school = await School.findById(teacherData.schoolId);
+      // Verify school exists and is active using MongoDB ObjectId
+      const school = await School.findById(new Types.ObjectId(teacherData.schoolId));
       if (!school) {
         throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
@@ -37,28 +37,7 @@ class TeacherService {
           "Cannot create teacher for inactive school"
         );
       }
-
-      // Check if teacher with same name exists in the same school
-      const existingUser = await User.findOne({
-        schoolId: teacherData.schoolId,
-        firstName: { $regex: new RegExp(`^${teacherData.firstName}$`, "i") },
-        lastName: { $regex: new RegExp(`^${teacherData.lastName}$`, "i") },
-        role: "teacher",
-      });
-
-      if (existingUser) {
-        // Check if this user is already a teacher
-        const existingTeacher = await Teacher.findOne({
-          userId: existingUser._id,
-        });
-
-        if (existingTeacher) {
-          throw new AppError(
-            httpStatus.CONFLICT,
-            `Teacher with name '${teacherData.firstName} ${teacherData.lastName}' already exists in this school`
-          );
-        }
-      }
+      console.log(school)
 
       // Generate teacher ID and employee ID
       const joiningYear = teacherData.joinDate
@@ -79,11 +58,11 @@ class TeacherService {
         teacherId
       );
 
-      // Create user account for teacher
+      // Create user account for teacher FIRST (similar to school-admin creation)
       const newUser = await User.create(
         [
           {
-            schoolId: teacherData.schoolId,
+            schoolId: new Types.ObjectId(teacherData.schoolId), // Ensure MongoDB ObjectId
             role: "teacher",
             username: credentials.username,
             passwordHash: credentials.hashedPassword,
@@ -91,6 +70,7 @@ class TeacherService {
             lastName: teacherData.lastName,
             email: teacherData.email,
             phone: teacherData.phone,
+            isActive: teacherData.isActive !== false, // Default to true if not specified
             requiresPasswordChange: credentials.requiresPasswordChange,
           },
         ],
@@ -108,12 +88,12 @@ class TeacherService {
           })) || [],
       };
 
-      // Create teacher record
+      // Create teacher record using the User's MongoDB ID (following school-admin pattern)
       const newTeacher = await Teacher.create(
         [
           {
-            userId: newUser[0]._id,
-            schoolId: teacherData.schoolId,
+            userId: newUser[0]._id, // Reference to the User document's MongoDB ObjectId
+            schoolId: new Types.ObjectId(teacherData.schoolId), // Ensure MongoDB ObjectId
             teacherId,
             employeeId: employeeId, // Use auto-generated employee ID
             subjects: teacherData.subjects,
@@ -140,6 +120,7 @@ class TeacherService {
               : undefined,
             isClassTeacher: teacherData.isClassTeacher || false,
             classTeacherFor: teacherData.classTeacherFor,
+            isActive: teacherData.isActive !== false, // Default to true if not specified
           },
         ],
         { session }
@@ -211,7 +192,7 @@ class TeacherService {
               [
                 {
                   teacherId: newTeacher[0]._id,
-                  schoolId: teacherData.schoolId,
+                  schoolId: new Types.ObjectId(teacherData.schoolId), // Ensure MongoDB ObjectId
                   photoPath: photoResult.relativePath,
                   photoNumber,
                   filename: photoResult.filename,
@@ -318,8 +299,9 @@ class TeacherService {
       // Build query
       const query: any = {};
 
+      // Use MongoDB ObjectId for schoolId filtering
       if (schoolId) {
-        query.schoolId = schoolId;
+        query.schoolId = new Types.ObjectId(schoolId);
       }
 
       if (subject) {
@@ -380,16 +362,57 @@ class TeacherService {
         sort[sortBy] = sortOrder === "desc" ? -1 : 1;
       }
 
-      // Execute queries
+      // Execute queries using aggregation pipeline for better User data integration
+      const aggregationPipeline: any[] = [
+        { $match: query },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+            pipeline: [
+              {
+                $project: {
+                  firstName: 1,
+                  lastName: 1,
+                  username: 1,
+                  email: 1,
+                  phone: 1,
+                  isActive: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $lookup: {
+            from: "schools",
+            localField: "schoolId",
+            foreignField: "_id",
+            as: "school",
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $addFields: {
+            user: { $arrayElemAt: ["$user", 0] },
+            school: { $arrayElemAt: ["$school", 0] },
+          },
+        },
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+      ];
+
       const [teachers, totalCount] = await Promise.all([
-        Teacher.find(query)
-          .populate("userId", "firstName lastName username email phone")
-          .populate("schoolId", "name")
-          .populate("photoCount")
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        Teacher.aggregate(aggregationPipeline),
         Teacher.countDocuments(query),
       ]);
 
@@ -722,9 +745,9 @@ class TeacherService {
         experienceStats,
         recentJoining,
       ] = await Promise.all([
-        Teacher.countDocuments({ schoolId }),
-        Teacher.countDocuments({ schoolId, isActive: true }),
-        Teacher.countDocuments({ schoolId, isClassTeacher: true }),
+        Teacher.countDocuments({ schoolId: new Types.ObjectId(schoolId) }),
+        Teacher.countDocuments({ schoolId: new Types.ObjectId(schoolId), isActive: true }),
+        Teacher.countDocuments({ schoolId: new Types.ObjectId(schoolId), isClassTeacher: true }),
         Teacher.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
           { $group: { _id: "$designation", count: { $sum: 1 } } },

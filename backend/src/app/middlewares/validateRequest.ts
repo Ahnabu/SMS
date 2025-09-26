@@ -17,11 +17,11 @@ const validateRequest = (schema: AnyZodObject | ZodEffects<AnyZodObject>) => {
     req.params = parsedData.params;
     req.cookies = parsedData.cookies;
 
-    console.log("Validated and parsed request data:", {
-      body: req.body,
-      query: req.query,
-      params: req.params,
-    });
+    // console.log("Validated and parsed request data:", {
+    //   body: req.body,
+    //   query: req.query,
+    //   params: req.params,
+    // });
 
     next();
   });

@@ -5,12 +5,12 @@ import { Request, Response, NextFunction } from 'express';
  */
 export const parseTeacherData = (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log("=== parseTeacherData: Input body ===", req.body);
+    // console.log("=== parseTeacherData: Input body ===", req.body);
     
     const teacherData: any = { ...req.body };
     
     // Parse JSON string fields that were sent as FormData
-    const jsonFields = ['subjects', 'grades', 'sections', 'experience', 'qualifications', 'address', 'emergencyContact', 'isClassTeacher', 'salary'];
+    const jsonFields = ['subjects', 'grades', 'sections', 'experience', 'qualifications', 'address', 'emergencyContact', 'salary', 'isClassTeacher', 'isActive', 'classTeacherFor'];
     
     jsonFields.forEach(field => {
       if (teacherData[field] && typeof teacherData[field] === 'string') {
@@ -43,8 +43,13 @@ export const parseTeacherData = (req: Request, res: Response, next: NextFunction
       teacherData.isClassTeacher = teacherData.isClassTeacher === 'true';
     }
     
+    // Handle special case for isActive boolean
+    if (teacherData.isActive && typeof teacherData.isActive === 'string') {
+      teacherData.isActive = teacherData.isActive === 'true';
+    }
+    
     req.body = teacherData;
-    console.log("=== parseTeacherData: Final body ===", req.body);
+    // console.log("=== parseTeacherData: Final body ===", req.body);
     
     next();
   } catch (error) {

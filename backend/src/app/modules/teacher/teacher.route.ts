@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { authenticate, authorize } from "../../middlewares/auth";
 import { validateRequest } from "../../middlewares/validateRequest";
+import { parseTeacherData } from "../../middlewares/parseTeacherData";
 import { UserRole } from "../user/user.interface";
 import { TeacherController } from "./teacher.controller";
 import {
@@ -40,6 +41,7 @@ router.post(
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   upload.array("photos", 20), // Support up to 20 photos
+  parseTeacherData, // Parse JSON strings from FormData
   validateRequest(createTeacherValidationSchema),
   TeacherController.createTeacher
 );

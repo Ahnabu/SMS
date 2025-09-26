@@ -197,7 +197,108 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
         }
       } catch (error) {
         console.error("Failed to load students:", error);
-        // Set demo data for testing
+        // Set demo data for testing when API is not available
+        const demoStudents = [
+          {
+            id: "demo-std-1",
+            studentId: "STU001",
+            grade: 10,
+            section: "A",
+            rollNumber: 15,
+            bloodGroup: "A+",
+            dob: "2007-05-20",
+            admissionDate: "2022-04-01",
+            isActive: true,
+            age: 16,
+            user: {
+              id: "std-user-1",
+              username: "alice.brown",
+              firstName: "Alice",
+              lastName: "Brown",
+              fullName: "Alice Brown",
+              email: "alice.brown@student.com",
+              phone: "+1234567800"
+            },
+            parent: {
+              id: "parent-1",
+              fullName: "Robert Brown",
+              email: "robert.brown@parent.com",
+              phone: "+1234567801",
+              relationship: "Father",
+              occupation: "Engineer"
+            },
+            address: {
+              street: "123 Main Street",
+              city: "Springfield",
+              state: "IL",
+              country: "USA",
+              postalCode: "62701"
+            },
+            createdAt: "2022-04-01T10:00:00Z"
+          },
+          {
+            id: "demo-std-2",
+            studentId: "STU002",
+            grade: 11,
+            section: "B",
+            rollNumber: 8,
+            bloodGroup: "B+",
+            dob: "2006-08-15",
+            admissionDate: "2021-04-01",
+            isActive: true,
+            age: 17,
+            user: {
+              id: "std-user-2",
+              username: "david.wilson",
+              firstName: "David",
+              lastName: "Wilson",
+              fullName: "David Wilson",
+              email: "david.wilson@student.com",
+              phone: "+1234567802"
+            },
+            parent: {
+              id: "parent-2",
+              fullName: "Sarah Wilson",
+              email: "sarah.wilson@parent.com",
+              phone: "+1234567803",
+              relationship: "Mother",
+              occupation: "Doctor"
+            },
+            createdAt: "2021-04-01T10:00:00Z"
+          },
+          {
+            id: "demo-std-3",
+            studentId: "STU003",
+            grade: 9,
+            section: "A",
+            rollNumber: 22,
+            bloodGroup: "O+",
+            dob: "2008-11-03",
+            admissionDate: "2023-04-01",
+            isActive: false,
+            age: 15,
+            user: {
+              id: "std-user-3",
+              username: "emma.davis",
+              firstName: "Emma",
+              lastName: "Davis",
+              fullName: "Emma Davis",
+              email: "emma.davis@student.com",
+              phone: "+1234567804"
+            },
+            parent: {
+              id: "parent-3",
+              fullName: "Michael Davis",
+              email: "michael.davis@parent.com",
+              phone: "+1234567805",
+              relationship: "Father",
+              occupation: "Teacher"
+            },
+            createdAt: "2023-04-01T10:00:00Z"
+          }
+        ];
+        setStudents(demoStudents);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
@@ -357,6 +458,34 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
           filters={filterConfigs}
         />
 
+        {/* Quick Stats */}
+        {students.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <div className="text-indigo-600 text-2xl font-bold">{students.length}</div>
+              <div className="text-indigo-800 text-sm font-medium">Total Students</div>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="text-green-600 text-2xl font-bold">
+                {students.filter(s => s.isActive).length}
+              </div>
+              <div className="text-green-800 text-sm font-medium">Active Students</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="text-purple-600 text-2xl font-bold">
+                {[...new Set(students.map(s => s.grade))].length}
+              </div>
+              <div className="text-purple-800 text-sm font-medium">Grades</div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="text-orange-600 text-2xl font-bold">
+                {[...new Set(students.map(s => `${s.grade}-${s.section}`))].length}
+              </div>
+              <div className="text-orange-800 text-sm font-medium">Classes</div>
+            </div>
+          </div>
+        )}
+
         {/* Students Table */}
         {loading ? (
           <div className="text-center py-8">
@@ -386,37 +515,120 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
             </CardContent>
           </Card>
         ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {students.map((student) => (
-                <li key={student.id} className="px-4 py-4 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+          <div className="grid gap-6">
+            {students.map((student) => (
+              <Card key={student.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                          <span className="text-xl font-bold text-white">
                             {student.user?.firstName?.[0] || "S"}
                             {student.user?.lastName?.[0] || "T"}
                           </span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {student.user?.firstName || "N/A"}{" "}
-                          {student.user?.lastName || ""}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {student.studentId} • Grade {student.grade}-
-                          {student.section} • Roll: {student.rollNumber}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {student.user?.email || "N/A"} • Parent:{" "}
-                          {student.parent?.fullName || "N/A"}
-                        </p>
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-bold text-gray-900">
+                            {student.user?.fullName || `${student.user?.firstName || "Unknown"} ${student.user?.lastName || "Student"}`}
+                          </h3>
+                          {getStatusBadge(student.isActive)}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Student ID:</span>
+                              <span className="text-gray-600 font-mono">{student.studentId}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Class:</span>
+                              <span className="text-gray-600">
+                                Grade {student.grade}-{student.section}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Roll Number:</span>
+                              <span className="text-gray-600">{student.rollNumber}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Age:</span>
+                              <span className="text-gray-600">{student.age || 'N/A'} years</span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Email:</span>
+                              <span className="text-gray-600 truncate">{student.user?.email || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Phone:</span>
+                              <span className="text-gray-600">{student.user?.phone || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Blood Group:</span>
+                              <span className="text-gray-600">{student.bloodGroup || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">Admission Date:</span>
+                              <span className="text-gray-600">
+                                {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : "N/A"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Parent Information */}
+                        {student.parent && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium text-gray-700">Parent/Guardian:</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-gray-600">
+                                  <strong>{student.parent.fullName}</strong> ({student.parent.relationship || 'Guardian'})
+                                </span>
+                              </div>
+                              <div className="text-gray-600">
+                                {student.parent.phone && (
+                                  <span>📞 {student.parent.phone}</span>
+                                )}
+                                {student.parent.email && (
+                                  <span className="ml-3">✉️ {student.parent.email}</span>
+                                )}
+                              </div>
+                            </div>
+                            {student.parent.occupation && (
+                              <div className="mt-1 text-sm text-gray-600">
+                                <span>Occupation: {student.parent.occupation}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Address Information */}
+                        {student.address && (
+                          <div className="mt-3 text-sm">
+                            <span className="font-medium text-gray-700">Address: </span>
+                            <span className="text-gray-600">
+                              {[
+                                student.address.street,
+                                student.address.city,
+                                student.address.state,
+                                student.address.country
+                              ].filter(Boolean).join(', ')}
+                              {student.address.postalCode && ` - ${student.address.postalCode}`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
+                    
                     <div className="flex items-center space-x-2">
-                      {getStatusBadge(student.isActive)}
                       <Button
                         variant="outline"
                         size="sm"
@@ -469,9 +681,9 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
                       </Button>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 

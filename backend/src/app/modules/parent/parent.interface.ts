@@ -3,7 +3,7 @@ import { Document, Types, Model } from 'mongoose';
 export interface IParent {
   userId: Types.ObjectId;
   schoolId: Types.ObjectId;
-  parentId: string; // Auto-generated unique ID (e.g., PAR-2025-001)
+  parentId: string; // Auto-generated unique ID (e.g., SCH001-PAR-2025-001)
   children: Types.ObjectId[]; // References to Student documents
   relationship: 'Father' | 'Mother' | 'Guardian' | 'Step Parent' | 'Foster Parent' | 'Grandparent' | 'Other';
   occupation?: string;

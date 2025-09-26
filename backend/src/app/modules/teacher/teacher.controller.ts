@@ -18,16 +18,16 @@ const createTeacher = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.UNAUTHORIZED, "Admin user not found");
   }
   
-  // Add schoolId from authenticated admin user
+  // Use MongoDB ObjectId for schoolId filtering
   const teacherDataWithSchoolId = {
     ...teacherData,
-    schoolId: adminUser.schoolId,
+    schoolId: adminUser.schoolId, // This is already a MongoDB ObjectId
   };
   
   const files = req.files as Express.Multer.File[];
 
   const result = await teacherService.createTeacher(teacherDataWithSchoolId, files);
-
+  
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -38,7 +38,24 @@ const createTeacher = catchAsync(async (req: Request, res: Response) => {
 
 const getAllTeachers = catchAsync(async (req: Request, res: Response) => {
   const filters = req.query as any;
-  const result = await teacherService.getTeachers(filters);
+  
+  // Get admin user from auth middleware
+  const adminUser = (req as any).user;
+  if (!adminUser?.schoolId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Admin user or school ID not found");
+  }
+  
+  // Use MongoDB ObjectId for schoolId filtering and set defaults
+  const filtersWithSchoolId = {
+    page: Number(filters.page) || 1,
+    limit: Number(filters.limit) || 20,
+    sortBy: filters.sortBy || 'createdAt',
+    sortOrder: filters.sortOrder || 'desc',
+    ...filters,
+    schoolId: adminUser.schoolId, // This is already a MongoDB ObjectId
+  };
+  
+  const result = await teacherService.getTeachers(filtersWithSchoolId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
