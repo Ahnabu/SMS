@@ -1,4 +1,4 @@
-import { Document, Types, Model } from 'mongoose';
+import { Document, Types, Model } from "mongoose";
 
 export interface ISchedule {
   schoolId: Types.ObjectId;
@@ -6,7 +6,13 @@ export interface ISchedule {
   grade: number;
   section: string;
   academicYear: string; // e.g., "2024-2025"
-  dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  dayOfWeek:
+    | "monday"
+    | "tuesday"
+    | "wednesday"
+    | "thursday"
+    | "friday"
+    | "saturday";
   periods: ISchedulePeriod[];
   isActive: boolean;
   createdAt?: Date;
@@ -15,17 +21,20 @@ export interface ISchedule {
 
 export interface ISchedulePeriod {
   periodNumber: number; // 1-8
-  subjectId: Types.ObjectId;
-  teacherId: Types.ObjectId;
+  subjectId?: Types.ObjectId; // Optional for break periods
+  teacherId?: Types.ObjectId; // Optional for break periods
   roomNumber?: string;
   startTime: string; // e.g., "09:00"
   endTime: string; // e.g., "09:45"
   isBreak?: boolean;
-  breakType?: 'short' | 'lunch' | 'long';
+  breakType?: "short" | "lunch" | "long";
   breakDuration?: number; // minutes
 }
 
-export interface IScheduleDocument extends ISchedule, Document, IScheduleMethods {
+export interface IScheduleDocument
+  extends ISchedule,
+    Document,
+    IScheduleMethods {
   _id: Types.ObjectId;
 }
 
@@ -41,7 +50,11 @@ export interface IScheduleMethods {
 
 export interface IScheduleModel extends Model<IScheduleDocument> {
   findBySchool(schoolId: string): Promise<IScheduleDocument[]>;
-  findByClass(schoolId: string, grade: number, section: string): Promise<IScheduleDocument[]>;
+  findByClass(
+    schoolId: string,
+    grade: number,
+    section: string
+  ): Promise<IScheduleDocument[]>;
   findByTeacher(teacherId: string): Promise<IScheduleDocument[]>;
   findBySubject(subjectId: string): Promise<IScheduleDocument[]>;
   checkTeacherConflict(
@@ -50,29 +63,39 @@ export interface IScheduleModel extends Model<IScheduleDocument> {
     periodNumber: number,
     excludeScheduleId?: string
   ): Promise<boolean>;
-  generateWeeklySchedule(schoolId: string, grade: number, section: string): Promise<IWeeklySchedule>;
+  generateWeeklySchedule(
+    schoolId: string,
+    grade: number,
+    section: string
+  ): Promise<IWeeklySchedule>;
   getTeacherWorkload(teacherId: string): Promise<ITeacherWorkload>;
 }
 
 export interface ICreateScheduleRequest {
   schoolId: string;
-  classId: string;
+  classId?: string; // Optional as it's handled automatically by the service
   grade: number;
   section: string;
   academicYear: string;
-  dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+  dayOfWeek:
+    | "monday"
+    | "tuesday"
+    | "wednesday"
+    | "thursday"
+    | "friday"
+    | "saturday";
   periods: ICreateSchedulePeriod[];
 }
 
 export interface ICreateSchedulePeriod {
   periodNumber: number;
-  subjectId: string;
-  teacherId: string;
+  subjectId?: string; // Optional for break periods
+  teacherId?: string; // Optional for break periods
   roomNumber?: string;
   startTime: string;
   endTime: string;
   isBreak?: boolean;
-  breakType?: 'short' | 'lunch' | 'long';
+  breakType?: "short" | "lunch" | "long";
   breakDuration?: number;
 }
 
@@ -235,7 +258,7 @@ export interface ITimeSlot {
   startTime: string;
   endTime: string;
   isBreak: boolean;
-  breakType?: 'short' | 'lunch' | 'long';
+  breakType?: "short" | "lunch" | "long";
 }
 
 export interface ISchoolTimeTable {

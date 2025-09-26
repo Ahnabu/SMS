@@ -2,10 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { adminApi } from "../services/admin.api";
-import StudentList, { StudentListRef } from "../components/admin/student/StudentList";
+import StudentList, {
+  StudentListRef,
+} from "../components/admin/student/StudentList";
 import StudentForm from "../components/admin/student/StudentForm";
 import TeacherList, { TeacherListRef } from "../components/admin/TeacherList";
 import TeacherForm from "../components/admin/TeacherForm";
+import SubjectManagement from "../components/admin/SubjectManagement";
+import ScheduleManagement from "../components/admin/ScheduleManagement";
+import AcademicCalendar from "../components/admin/AcademicCalendar";
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -117,9 +122,9 @@ const AdminDashboard: React.FC = () => {
           />
           <Route path="/students" element={<StudentManagement />} />
           <Route path="/teachers" element={<TeacherManagement />} />
-          <Route path="/subjects" element={<SubjectManagement />} />
-          <Route path="/schedules" element={<ScheduleManagement />} />
-          <Route path="/calendar" element={<CalendarManagement />} />
+          <Route path="/subjects" element={<SubjectManagementPage />} />
+          <Route path="/schedules" element={<ScheduleManagementPage />} />
+          <Route path="/calendar" element={<CalendarManagementPage />} />
         </Routes>
       </main>
     </div>
@@ -129,7 +134,7 @@ const AdminDashboard: React.FC = () => {
 // Admin Home Component
 const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 sm:px-0">
       <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           School Overview
@@ -314,7 +319,7 @@ const StudentManagement: React.FC = () => {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 sm:px-0">
       <StudentList
         ref={studentListRef}
         onCreateStudent={handleCreateStudent}
@@ -384,7 +389,7 @@ const TeacherManagement: React.FC = () => {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 sm:px-0">
       <TeacherList
         ref={teacherListRef}
         onCreateTeacher={handleCreateTeacher}
@@ -405,42 +410,21 @@ const TeacherManagement: React.FC = () => {
   );
 };
 
-const SubjectManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Subject Management
-      </h2>
-      <p className="text-gray-500">
-        Subject management interface will be implemented here.
-      </p>
-    </div>
+const SubjectManagementPage: React.FC = () => (
+  <div className="px-4 sm:px-0">
+    <SubjectManagement />
   </div>
 );
 
-const ScheduleManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Schedule Management
-      </h2>
-      <p className="text-gray-500">
-        Schedule management interface will be implemented here.
-      </p>
-    </div>
+const ScheduleManagementPage: React.FC = () => (
+  <div className="px-4 sm:px-0">
+    <ScheduleManagement />
   </div>
 );
 
-const CalendarManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Calendar Management
-      </h2>
-      <p className="text-gray-500">
-        Calendar management interface will be implemented here.
-      </p>
-    </div>
+const CalendarManagementPage: React.FC = () => (
+  <div className="px-4 sm:px-0">
+    <AcademicCalendar />
   </div>
 );
 

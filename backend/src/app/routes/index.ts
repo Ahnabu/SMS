@@ -1,65 +1,80 @@
-import { Router } from 'express';
+import { Router } from "express";
 
 const router = Router();
 
 // Import route modules (will be added as we create them)
-import { organizationRoutes } from '../modules/organization/organization.route';
-import { schoolRoutes } from '../modules/school/school.route';
-import { userRoutes } from '../modules/user/user.route';
-import { authRoutes } from '../modules/auth/auth.route';
-import { StudentRoutes } from '../modules/student/student.route';
-import { TeacherRoutes } from '../modules/teacher/teacher.route';
-import { superadminRoutes } from '../modules/superadmin/superadmin.route';
-import { classRoutes } from '../modules/class/class.route';
-import { homeworkRoutes } from '../modules/homework/homework.route';
-import { examRoutes } from '../modules/exam/exam.route';
-import { adminRoutes } from '../modules/admin/admin.route';
+import { organizationRoutes } from "../modules/organization/organization.route";
+import { schoolRoutes } from "../modules/school/school.route";
+import { userRoutes } from "../modules/user/user.route";
+import { authRoutes } from "../modules/auth/auth.route";
+import { StudentRoutes } from "../modules/student/student.route";
+import { TeacherRoutes } from "../modules/teacher/teacher.route";
+import { superadminRoutes } from "../modules/superadmin/superadmin.route";
+import { classRoutes } from "../modules/class/class.route";
+import { homeworkRoutes } from "../modules/homework/homework.route";
+import { examRoutes } from "../modules/exam/exam.route";
+import { adminRoutes } from "../modules/admin/admin.route";
+import { SubjectRoutes } from "../modules/subject/subject.route";
+import { AcademicCalendarRoutes } from "../modules/academic-calendar/academic-calendar.route";
+import { ScheduleRoutes } from "../modules/schedule/schedule.route";
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
   {
-    path: '/auth',
+    path: "/auth",
     route: authRoutes,
   },
   {
-    path: '/superadmin',
+    path: "/superadmin",
     route: superadminRoutes,
   },
   {
-    path: '/admin',
+    path: "/admin",
     route: adminRoutes,
   },
   {
-    path: '/organizations',
+    path: "/organizations",
     route: organizationRoutes,
   },
   {
-    path: '/schools',
+    path: "/schools",
     route: schoolRoutes,
   },
   {
-    path: '/users',
+    path: "/users",
     route: userRoutes,
   },
   {
-    path: '/students',
+    path: "/students",
     route: StudentRoutes,
   },
   {
-    path: '/teachers',
+    path: "/teachers",
     route: TeacherRoutes,
   },
   {
-    path: '/classes',
+    path: "/classes",
     route: classRoutes,
   },
   {
-    path: '/homework',
+    path: "/homework",
     route: homeworkRoutes,
   },
   {
-    path: '/exams',
+    path: "/exams",
     route: examRoutes,
+  },
+  {
+    path: "/subjects",
+    route: SubjectRoutes,
+  },
+  {
+    path: "/calendar",
+    route: AcademicCalendarRoutes,
+  },
+  {
+    path: "/schedules",
+    route: ScheduleRoutes,
   },
 ];
 
@@ -67,11 +82,11 @@ const moduleRoutes = [
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
 // Basic test route
-router.get('/', (req, res) => {
+router.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'School Management System API is running!',
-    version: '1.0.0',
+    message: "School Management System API is running!",
+    version: "1.0.0",
     timestamp: new Date().toISOString(),
   });
 });
