@@ -523,7 +523,7 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
           </div>
         ) : teachers.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-12">
+            <CardContent className="text-center py-12 pt-4">
               <UserCheck className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No teachers found
@@ -550,7 +550,7 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
             {teachers.map((teacher) => (
               <Card key={teacher.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between pt-4 md:pt-6 xl:pt-8">
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
                         <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
@@ -659,24 +659,26 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 sm:border-l border-gray-100 sm:pl-4">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onViewTeacher(teacher)}
-                        className="p-2"
+                        className="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 hover:scale-105 transition-all duration-200 justify-center"
                         title="View Details"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 mr-2" />
+                        <span className="sm:hidden">View</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onEditTeacher(teacher)}
-                        className="p-2"
+                        className="flex-1 sm:flex-none bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300 hover:scale-105 transition-all duration-200 justify-center"
                         title="Edit Teacher"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 mr-2" />
+                        <span className="sm:hidden">Edit</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -684,10 +686,10 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                         onClick={() =>
                           handleStatusChange(teacher.id, !(teacher.isActive ?? false))
                         }
-                        className={`p-2 ${
+                        className={`flex-1 sm:flex-none justify-center hover:scale-105 transition-all duration-200 ${
                           teacher.isActive ?? false
-                            ? "text-red-600 hover:text-red-700"
-                            : "text-green-600 hover:text-green-700"
+                            ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
+                            : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
                         }`}
                         title={
                           (teacher.isActive ?? false)
@@ -696,9 +698,15 @@ const TeacherList = React.forwardRef<TeacherListRef, TeacherListProps>(
                         }
                       >
                         {(teacher.isActive ?? false) ? (
-                          <UserX className="w-4 h-4" />
+                          <>
+                            <UserX className="w-4 h-4 mr-2" />
+                            <span className="sm:hidden">Deactivate</span>
+                          </>
                         ) : (
-                          <UserCheck className="w-4 h-4" />
+                          <>
+                            <UserCheck className="w-4 h-4 mr-2" />
+                            <span className="sm:hidden">Activate</span>
+                          </>
                         )}
                       </Button>
                       <Button
