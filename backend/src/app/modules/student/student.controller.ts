@@ -58,7 +58,24 @@ const createStudent = catchAsync(async (req: Request, res: Response) => {
 
 const getAllStudents = catchAsync(async (req: Request, res: Response) => {
   const filters = req.query as any;
-  const result = await studentService.getStudents(filters);
+  
+  // Get admin user from auth middleware
+  const adminUser = (req as any).user;
+  if (!adminUser?.schoolId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Admin user or school ID not found");
+  }
+  
+  // Use schoolId from authenticated user and set defaults
+  const filtersWithSchoolId = {
+    page: Number(filters.page) || 1,
+    limit: Number(filters.limit) || 20,
+    sortBy: filters.sortBy || 'createdAt',
+    sortOrder: filters.sortOrder || 'desc',
+    ...filters,
+    schoolId: adminUser.schoolId, // This ensures students are filtered by the admin's school
+  };
+  
+  const result = await studentService.getStudents(filtersWithSchoolId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

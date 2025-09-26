@@ -28,7 +28,6 @@ const AdminDashboard: React.FC = () => {
       const response = await adminApi.getDashboard();
       
       if (response.data.success) {
-        console.log('Setting dashboard data:', response.data.data);
         setDashboardData(response.data.data);
       } else {
         console.error('Dashboard API returned success: false', response.data);
@@ -137,7 +136,6 @@ const AdminDashboard: React.FC = () => {
 
 // Admin Home Component
 const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
-  console.log('AdminHome received dashboardData:', dashboardData);
   
   return (
     <div className="px-4 sm:px-0">
@@ -145,12 +143,6 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           School Overview
         </h2>
-
-        {/* Debug info - remove after testing */}
-        <div className="bg-gray-100 p-4 mb-6 rounded">
-          <h3 className="font-bold text-sm">Debug Info:</h3>
-          <pre className="text-xs mt-2">{JSON.stringify(dashboardData, null, 2)}</pre>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -319,7 +311,6 @@ const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChan
   };
 
   const handleStudentCreated = (student: any) => {
-    console.log("Student created optimistically:", student);
     // Add the student optimistically to the list
     if (studentListRef.current) {
       studentListRef.current.addStudentOptimistically(student);

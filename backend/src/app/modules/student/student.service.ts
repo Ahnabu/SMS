@@ -1189,7 +1189,10 @@ class StudentService {
       if (obj.id) return obj.id.toString();
       return obj.toString();
     };
-console.log(student);
+
+    // Handle user data - check both userId and user properties (similar to teacher fix)
+    const userData = student.userId || student.user;
+
     return {
       id: extractId(student._id || student.id),
       userId: extractId(student.userId),
@@ -1210,18 +1213,18 @@ console.log(student);
       address: student.address || undefined,
       createdAt: student.createdAt,
       updatedAt: student.updatedAt,
-      user: student.userId
+      user: userData
         ? {
-            id: extractId(student.userId),
-            username: student.userId.username || "",
-            firstName: student.userId.firstName || "",
-            lastName: student.userId.lastName || "",
+            id: extractId(userData),
+            username: userData.username || "",
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
             fullName:
-              `${student.userId.firstName || ""} ${
-                student.userId.lastName || ""
+              `${userData.firstName || ""} ${
+                userData.lastName || ""
               }`.trim() || "Unknown User",
-            email: student.userId.email,
-            phone: student.userId.phone,
+            email: userData.email,
+            phone: userData.phone,
           }
         : undefined,
       school: student.schoolId
