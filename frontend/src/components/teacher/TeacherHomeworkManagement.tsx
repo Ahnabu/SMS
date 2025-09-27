@@ -38,10 +38,14 @@ interface HomeworkAssignment {
 }
 
 interface TeacherClass {
-  grade: string;
+  grade: number;
   section: string;
-  subject: string;
+  className: string;
+  subjects: string[];
+  totalPeriods: number;
+  daysScheduled: string[];
   studentsCount: number;
+  classId?: string;
 }
 
 const TeacherHomeworkManagement: React.FC = () => {
@@ -230,7 +234,7 @@ const TeacherHomeworkManagement: React.FC = () => {
                   >
                     <option value="">Select Grade</option>
                     {Array.from(new Set(teacherClasses.map(c => c.grade))).map(grade => (
-                      <option key={grade} value={grade}>{grade}</option>
+                      <option key={grade} value={grade}>Grade {grade}</option>
                     ))}
                   </select>
                 </div>
@@ -250,7 +254,7 @@ const TeacherHomeworkManagement: React.FC = () => {
                     {formData.grade &&
                       Array.from(new Set(
                         teacherClasses
-                          .filter(c => c.grade === formData.grade)
+                          .filter(c => c.grade.toString() === formData.grade)
                           .map(c => c.section)
                       )).map(section => (
                         <option key={section} value={section}>{section}</option>
@@ -274,8 +278,8 @@ const TeacherHomeworkManagement: React.FC = () => {
                     {formData.grade && formData.section &&
                       Array.from(new Set(
                         teacherClasses
-                          .filter(c => c.grade === formData.grade && c.section === formData.section)
-                          .map(c => c.subject)
+                          .filter(c => c.grade.toString() === formData.grade && c.section === formData.section)
+                          .flatMap(c => c.subjects)
                       )).map(subject => (
                         <option key={subject} value={subject}>{subject}</option>
                       ))

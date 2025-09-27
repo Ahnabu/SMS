@@ -8,6 +8,7 @@ import { CredentialGenerator } from "../../utils/credentialGenerator"; // Update
 import { School } from "../school/school.model";
 import { User } from "../user/user.model";
 import { Teacher, TeacherPhoto } from "./teacher.model";
+import { Schedule } from "../schedule/schedule.model";
 import {
   ICreateTeacherRequest,
   IUpdateTeacherRequest,
@@ -1015,19 +1016,104 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      // TODO: Implement actual schedule retrieval from schedule collection
-      const schedule = {
+      // Get schedules where this teacher is assigned
+      const schedules = await Schedule.findByTeacher(teacher._id.toString());
+
+      // Group schedules by day of week
+      const weeklySchedule: { [key: string]: any[] } = {
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+      };
+
+      let totalPeriodsPerWeek = 0;
+      const subjectsCount = new Set();
+      const classesCount = new Set();
+
+      schedules.forEach(schedule => {
+        const teacherPeriods = schedule.getPeriodsForTeacher(teacher._id.toString());
+        
+        teacherPeriods.forEach(period => {
+          const scheduleEntry = {
+            scheduleId: schedule._id,
+            grade: schedule.grade,
+            section: schedule.section,
+            className: `Grade ${schedule.grade} - Section ${schedule.section}`,
+            periodNumber: period.periodNumber,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            subject: {
+              id: (period.subjectId as any)?._id || period.subjectId,
+              name: (period.subjectId as any)?.name || 'Unknown Subject',
+              code: (period.subjectId as any)?.code || 'N/A'
+            },
+            roomNumber: period.roomNumber,
+            venue: period.roomNumber,
+            duration: this.calculateDuration(period.startTime, period.endTime)
+          };
+
+          weeklySchedule[schedule.dayOfWeek].push(scheduleEntry);
+          totalPeriodsPerWeek++;
+          subjectsCount.add(scheduleEntry.subject.name);
+          classesCount.add(`${schedule.grade}-${schedule.section}`);
+        });
+      });
+
+      // Sort periods by time within each day
+      Object.keys(weeklySchedule).forEach(day => {
+        weeklySchedule[day].sort((a, b) => {
+          if (a.startTime < b.startTime) return -1;
+          if (a.startTime > b.startTime) return 1;
+          return a.periodNumber - b.periodNumber;
+        });
+      });
+
+      // Get today's schedule
+      const today = new Date();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const todayName = dayNames[today.getDay()];
+      const todaySchedule = weeklySchedule[todayName] || [];
+
+      // Find current period
+      const currentTime = new Date();
+      const currentTimeString = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
+      
+      const currentPeriod = todaySchedule.find(period => {
+        return currentTimeString >= period.startTime && currentTimeString <= period.endTime;
+      });
+
+      const nextPeriod = todaySchedule.find(period => {
+        return currentTimeString < period.startTime;
+      });
+
+      return {
         teacher: {
           id: teacher._id,
+          teacherId: teacher.teacherId,
+          name: `${(teacher.userId as any)?.firstName || ''} ${(teacher.userId as any)?.lastName || ''}`.trim(),
           subjects: teacher.subjects,
           grades: teacher.grades,
           sections: teacher.sections,
+          designation: teacher.designation,
+          isClassTeacher: teacher.isClassTeacher,
+          classTeacherFor: teacher.classTeacherFor
         },
-        weeklySchedule: [], // TODO: Get from schedule collection
-        todaySchedule: [],  // TODO: Get today's classes
+        weeklySchedule,
+        todaySchedule,
+        currentPeriod,
+        nextPeriod,
+        statistics: {
+          totalPeriodsPerWeek,
+          uniqueSubjects: subjectsCount.size,
+          uniqueClasses: classesCount.size,
+          averagePeriodsPerDay: Math.round(totalPeriodsPerWeek / 6 * 10) / 10,
+          busyDays: Object.keys(weeklySchedule).filter(day => weeklySchedule[day].length > 0).length
+        }
       };
-
-      return schedule;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
@@ -1035,6 +1121,17 @@ class TeacherService {
         `Failed to get teacher schedule: ${(error as Error).message}`
       );
     }
+  }
+
+  // Helper method to calculate duration between two time strings
+  private calculateDuration(startTime: string, endTime: string): number {
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    return endMinutes - startMinutes;
   }
 
   async getTeacherClasses(userId: string): Promise<any> {
@@ -1046,29 +1143,87 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      // Generate classes based on teacher's assigned grades and sections
-      const classes = [];
-      for (const grade of teacher.grades) {
-        for (const section of teacher.sections) {
-          for (const subject of teacher.subjects) {
-            classes.push({
-              grade,
-              section,
-              subject,
+      // Get schedules where this teacher is assigned
+      const schedules = await Schedule.findByTeacher(teacher._id.toString());
+
+      // Extract unique class combinations from schedules
+      const classMap = new Map();
+      
+      schedules.forEach(schedule => {
+        // Get periods where this teacher is assigned
+        const teacherPeriods = schedule.getPeriodsForTeacher(teacher._id.toString());
+        
+        if (teacherPeriods.length > 0) {
+          const classKey = `${schedule.grade}-${schedule.section}`;
+          
+          if (!classMap.has(classKey)) {
+            classMap.set(classKey, {
+              grade: schedule.grade,
+              section: schedule.section,
+              subjects: new Set(),
+              totalPeriods: 0,
+              daysScheduled: new Set(),
               studentsCount: 0, // TODO: Get actual count from student collection
+              classId: schedule.classId
             });
           }
+          
+          const classData = classMap.get(classKey);
+          
+          // Add subjects from teacher's periods
+          teacherPeriods.forEach(period => {
+            if (period.subjectId) {
+              // Add subject name from populated data or use the ID
+              const subjectName = (period.subjectId as any)?.name || 
+                                teacher.subjects.find(s => s === period.subjectId?.toString()) || 
+                                period.subjectId.toString();
+              classData.subjects.add(subjectName);
+              classData.totalPeriods++;
+            }
+          });
+          
+          classData.daysScheduled.add(schedule.dayOfWeek);
         }
-      }
+      });
+
+      // Convert map to array and format the data
+      const classes = Array.from(classMap.values()).map(classData => ({
+        grade: classData.grade,
+        section: classData.section,
+        className: `Grade ${classData.grade} - Section ${classData.section}`,
+        subjects: Array.from(classData.subjects),
+        totalPeriods: classData.totalPeriods,
+        daysScheduled: Array.from(classData.daysScheduled),
+        studentsCount: classData.studentsCount,
+        classId: classData.classId
+      }));
+
+      // Sort classes by grade and then by section
+      classes.sort((a, b) => {
+        if (a.grade !== b.grade) {
+          return a.grade - b.grade;
+        }
+        return a.section.localeCompare(b.section);
+      });
 
       return {
         teacher: {
           id: teacher._id,
+          teacherId: teacher.teacherId,
+          name: `${(teacher.userId as any)?.firstName || ''} ${(teacher.userId as any)?.lastName || ''}`.trim(),
           subjects: teacher.subjects,
           grades: teacher.grades,
           sections: teacher.sections,
+          designation: teacher.designation,
+          isClassTeacher: teacher.isClassTeacher,
+          classTeacherFor: teacher.classTeacherFor
         },
         classes,
+        summary: {
+          totalClasses: classes.length,
+          totalSubjects: [...new Set(classes.flatMap(c => c.subjects))].length,
+          totalPeriods: classes.reduce((sum, c) => sum + c.totalPeriods, 0)
+        }
       };
     } catch (error) {
       if (error instanceof AppError) throw error;

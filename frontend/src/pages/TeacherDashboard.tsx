@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
+import TeacherScheduleView from '../components/teacher/TeacherScheduleView';
 
 const TeacherDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -18,6 +19,7 @@ const TeacherDashboard: React.FC = () => {
       const response = await apiService.teacher.getDashboard();
       if (response.data.success) {
         setDashboardData(response.data.data);
+       
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -45,7 +47,7 @@ const TeacherDashboard: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {user?.username}</p>
+              <p className="text-gray-600">Welcome back, {user?.fullName}</p>
             </div>
             <button
               onClick={handleLogout}
@@ -89,7 +91,7 @@ const TeacherDashboard: React.FC = () => {
           <Route path="/attendance" element={<AttendanceManagement />} />
           <Route path="/homework" element={<HomeworkManagement />} />
           <Route path="/grades" element={<GradeManagement />} />
-          <Route path="/schedule" element={<ScheduleView />} />
+          <Route path="/schedule" element={<TeacherScheduleView />} />
         </Routes>
       </main>
     </div>
@@ -215,15 +217,6 @@ const GradeManagement: React.FC = () => (
     <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Grade Management</h2>
       <p className="text-gray-500">Grade management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
-const ScheduleView: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">My Schedule</h2>
-      <p className="text-gray-500">Schedule view interface will be implemented here.</p>
     </div>
   </div>
 );
