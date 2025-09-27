@@ -2,7 +2,112 @@ import { User } from '../modules/user/user.model';
 import { UserRole } from '../modules/user/user.interface';
 import { School } from '../modules/school/school.model';
 import { SchoolStatus } from '../modules/school/school.interface';
+import { Subject } from '../modules/subject/subject.model';
 import config from '../config';
+
+/**
+ * Seeds sample subjects for testing
+ */
+export async function seedSampleSubjects(schoolId?: string): Promise<void> {
+  try {
+    console.log('🌱 Checking for existing subjects...');
+
+    if (!schoolId) {
+      console.log('⚠️  No school ID provided, skipping subject seeding');
+      return;
+    }
+
+    // Check if subjects already exist for this school
+    const existingSubjects = await Subject.findOne({ schoolId });
+
+    if (existingSubjects) {
+      console.log('✅ Subjects already exist for this school');
+      return;
+    }
+
+    console.log('🌱 Creating sample subjects...');
+
+    const sampleSubjects = [
+      {
+        schoolId,
+        name: 'Mathematics',
+        code: 'MATH',
+        description: 'Core mathematics curriculum',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: true,
+        credits: 4,
+        teachers: [],
+        isActive: true,
+      },
+      {
+        schoolId,
+        name: 'English Language Arts',
+        code: 'ELA',
+        description: 'English language and literature',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: true,
+        credits: 4,
+        teachers: [],
+        isActive: true,
+      },
+      {
+        schoolId,
+        name: 'Science',
+        code: 'SCI',
+        description: 'General science curriculum',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: true,
+        credits: 3,
+        teachers: [],
+        isActive: true,
+      },
+      {
+        schoolId,
+        name: 'Social Studies',
+        code: 'SS',
+        description: 'History and social sciences',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: true,
+        credits: 3,
+        teachers: [],
+        isActive: true,
+      },
+      {
+        schoolId,
+        name: 'Physical Education',
+        code: 'PE',
+        description: 'Physical education and health',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: false,
+        credits: 2,
+        teachers: [],
+        isActive: true,
+      },
+      {
+        schoolId,
+        name: 'Art',
+        code: 'ART',
+        description: 'Visual arts and creative expression',
+        grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        isCore: false,
+        credits: 1,
+        teachers: [],
+        isActive: true,
+      },
+    ];
+
+    const subjects = await Subject.insertMany(sampleSubjects);
+
+    console.log('✅ Sample subjects created successfully:');
+    subjects.forEach(subject => {
+      console.log(`   - ${subject.name} (${subject.code})`);
+    });
+
+  } catch (error) {
+    console.error('❌ Error seeding sample subjects:', error);
+    throw error;
+  }
+}
 
 /**
  * Seeds a superadmin user if none exists

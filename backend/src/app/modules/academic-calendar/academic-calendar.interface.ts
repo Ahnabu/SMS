@@ -8,9 +8,10 @@ export interface IAcademicCalendar {
     | "holiday"
     | "exam"
     | "meeting"
-    | "celebration"
+    | "event"
     | "sports"
-    | "academic"
+    | "cultural"
+    | "parent-teacher"
     | "other";
   startDate: Date;
   endDate: Date;

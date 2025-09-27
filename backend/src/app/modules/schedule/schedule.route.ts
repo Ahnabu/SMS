@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticate, authorize } from "../../middlewares/auth";
+import { authenticate, authorize, enforceSchoolIsolation } from "../../middlewares/auth";
 import { UserRole } from "../user/user.interface";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { ScheduleController } from "./schedule.controller";
@@ -12,6 +12,7 @@ router.post(
   "/",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
   validateRequest(ScheduleValidation.createScheduleValidationSchema),
   ScheduleController.createSchedule
 );
@@ -21,6 +22,7 @@ router.post(
   "/bulk",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
   validateRequest(ScheduleValidation.bulkCreateScheduleValidationSchema),
   ScheduleController.bulkCreateSchedules
 );
@@ -37,6 +39,7 @@ router.get(
     UserRole.PARENT,
     UserRole.ACCOUNTANT
   ),
+  enforceSchoolIsolation,
   ScheduleController.getAllSchedules
 );
 
@@ -160,6 +163,7 @@ router.patch(
   "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
   validateRequest(ScheduleValidation.updateScheduleValidationSchema),
   ScheduleController.updateSchedule
 );
@@ -169,6 +173,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
   ScheduleController.deleteSchedule
 );
 

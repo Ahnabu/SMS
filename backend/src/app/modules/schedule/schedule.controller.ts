@@ -58,7 +58,11 @@ const getScheduleById = catchAsync(async (req: Request, res: Response) => {
 const updateSchedule = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const updateData: IUpdateScheduleRequest = req.body;
-  const result = await ScheduleService.updateSchedule(id, updateData);
+  
+  // Get schoolId from authenticated user (set by enforceSchoolIsolation middleware)
+  const userSchoolId = (req as any).user?.role === 'superadmin' ? undefined : (req as any).user?.schoolId;
+  
+  const result = await ScheduleService.updateSchedule(id, updateData, userSchoolId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -70,7 +74,11 @@ const updateSchedule = catchAsync(async (req: Request, res: Response) => {
 
 const deleteSchedule = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  await ScheduleService.deleteSchedule(id);
+  
+  // Get schoolId from authenticated user (set by enforceSchoolIsolation middleware)
+  const userSchoolId = (req as any).user?.role === 'superadmin' ? undefined : (req as any).user?.schoolId;
+  
+  await ScheduleService.deleteSchedule(id, userSchoolId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

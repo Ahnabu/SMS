@@ -94,16 +94,27 @@ export const adminApi = {
   createCalendarEvent: (data: {
     title: string;
     description?: string;
-    type: "exam" | "holiday" | "event" | "meeting" | "activity";
+    eventType: "holiday" | "exam" | "meeting" | "event" | "sports" | "cultural" | "parent-teacher" | "other";
     startDate: string;
     endDate: string;
     isAllDay: boolean;
     startTime?: string;
     endTime?: string;
-    venue?: string;
-    targetAudience: "all" | "specific";
+    location?: string;
+    organizerId: string;
+    schoolId: string;
+    targetAudience: {
+      allSchool: boolean;
+      grades?: string[];
+      classes?: string[];
+      teachers?: string[];
+      students?: string[];
+      parents?: string[];
+    };
     priority: "low" | "medium" | "high";
-    color: string;
+    status: "draft" | "published" | "cancelled";
+    isRecurring: boolean;
+    color?: string;
   }) => api.post<ApiResponse>("/calendar", data),
 
   getCalendarEvents: (params?: {
@@ -118,15 +129,24 @@ export const adminApi = {
     data: {
       title?: string;
       description?: string;
-      type?: "exam" | "holiday" | "event" | "meeting" | "activity";
+      eventType?: "holiday" | "exam" | "meeting" | "event" | "sports" | "cultural" | "parent-teacher" | "other";
       startDate?: string;
       endDate?: string;
       isAllDay?: boolean;
       startTime?: string;
       endTime?: string;
-      venue?: string;
-      targetAudience?: "all" | "specific";
+      location?: string;
+      targetAudience?: {
+        allSchool: boolean;
+        grades?: string[];
+        classes?: string[];
+        teachers?: string[];
+        students?: string[];
+        parents?: string[];
+      };
       priority?: "low" | "medium" | "high";
+      status?: "draft" | "published" | "cancelled";
+      isRecurring?: boolean;
       color?: string;
     }
   ) => api.put<ApiResponse>(`/calendar/${id}`, data),

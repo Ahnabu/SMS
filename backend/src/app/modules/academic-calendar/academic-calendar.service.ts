@@ -59,22 +59,48 @@ class AcademicCalendarService {
         }
       }
 
+      // Map request data to model schema fields
+      const mappedEventData = {
+        schoolId: eventData.schoolId,
+        eventTitle: eventData.title,
+        eventDescription: eventData.description,
+        eventType: eventData.eventType,
+        startDate: new Date(eventData.startDate),
+        endDate: new Date(eventData.endDate),
+        isAllDay: eventData.isAllDay,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
+        venue: eventData.location,
+        targetAudience: eventData.targetAudience.allSchool ? "all" : "specific",
+        specificAudience: !eventData.targetAudience.allSchool ? {
+          grades: eventData.targetAudience.grades?.map(g => parseInt(g)) || [],
+          sections: eventData.targetAudience.classes || [],
+          teacherIds: eventData.targetAudience.teachers?.map(t => new Types.ObjectId(t)) || [],
+          studentIds: eventData.targetAudience.students?.map(s => new Types.ObjectId(s)) || [],
+        } : undefined,
+        priority: eventData.priority,
+        isRecurring: eventData.isRecurring,
+        recurrencePattern: eventData.isRecurring ? {
+          frequency: eventData.recurrence?.frequency || "weekly",
+          interval: eventData.recurrence?.interval || 1,
+          endDate: eventData.recurrence?.endDate ? new Date(eventData.recurrence.endDate) : undefined,
+          occurrences: eventData.recurrence?.occurrences,
+        } : undefined,
+        color: this.getDefaultColor(eventData.eventType),
+        createdBy: eventData.organizerId,
+        isActive: eventData.status === "published",
+      };
+
       // Create calendar event
-      const newEvent = await AcademicCalendar.create(
-        [
-          {
-            ...eventData,
-            color: this.getDefaultColor(eventData.eventType),
-          },
-        ],
-        { session }
-      );
+      console.log("About to create calendar event with mapped data:", JSON.stringify(mappedEventData, null, 2));
+      const newEvent = await AcademicCalendar.create([mappedEventData], { session });
 
       await session.commitTransaction();
 
       return this.formatCalendarEventResponse(newEvent[0]);
     } catch (error) {
       await session.abortTransaction();
+      console.error("Detailed error in createCalendarEvent:", error);
       if (error instanceof AppError) {
         throw error;
       }

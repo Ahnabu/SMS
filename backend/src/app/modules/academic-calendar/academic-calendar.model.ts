@@ -115,8 +115,8 @@ const academicCalendarSchema = new Schema<IAcademicCalendarDocument, IAcademicCa
       type: String,
       required: [true, 'Event type is required'],
       enum: {
-        values: ['holiday', 'exam', 'meeting', 'celebration', 'sports', 'academic', 'other'],
-        message: 'Event type must be one of: holiday, exam, meeting, celebration, sports, academic, other',
+        values: ['holiday', 'exam', 'meeting', 'event', 'sports', 'cultural', 'parent-teacher', 'other'],
+        message: 'Event type must be one of: holiday, exam, meeting, event, sports, cultural, parent-teacher, other',
       },
       index: true,
     },

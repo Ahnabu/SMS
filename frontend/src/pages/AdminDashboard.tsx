@@ -267,14 +267,14 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 Add Teacher
               </button>
             </Link>
-            <Link to="/admin/schedule">
+            <Link to="/admin/schedules">
               <button className="bg-yellow-600 hover:bg-yellow-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
                 Create Schedule
               </button>
             </Link>
-            <Link to="/admin/reports">
+            <Link to="/admin/calendar">
               <button className="bg-purple-600 hover:bg-purple-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                View Reports
+                View Calendar
               </button>
             </Link>
           </div>

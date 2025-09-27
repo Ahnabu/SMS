@@ -255,16 +255,23 @@ const getScheduleById = async (
 
 const updateSchedule = async (
   scheduleId: string,
-  updateData: IUpdateScheduleRequest
+  updateData: IUpdateScheduleRequest,
+  userSchoolId?: string
 ): Promise<IScheduleDocument> => {
   const session = await startSession();
 
   try {
     session.startTransaction();
 
-    const schedule = await Schedule.findById(scheduleId).session(session);
+    // Build query to include school validation if userSchoolId provided
+    const query: any = { _id: scheduleId };
+    if (userSchoolId) {
+      query.schoolId = userSchoolId;
+    }
+
+    const schedule = await Schedule.findOne(query).session(session);
     if (!schedule) {
-      throw new AppError(httpStatus.NOT_FOUND, "Schedule not found");
+      throw new AppError(httpStatus.NOT_FOUND, "Schedule not found or access denied");
     }
 
     // If updating periods, validate teachers and subjects
@@ -355,10 +362,16 @@ const updateSchedule = async (
   }
 };
 
-const deleteSchedule = async (scheduleId: string): Promise<void> => {
-  const schedule = await Schedule.findById(scheduleId);
+const deleteSchedule = async (scheduleId: string, userSchoolId?: string): Promise<void> => {
+  // Build query to include school validation if userSchoolId provided
+  const query: any = { _id: scheduleId };
+  if (userSchoolId) {
+    query.schoolId = userSchoolId;
+  }
+
+  const schedule = await Schedule.findOne(query);
   if (!schedule) {
-    throw new AppError(httpStatus.NOT_FOUND, "Schedule not found");
+    throw new AppError(httpStatus.NOT_FOUND, "Schedule not found or access denied");
   }
 
   // Soft delete by setting isActive to false

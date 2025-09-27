@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "../../services/admin.api";
+import { useAuth } from "../../context/AuthContext";
 
 interface AcademicEvent {
   _id: string;
@@ -34,6 +35,7 @@ interface AcademicEvent {
 }
 
 const AcademicCalendar: React.FC = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -41,15 +43,24 @@ const AcademicCalendar: React.FC = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    type: "event",
+    eventType: "event",
     startDate: "",
     endDate: "",
     isAllDay: true,
     startTime: "",
     endTime: "",
-    venue: "",
-    targetAudience: "all",
+    location: "",
+    targetAudience: {
+      allSchool: true,
+      grades: [] as string[],
+      classes: [] as string[],
+      teachers: [] as string[],
+      students: [] as string[],
+      parents: [] as string[],
+    },
     priority: "medium",
+    status: "published",
+    isRecurring: false,
     color: "#3b82f6",
   });
 
@@ -74,31 +85,56 @@ const AcademicCalendar: React.FC = () => {
     setLoading(true);
 
     try {
+      // Validate required user data
+      if (!user?.id) {
+        toast.error("User ID is required. Please log in again.");
+        return;
+      }
+      
+      if (!user?.schoolId) {
+        toast.error("School ID is required. Please contact your administrator.");
+        return;
+      }
+
+      // Prepare the data according to backend validation schema
+      const eventData = {
+        title: formData.title,
+        description: formData.description || undefined,
+        eventType: formData.eventType as
+          | "holiday"
+          | "exam" 
+          | "meeting"
+          | "event"
+          | "sports"
+          | "cultural"
+          | "parent-teacher"
+          | "other",
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        isAllDay: formData.isAllDay,
+        startTime: !formData.isAllDay ? formData.startTime : undefined,
+        endTime: !formData.isAllDay ? formData.endTime : undefined,
+        location: formData.location || undefined,
+        organizerId: user.id,
+        schoolId: user.schoolId,
+        targetAudience: formData.targetAudience,
+        priority: formData.priority as "low" | "medium" | "high",
+        status: formData.status as "draft" | "published" | "cancelled",
+        isRecurring: formData.isRecurring,
+        ...(formData.isRecurring && {
+          recurrence: {
+            frequency: "weekly" as const,
+            interval: 1,
+          }
+        }),
+        color: formData.color,
+      };
+
       if (editingEvent) {
-        await adminApi.updateCalendarEvent(editingEvent._id, {
-          ...formData,
-          type: formData.type as
-            | "exam"
-            | "holiday"
-            | "event"
-            | "meeting"
-            | "activity",
-          targetAudience: formData.targetAudience as "all" | "specific",
-          priority: formData.priority as "low" | "medium" | "high",
-        });
+        await adminApi.updateCalendarEvent(editingEvent._id, eventData);
         toast.success("Event updated successfully");
       } else {
-        await adminApi.createCalendarEvent({
-          ...formData,
-          type: formData.type as
-            | "exam"
-            | "holiday"
-            | "event"
-            | "meeting"
-            | "activity",
-          targetAudience: formData.targetAudience as "all" | "specific",
-          priority: formData.priority as "low" | "medium" | "high",
-        });
+        await adminApi.createCalendarEvent(eventData);
         toast.success("Event created successfully");
       }
 
@@ -106,8 +142,13 @@ const AcademicCalendar: React.FC = () => {
       setEditingEvent(null);
       resetForm();
       fetchEvents();
-    } catch (error) {
-      toast.error("Error saving event");
+    } catch (error: any) {
+      console.error("Error saving event:", error);
+      if (error.response?.data?.message) {
+        toast.error(`Error: ${error.response.data.message}`);
+      } else {
+        toast.error("Error saving event");
+      }
     } finally {
       setLoading(false);
     }
@@ -132,15 +173,24 @@ const AcademicCalendar: React.FC = () => {
     setFormData({
       title: "",
       description: "",
-      type: "event",
+      eventType: "event",
       startDate: "",
       endDate: "",
       isAllDay: true,
       startTime: "",
       endTime: "",
-      venue: "",
-      targetAudience: "all",
+      location: "",
+      targetAudience: {
+        allSchool: true,
+        grades: [],
+        classes: [],
+        teachers: [],
+        students: [],
+        parents: [],
+      },
       priority: "medium",
+      status: "published",
+      isRecurring: false,
       color: "#3b82f6",
     });
   };
@@ -150,15 +200,24 @@ const AcademicCalendar: React.FC = () => {
     setFormData({
       title: event.title,
       description: event.description || "",
-      type: event.type,
+      eventType: event.type,
       startDate: event.startDate.split("T")[0],
       endDate: event.endDate.split("T")[0],
       isAllDay: event.isAllDay,
       startTime: event.startTime || "",
       endTime: event.endTime || "",
-      venue: event.venue || "",
-      targetAudience: event.targetAudience,
+      location: (event as any).venue || (event as any).location || "",
+      targetAudience: {
+        allSchool: event.targetAudience === "all",
+        grades: [],
+        classes: [],
+        teachers: [],
+        students: [],
+        parents: [],
+      },
       priority: event.priority,
+      status: "published", // Default status if not available
+      isRecurring: false, // Default if not available
       color: event.color,
     });
     setIsFormOpen(true);
@@ -250,24 +309,28 @@ const AcademicCalendar: React.FC = () => {
                   </div>
                   <div>
                     <label
-                      htmlFor="type"
+                      htmlFor="eventType"
                       className="block text-sm font-medium mb-1"
                     >
                       Event Type*
                     </label>
                     <select
-                      id="type"
-                      value={formData.type}
+                      id="eventType"
+                      value={formData.eventType}
                       onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
+                        setFormData({ ...formData, eventType: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     >
-                      <option value="exam">Exam</option>
-                      <option value="holiday">Holiday</option>
                       <option value="event">Event</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="exam">Exam</option>
                       <option value="meeting">Meeting</option>
-                      <option value="activity">Activity</option>
+                      <option value="sports">Sports</option>
+                      <option value="cultural">Cultural</option>
+                      <option value="parent-teacher">Parent-Teacher</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
                 </div>
@@ -385,16 +448,16 @@ const AcademicCalendar: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label
-                      htmlFor="venue"
+                      htmlFor="location"
                       className="block text-sm font-medium mb-1"
                     >
-                      Venue
+                      Location
                     </label>
                     <Input
-                      id="venue"
-                      value={formData.venue}
+                      id="location"
+                      value={formData.location}
                       onChange={(e) =>
-                        setFormData({ ...formData, venue: e.target.value })
+                        setFormData({ ...formData, location: e.target.value })
                       }
                     />
                   </div>
@@ -430,17 +493,49 @@ const AcademicCalendar: React.FC = () => {
                     </label>
                     <select
                       id="targetAudience"
-                      value={formData.targetAudience}
-                      onChange={(e) =>
+                      value={formData.targetAudience.allSchool ? "all" : "specific"}
+                      onChange={(e) => {
+                        const isAllSchool = e.target.value === "all";
                         setFormData({
                           ...formData,
-                          targetAudience: e.target.value,
+                          targetAudience: {
+                            allSchool: isAllSchool,
+                            grades: [],
+                            classes: [],
+                            teachers: [],
+                            students: [],
+                            parents: [],
+                          },
                         })
-                      }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="all">All Students</option>
+                      <option value="all">All School</option>
                       <option value="specific">Specific Groups</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="status"
+                      className="block text-sm font-medium mb-1"
+                    >
+                      Status*
+                    </label>
+                    <select
+                      id="status"
+                      value={formData.status}
+                      onChange={(e) =>
+                        setFormData({ ...formData, status: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
                   <div>
@@ -460,6 +555,26 @@ const AcademicCalendar: React.FC = () => {
                       className="w-full h-10 border border-gray-300 rounded-md"
                       title="Choose event color"
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="isRecurring"
+                      type="checkbox"
+                      checked={formData.isRecurring}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isRecurring: e.target.checked })
+                      }
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="isRecurring"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Recurring Event
+                    </label>
                   </div>
                 </div>
 
