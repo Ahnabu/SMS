@@ -960,6 +960,390 @@ class TeacherService {
       photoCount: teacher.photoCount || 0,
     };
   }
+
+  // Teacher Dashboard Service Methods
+  async getTeacherDashboard(userId: string): Promise<any> {
+    try {
+      // Find the teacher by userId
+      const teacher = await Teacher.findOne({ userId })
+        .populate('schoolId', 'name')
+        .populate('userId', 'firstName lastName username');
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // Get current date for today's statistics
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+      // TODO: Replace with actual collections when implemented
+      // For now, returning mock data structure that matches frontend expectations
+      const dashboardData = {
+        teacher: {
+          id: teacher._id,
+          name: `${(teacher.userId as any)?.firstName || ''} ${(teacher.userId as any)?.lastName || ''}`.trim(),
+          subjects: teacher.subjects,
+          grades: teacher.grades,
+          sections: teacher.sections,
+        },
+        totalClasses: teacher.grades.length * teacher.sections.length || 0,
+        totalStudents: 0, // TODO: Count actual students from student collection
+        pendingHomework: 0, // TODO: Count from homework collection
+        todayClasses: 0, // TODO: Count from schedule collection
+        upcomingClasses: [],
+        recentActivity: [],
+      };
+
+      return dashboardData;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get teacher dashboard: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getTeacherSchedule(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId })
+        .populate('schoolId', 'name');
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Implement actual schedule retrieval from schedule collection
+      const schedule = {
+        teacher: {
+          id: teacher._id,
+          subjects: teacher.subjects,
+          grades: teacher.grades,
+          sections: teacher.sections,
+        },
+        weeklySchedule: [], // TODO: Get from schedule collection
+        todaySchedule: [],  // TODO: Get today's classes
+      };
+
+      return schedule;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get teacher schedule: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getTeacherClasses(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId })
+        .populate('schoolId', 'name');
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // Generate classes based on teacher's assigned grades and sections
+      const classes = [];
+      for (const grade of teacher.grades) {
+        for (const section of teacher.sections) {
+          for (const subject of teacher.subjects) {
+            classes.push({
+              grade,
+              section,
+              subject,
+              studentsCount: 0, // TODO: Get actual count from student collection
+            });
+          }
+        }
+      }
+
+      return {
+        teacher: {
+          id: teacher._id,
+          subjects: teacher.subjects,
+          grades: teacher.grades,
+          sections: teacher.sections,
+        },
+        classes,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get teacher classes: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getCurrentPeriods(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      const currentTime = new Date();
+      const currentHour = currentTime.getHours();
+      const currentMinutes = currentTime.getMinutes();
+
+      // TODO: Get actual schedule from database
+      // For now, return mock current periods based on time
+      const periods = [];
+      
+      // Check if current time is within school hours (8 AM - 4 PM)
+      if (currentHour >= 8 && currentHour < 16) {
+        // Generate current period based on teacher's subjects/classes
+        for (let i = 0; i < teacher.subjects.length; i++) {
+          const subject = teacher.subjects[i];
+          const grade = teacher.grades[i] || teacher.grades[0];
+          const section = teacher.sections[i] || teacher.sections[0];
+          
+          periods.push({
+            id: `period_${i}`,
+            subject,
+            grade,
+            section,
+            startTime: `${8 + i}:00`,
+            endTime: `${9 + i}:00`,
+            isActive: currentHour === (8 + i),
+            canMarkAttendance: currentHour === (8 + i) && currentMinutes <= 59,
+          });
+        }
+      }
+
+      return {
+        teacher: {
+          id: teacher._id,
+          subjects: teacher.subjects,
+          grades: teacher.grades,
+          sections: teacher.sections,
+        },
+        currentPeriods: periods,
+        currentTime: currentTime.toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get current periods: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async markAttendance(userId: string, attendanceData: any): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Verify teacher has permission for this subject/grade/section
+      // TODO: Verify current time is within the period window
+      // TODO: Save attendance records to attendance collection
+
+      // Mock implementation for now
+      const result = {
+        success: true,
+        attendanceId: new Types.ObjectId().toString(),
+        markedAt: new Date().toISOString(),
+        teacherId: teacher._id,
+        ...attendanceData,
+      };
+
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to mark attendance: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getStudentsForAttendance(userId: string, gradeId: string, sectionId: string, subjectId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Verify teacher is assigned to this grade/section/subject
+      // TODO: Get actual students from student collection
+
+      // Mock students for now
+      const students = [
+        {
+          id: '1',
+          name: 'John Doe',
+          rollNumber: '001',
+          isPresent: null, // null = not marked, true = present, false = absent
+        },
+        {
+          id: '2', 
+          name: 'Jane Smith',
+          rollNumber: '002',
+          isPresent: null,
+        },
+        // Add more mock students as needed
+      ];
+
+      return {
+        grade: gradeId,
+        section: sectionId,
+        subject: subjectId,
+        students,
+        teacherId: teacher._id,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get students for attendance: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async assignHomework(userId: string, homeworkData: any): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Verify teacher has permission for the specified grade/section/subject
+      // TODO: Save homework to homework collection
+      // TODO: Send notifications to students/parents
+
+      const result = {
+        success: true,
+        homeworkId: new Types.ObjectId().toString(),
+        assignedAt: new Date().toISOString(),
+        teacherId: teacher._id,
+        ...homeworkData,
+      };
+
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to assign homework: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getMyHomeworkAssignments(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Get actual homework assignments from homework collection
+
+      return {
+        teacherId: teacher._id,
+        assignments: [], // TODO: Populate from database
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get homework assignments: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async issueWarning(userId: string, warningData: any): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Verify teacher has permission for the student
+      // TODO: Save warning to disciplinary collection
+      // TODO: Send notifications to student and parents
+
+      const result = {
+        success: true,
+        warningId: new Types.ObjectId().toString(),
+        issuedAt: new Date().toISOString(),
+        teacherId: teacher._id,
+        type: 'warning',
+        ...warningData,
+      };
+
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to issue warning: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getMyGradingTasks(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Get actual grading tasks from exam/grade collections
+
+      return {
+        teacherId: teacher._id,
+        gradingTasks: [], // TODO: Populate from database
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get grading tasks: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async submitGrades(userId: string, gradesData: any): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      // TODO: Verify teacher is assigned to the exam/subject
+      // TODO: Save grades to grade collection
+
+      const result = {
+        success: true,
+        submittedAt: new Date().toISOString(),
+        teacherId: teacher._id,
+        ...gradesData,
+      };
+
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to submit grades: ${(error as Error).message}`
+      );
+    }
+  }
 }
 
 export const teacherService = new TeacherService();

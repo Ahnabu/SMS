@@ -248,6 +248,205 @@ const resetTeacherPassword = catchAsync(
   }
 );
 
+// Teacher Dashboard Controllers (for logged-in teachers)
+const getDashboard = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  // Get teacher data and dashboard statistics
+  const dashboardData = await teacherService.getTeacherDashboard(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Teacher dashboard data retrieved successfully",
+    data: dashboardData,
+  });
+});
+
+const getMySchedule = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const schedule = await teacherService.getTeacherSchedule(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Teacher schedule retrieved successfully",
+    data: schedule,
+  });
+});
+
+const getMyClasses = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const classes = await teacherService.getTeacherClasses(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Teacher classes retrieved successfully",
+    data: classes,
+  });
+});
+
+const getCurrentPeriods = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const periods = await teacherService.getCurrentPeriods(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Current periods retrieved successfully",
+    data: periods,
+  });
+});
+
+const markAttendance = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const attendanceData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.markAttendance(teacherUser.id, attendanceData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Attendance marked successfully",
+    data: result,
+  });
+});
+
+const getStudentsForAttendance = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { gradeId, sectionId, subjectId } = req.params;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const students = await teacherService.getStudentsForAttendance(
+    teacherUser.id,
+    gradeId,
+    sectionId,
+    subjectId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students retrieved successfully",
+    data: students,
+  });
+});
+
+const assignHomework = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const homeworkData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.assignHomework(teacherUser.id, homeworkData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Homework assigned successfully",
+    data: result,
+  });
+});
+
+const getMyHomeworkAssignments = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const assignments = await teacherService.getMyHomeworkAssignments(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Homework assignments retrieved successfully",
+    data: assignments,
+  });
+});
+
+const issueWarning = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const warningData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.issueWarning(teacherUser.id, warningData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Warning issued successfully",
+    data: result,
+  });
+});
+
+const getMyGradingTasks = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const gradingTasks = await teacherService.getMyGradingTasks(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Grading tasks retrieved successfully",
+    data: gradingTasks,
+  });
+});
+
+const submitGrades = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const gradesData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.submitGrades(teacherUser.id, gradesData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Grades submitted successfully",
+    data: result,
+  });
+});
+
 export const TeacherController = {
   createTeacher,
   getAllTeachers,
@@ -262,4 +461,16 @@ export const TeacherController = {
   getAvailablePhotoSlots,
   getTeacherCredentials,
   resetTeacherPassword,
+  // Teacher Dashboard Methods
+  getDashboard,
+  getMySchedule,
+  getMyClasses,
+  getCurrentPeriods,
+  markAttendance,
+  getStudentsForAttendance,
+  assignHomework,
+  getMyHomeworkAssignments,
+  issueWarning,
+  getMyGradingTasks,
+  submitGrades,
 };

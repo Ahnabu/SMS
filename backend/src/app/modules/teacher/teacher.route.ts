@@ -143,4 +143,86 @@ router.post(
   TeacherController.resetTeacherPassword
 );
 
+// Teacher Dashboard Routes (for logged-in teachers)
+router.get(
+  "/dashboard",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getDashboard
+);
+
+router.get(
+  "/my-schedule",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMySchedule
+);
+
+router.get(
+  "/my-classes",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyClasses
+);
+
+// Attendance Management Routes
+router.get(
+  "/attendance/periods",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getCurrentPeriods
+);
+
+router.post(
+  "/attendance/mark",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.markAttendance
+);
+
+router.get(
+  "/attendance/students/:gradeId/:sectionId/:subjectId",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getStudentsForAttendance
+);
+
+// Homework Management Routes
+router.post(
+  "/homework/assign",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.assignHomework
+);
+
+router.get(
+  "/homework/my-assignments",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyHomeworkAssignments
+);
+
+// Disciplinary Actions Routes
+router.post(
+  "/discipline/warning",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.issueWarning
+);
+
+// Grading Routes
+router.get(
+  "/grading/exams",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyGradingTasks
+);
+
+router.post(
+  "/grading/submit",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.submitGrades
+);
+
 export const TeacherRoutes = router;

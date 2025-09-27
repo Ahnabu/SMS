@@ -182,4 +182,96 @@ export const teacherApi = {
 
   resetPassword: (teacherId: string) =>
     api.post<ApiResponse>(`/teachers/${teacherId}/credentials/reset`),
+
+  // Teacher Dashboard APIs (for logged-in teachers)
+  getTeacherDashboard: () => api.get<ApiResponse>("/teachers/dashboard"),
+  
+  getTeacherSchedule: (params?: { date?: string }) => 
+    api.get<ApiResponse>("/teachers/my-schedule", { params }),
+  
+  getTeacherClasses: () => api.get<ApiResponse>("/teachers/my-classes"),
+
+  // Attendance APIs
+  getCurrentPeriods: () => api.get<ApiResponse>("/teachers/attendance/periods"),
+  
+  markStudentAttendance: (attendanceData: {
+    grade: string;
+    section: string;
+    subject: string;
+    date: string;
+    students: Array<{
+      studentId: string;
+      isPresent: boolean;
+    }>;
+  }) => api.post<ApiResponse>("/teachers/attendance/mark", attendanceData),
+
+  getStudentsForAttendance: (gradeId: string, sectionId: string, subjectId: string) =>
+    api.get<ApiResponse>(`/teachers/attendance/students/${gradeId}/${sectionId}/${subjectId}`),
+
+  // Homework APIs
+  assignNewHomework: (homeworkData: {
+    title: string;
+    description: string;
+    grade: string;
+    section: string;
+    subject: string;
+    dueDate: string;
+    attachments?: File[];
+  }) => {
+    const formData = new FormData();
+    Object.entries(homeworkData).forEach(([key, value]) => {
+      if (key === "attachments" && value) {
+        (value as File[]).forEach((file) => {
+          formData.append("attachments", file);
+        });
+      } else if (value !== undefined) {
+        formData.append(key, String(value));
+      }
+    });
+    return api.post<ApiResponse>("/teachers/homework/assign", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  getTeacherHomeworkAssignments: () => api.get<ApiResponse>("/teachers/homework/my-assignments"),
+
+  // Disciplinary Actions APIs
+  getTeacherStudents: () => api.get<ApiResponse>("/teachers/discipline/students"),
+  
+  issueWarning: (warningData: {
+    studentIds: string[];
+    warningType: string;
+    severity: "low" | "medium" | "high";
+    reason: string;
+    description: string;
+    notifyParents: boolean;
+  }) => api.post<ApiResponse>("/teachers/discipline/warning", warningData),
+
+  getIssuedWarnings: () => api.get<ApiResponse>("/teachers/discipline/warnings"),
+
+  // Grading APIs
+  getAssignedExams: () => api.get<ApiResponse>("/teachers/grading/exams"),
+  
+  getExamGradingDetails: (examId: string) => api.get<ApiResponse>(`/teachers/grading/exam/${examId}`),
+  
+  submitExamGrades: (gradesData: {
+    examId: string;
+    grades: Array<{
+      studentId: string;
+      obtainedMarks: number;
+      percentage: number;
+      grade: string;
+      remarks?: string;
+    }>;
+  }) => api.post<ApiResponse>("/teachers/grading/submit", gradesData),
+  
+  submitStudentGrades: (gradesData: {
+    examId: string;
+    subject: string;
+    grades: Array<{
+      studentId: string;
+      marks: number;
+      grade: string;
+    }>;
+  }) => api.post<ApiResponse>("/teachers/grading/submit-legacy", gradesData),
 };
