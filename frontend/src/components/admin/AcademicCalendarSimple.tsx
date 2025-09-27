@@ -11,13 +11,13 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showToast } from "../../utils/toast";
 
 interface AcademicEvent {
   _id: string;
-  title: string;
-  description?: string;
-  type: "exam" | "holiday" | "event" | "meeting" | "activity";
+  eventTitle: string;
+  eventDescription?: string;
+  eventType: "exam" | "holiday" | "event" | "meeting" | "activity";
   startDate: string;
   endDate: string;
   isAllDay: boolean;
@@ -38,9 +38,9 @@ const AcademicCalendar: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    type: "event",
+    eventTitle: "",
+    eventDescription: "",
+    eventType: "event",
     startDate: "",
     endDate: "",
     isAllDay: true,
@@ -59,7 +59,7 @@ const AcademicCalendar: React.FC = () => {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/academic-calendar/events", {
+      const response = await fetch("/api/admin/calendar", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -71,10 +71,10 @@ const AcademicCalendar: React.FC = () => {
         const data = await response.json();
         setEvents(data.data || []);
       } else {
-        toast.error("Failed to fetch events");
+        showToast.error("Failed to fetch events");
       }
     } catch (error) {
-      toast.error("Error fetching events");
+      showToast.error("Error fetching events");
     } finally {
       setLoading(false);
     }
@@ -86,8 +86,8 @@ const AcademicCalendar: React.FC = () => {
 
     try {
       const url = editingEvent
-        ? `/api/academic-calendar/events/${editingEvent._id}`
-        : "/api/academic-calendar/events";
+        ? `/api/admin/calendar/${editingEvent._id}`
+        : "/api/admin/calendar";
 
       const method = editingEvent ? "PUT" : "POST";
 
@@ -101,7 +101,7 @@ const AcademicCalendar: React.FC = () => {
       });
 
       if (response.ok) {
-        toast.success(
+        showToast.success(
           editingEvent
             ? "Event updated successfully"
             : "Event created successfully"
@@ -112,10 +112,10 @@ const AcademicCalendar: React.FC = () => {
         fetchEvents();
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || "Failed to save event");
+        showToast.error(errorData.message || "Failed to save event");
       }
     } catch (error) {
-      toast.error("Error saving event");
+      showToast.error("Error saving event");
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ const AcademicCalendar: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/academic-calendar/events/${eventId}`, {
+      const response = await fetch(`/api/admin/calendar/${eventId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -134,13 +134,13 @@ const AcademicCalendar: React.FC = () => {
       });
 
       if (response.ok) {
-        toast.success("Event deleted successfully");
+        showToast.success("Event deleted successfully");
         fetchEvents();
       } else {
-        toast.error("Failed to delete event");
+        showToast.error("Failed to delete event");
       }
     } catch (error) {
-      toast.error("Error deleting event");
+      showToast.error("Error deleting event");
     } finally {
       setLoading(false);
     }
@@ -148,9 +148,9 @@ const AcademicCalendar: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      title: "",
-      description: "",
-      type: "event",
+      eventTitle: "",
+      eventDescription: "",
+      eventType: "event",
       startDate: "",
       endDate: "",
       isAllDay: true,
@@ -166,9 +166,9 @@ const AcademicCalendar: React.FC = () => {
   const openEditForm = (event: AcademicEvent) => {
     setEditingEvent(event);
     setFormData({
-      title: event.title,
-      description: event.description || "",
-      type: event.type,
+      eventTitle: event.eventTitle,
+      eventDescription: event.eventDescription || "",
+      eventType: event.eventType,
       startDate: event.startDate.split("T")[0],
       endDate: event.endDate.split("T")[0],
       isAllDay: event.isAllDay,
@@ -259,9 +259,9 @@ const AcademicCalendar: React.FC = () => {
                     </label>
                     <Input
                       id="title"
-                      value={formData.title}
+                      value={formData.eventTitle}
                       onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
+                        setFormData({ ...formData, eventTitle: e.target.value })
                       }
                       required
                     />
@@ -275,9 +275,9 @@ const AcademicCalendar: React.FC = () => {
                     </label>
                     <select
                       id="type"
-                      value={formData.type}
+                      value={formData.eventType}
                       onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
+                        setFormData({ ...formData, eventType: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
@@ -299,9 +299,9 @@ const AcademicCalendar: React.FC = () => {
                   </label>
                   <textarea
                     id="description"
-                    value={formData.description}
+                    value={formData.eventDescription}
                     onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
+                      setFormData({ ...formData, eventDescription: e.target.value })
                     }
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -524,9 +524,9 @@ const AcademicCalendar: React.FC = () => {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">{event.title}</h3>
-                      <span className={getEventTypeColor(event.type)}>
-                        {event.type}
+                      <h3 className="font-semibold">{event.eventTitle}</h3>
+                      <span className={getEventTypeColor(event.eventType)}>
+                        {event.eventType}
                       </span>
                       <span className={getPriorityColor(event.priority)}>
                         {event.priority}
@@ -564,9 +564,9 @@ const AcademicCalendar: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    {event.description && (
+                    {event.eventDescription && (
                       <p className="text-sm text-gray-600 mt-2">
-                        {event.description}
+                        {event.eventDescription}
                       </p>
                     )}
                   </div>

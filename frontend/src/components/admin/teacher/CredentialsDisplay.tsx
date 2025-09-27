@@ -1,5 +1,5 @@
 import React from "react";
-import { Key, Copy, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Key, Copy, Eye, EyeOff, CheckCircle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -52,16 +52,28 @@ The teacher will use the username and password to login to the system.
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-green-600">
-            <CheckCircle className="h-6 w-6" />
-            Teacher Created Successfully!
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Save these credentials safely. The teacher will need them to login.
-          </p>
-        </CardHeader>
+      <div className="relative">
+        {/* Floating Close Button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors duration-200"
+            aria-label="Close modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+        
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-green-600">
+              <CheckCircle className="h-6 w-6" />
+              Teacher Created Successfully!
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              Save these credentials safely. The teacher will need them to login.
+            </p>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -236,6 +248,7 @@ The teacher will use the username and password to login to the system.
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

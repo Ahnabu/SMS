@@ -10,6 +10,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "../../services/admin.api";
@@ -282,12 +283,48 @@ const AcademicCalendar: React.FC = () => {
       {/* Event Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>
-                {editingEvent ? "Edit Event" : "Create New Event"}
-              </CardTitle>
-            </CardHeader>
+          <div className="relative">
+            {/* Floating Close Button */}
+            <button
+              onClick={() => {
+                setIsFormOpen(false);
+                setEditingEvent(null);
+                setFormData({
+                  title: "",
+                  description: "",
+                  eventType: "event",
+                  startDate: "",
+                  endDate: "",
+                  isAllDay: true,
+                  startTime: "",
+                  endTime: "",
+                  location: "",
+                  targetAudience: {
+                    allSchool: true,
+                    grades: [],
+                    classes: [],
+                    teachers: [],
+                    students: [],
+                    parents: [],
+                  },
+                  priority: "medium",
+                  status: "published",
+                  isRecurring: false,
+                  color: "#3b82f6",
+                });
+              }}
+              className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors duration-200"
+              aria-label="Close modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <CardTitle>
+                  {editingEvent ? "Edit Event" : "Create New Event"}
+                </CardTitle>
+              </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -601,6 +638,7 @@ const AcademicCalendar: React.FC = () => {
               </form>
             </CardContent>
           </Card>
+          </div>
         </div>
       )}
 

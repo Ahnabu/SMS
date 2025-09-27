@@ -7,7 +7,7 @@ import {
   BookOpen,
   Settings,
 } from "lucide-react";
-import AcademicCalendarSimple from "./AcademicCalendarSimple";
+import AcademicCalendarModern from "./AcademicCalendarModern";
 import ScheduleManagement from "./ScheduleManagement";
 import SubjectManagement from "./SubjectManagement";
 
@@ -19,7 +19,7 @@ const AdminCalendarDashboard: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "calendar":
-        return <AcademicCalendarSimple />;
+        return <AcademicCalendarModern />;
       case "schedule":
         return <ScheduleManagement />;
       case "subjects":

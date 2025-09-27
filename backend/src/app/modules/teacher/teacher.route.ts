@@ -128,4 +128,19 @@ router.delete(
   TeacherController.deleteTeacherPhoto
 );
 
+// Teacher credentials routes
+router.get(
+  "/:teacherId/credentials",
+  authenticate,
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  TeacherController.getTeacherCredentials
+);
+
+router.post(
+  "/:teacherId/credentials/reset",
+  authenticate,
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  TeacherController.resetTeacherPassword
+);
+
 export const TeacherRoutes = router;

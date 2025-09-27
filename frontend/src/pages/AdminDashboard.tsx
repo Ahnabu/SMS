@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, Link } from "react-router-dom";
+import { X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { adminApi } from "../services/admin.api";
 import StudentList, {
@@ -10,6 +11,7 @@ import TeacherList, { TeacherListRef } from "../components/admin/TeacherList";
 import SubjectManagement from "../components/admin/SubjectManagement";
 import ScheduleManagement from "../components/admin/ScheduleManagement";
 import AcademicCalendar from "../components/admin/AcademicCalendar";
+import TeacherDetailView from "../components/admin/TeacherDetailView";
 
 import MinimalTeacherForm from "../components/admin/teacher/MinimalTeacherForm";
 
@@ -145,7 +147,7 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
         </h2>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -249,6 +251,32 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
               </div>
             </div>
           </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <svg
+                  className="w-6 h-6 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500">Upcoming Events</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData?.upcomingEvents || 0}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -279,6 +307,60 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
             </Link>
           </div>
         </div>
+
+        {/* Upcoming Events Section */}
+        {dashboardData?.upcomingEventsDetails && dashboardData.upcomingEventsDetails.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mt-8">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Upcoming Events
+            </h3>
+            <div className="space-y-4">
+              {dashboardData.upcomingEventsDetails.slice(0, 5).map((event: any, index: number) => (
+                <div key={event._id || index} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{event.eventTitle || event.title}</h4>
+                      <p className="text-sm text-gray-600">{event.eventDescription || event.description}</p>
+                      <div className="flex items-center mt-1 text-xs text-gray-500">
+                        <span>
+                          {new Date(event.startDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                        {event.venue && (
+                          <>
+                            <span className="mx-2">•</span>
+                            <span>{event.venue}</span>
+                          </>
+                        )}
+                        <span className="mx-2">•</span>
+                        <span className="capitalize">{event.eventType || event.type}</span>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      event.priority === 'high' || event.priority === 'urgent' 
+                        ? 'bg-red-100 text-red-800' 
+                        : event.priority === 'medium' 
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {event.priority || 'medium'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <Link to="/admin/calendar">
+                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  View All Events →
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -369,6 +451,7 @@ const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChan
 
 const TeacherManagement: React.FC = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [viewTeacher, setViewTeacher] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const teacherListRef = useRef<TeacherListRef>(null);
 
@@ -383,8 +466,7 @@ const TeacherManagement: React.FC = () => {
   };
 
   const handleViewTeacher = (teacher: any) => {
-    console.log("View teacher:", teacher);
-    // TODO: Implement teacher details view
+    setViewTeacher(teacher);
   };
 
   const handleFormClose = () => {
@@ -430,13 +512,33 @@ const TeacherManagement: React.FC = () => {
 
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-auto">
+          <div className="relative bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-auto">
+            {/* Floating Close Button */}
+            <button
+              onClick={handleFormClose}
+              className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors duration-200"
+              aria-label="Close modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            
             <MinimalTeacherForm
               onBack={handleFormClose}
               onSave={handleSaveTeacher}
             />
           </div>
         </div>
+      )}
+
+      {viewTeacher && (
+        <TeacherDetailView
+          teacher={viewTeacher}
+          onClose={() => setViewTeacher(null)}
+          onEdit={(teacher) => {
+            setViewTeacher(null);
+            handleEditTeacher(teacher);
+          }}
+        />
       )}
     </div>
   );

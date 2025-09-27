@@ -179,10 +179,18 @@ router.put("/schedules/:id", updateSchedule);
 router.delete("/schedules/:id", deleteSchedule);
 
 // Calendar management routes
-router.post("/calendar", createCalendarEvent);
+router.post("/calendar", 
+  multerUpload.array("attachments", 5), // Allow up to 5 attachments
+  parseBody,
+  createCalendarEvent
+);
 router.get("/calendar", getAllCalendarEvents);
 router.get("/calendar/:id", getCalendarEventById);
-router.put("/calendar/:id", updateCalendarEvent);
+router.put("/calendar/:id", 
+  multerUpload.array("attachments", 5), // Allow up to 5 attachments
+  parseBody,
+  updateCalendarEvent
+);
 router.delete("/calendar/:id", deleteCalendarEvent);
 
 export const adminRoutes = router;

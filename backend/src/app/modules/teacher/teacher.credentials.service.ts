@@ -74,7 +74,7 @@ export class TeacherCredentialsService {
   static async getTeacherCredentials(teacherId: string): Promise<CredentialsResponse | null> {
     try {
       const teacher = await Teacher.findOne({ teacherId })
-        .populate('userId', 'username firstName lastName credentialsGenerated');
+        .populate('userId', 'username firstName lastName credentialsGenerated passwordChangeRequired');
 
       if (!teacher || !teacher.userId) {
         return null;
@@ -82,18 +82,17 @@ export class TeacherCredentialsService {
 
       const user = teacher.userId as any;
       
-      if (!user.credentialsGenerated) {
-        return null;
-      }
-
+      // Always return credentials for admin view, even if not flagged as generated
       return {
         credentials: {
           teacherId,
           username: user.username,
           password: teacherId, // Default password is teacherId
-          temporaryPassword: true
+          temporaryPassword: user.passwordChangeRequired !== false
         },
-        message: 'These are auto-generated credentials. Teacher should change password on first login.'
+        message: user.credentialsGenerated 
+          ? 'These are auto-generated credentials. Teacher should change password on first login.'
+          : 'Default credentials based on Teacher ID. Password may have been changed by teacher.'
       };
     } catch (error) {
       throw new AppError(

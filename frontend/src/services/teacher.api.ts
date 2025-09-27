@@ -175,4 +175,11 @@ export const teacherApi = {
 
   getAvailablePhotoSlots: (teacherId: string) =>
     api.get<ApiResponse>(`/teachers/${teacherId}/photos/available-slots`),
+
+  // Credentials management
+  getCredentials: (teacherId: string) =>
+    api.get<ApiResponse>(`/teachers/${teacherId}/credentials`),
+
+  resetPassword: (teacherId: string) =>
+    api.post<ApiResponse>(`/teachers/${teacherId}/credentials/reset`),
 };

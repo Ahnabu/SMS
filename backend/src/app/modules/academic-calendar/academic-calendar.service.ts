@@ -83,8 +83,14 @@ class AcademicCalendarService {
         recurrencePattern: eventData.isRecurring ? {
           frequency: eventData.recurrence?.frequency || "weekly",
           interval: eventData.recurrence?.interval || 1,
+          daysOfWeek: (eventData.recurrence?.frequency || "weekly") === "weekly" 
+            ? [new Date(eventData.startDate).getDay()] // Default to the start date's day of week
+            : undefined,
+          dayOfMonth: (eventData.recurrence?.frequency || "weekly") === "monthly" 
+            ? new Date(eventData.startDate).getDate() 
+            : undefined,
           endDate: eventData.recurrence?.endDate ? new Date(eventData.recurrence.endDate) : undefined,
-          occurrences: eventData.recurrence?.occurrences,
+          occurrences: eventData.recurrence?.occurrences || 5, // Default to 5 occurrences if no end date
         } : undefined,
         color: this.getDefaultColor(eventData.eventType),
         createdBy: eventData.organizerId,

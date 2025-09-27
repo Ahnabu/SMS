@@ -11,6 +11,17 @@ import {
 
 const createCalendarEvent = catchAsync(async (req: Request, res: Response) => {
   const eventData: ICreateAcademicCalendarRequest = req.body;
+  
+  // Handle file attachments
+  if (req.files && Array.isArray(req.files)) {
+    eventData.attachments = req.files.map((file: any) => ({
+      fileName: file.originalname,
+      filePath: file.path,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+    }));
+  }
+  
   console.log("Received calendar event data:", JSON.stringify(eventData, null, 2));
   const result = await academicCalendarService.createCalendarEvent(eventData);
 
@@ -54,6 +65,17 @@ const getCalendarEventById = catchAsync(async (req: Request, res: Response) => {
 const updateCalendarEvent = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const updateData: IUpdateAcademicCalendarRequest = req.body;
+  
+  // Handle file attachments
+  if (req.files && Array.isArray(req.files)) {
+    updateData.attachments = req.files.map((file: any) => ({
+      fileName: file.originalname,
+      filePath: file.path,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+    }));
+  }
+  
   const result = await academicCalendarService.updateCalendarEvent(
     id,
     updateData

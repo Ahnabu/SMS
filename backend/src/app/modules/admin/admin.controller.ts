@@ -200,6 +200,11 @@ export const createCalendarEvent = catchAsync(async (req: AuthenticatedRequest, 
     createdBy: req.user?.id
   };
 
+  // Handle file attachments
+  if (req.files && Array.isArray(req.files)) {
+    eventData.attachments = req.files.map((file: any) => file.path);
+  }
+
   const event = await AcademicCalendar.create(eventData);
 
   sendResponse(res, {

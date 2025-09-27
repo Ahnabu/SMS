@@ -8,6 +8,7 @@ import {
   ICreateTeacherRequest,
   IUpdateTeacherRequest,
 } from "./teacher.interface";
+import { TeacherCredentialsService } from "./teacher.credentials.service";
 
 const createTeacher = catchAsync(async (req: Request, res: Response) => {
   const teacherData: ICreateTeacherRequest = req.body;
@@ -192,6 +193,61 @@ const getAvailablePhotoSlots = catchAsync(
   }
 );
 
+const getTeacherCredentials = catchAsync(
+  async (req: Request, res: Response) => {
+    const { teacherId } = req.params;
+    const adminUser = (req as any).user;
+
+    // Verify admin permissions
+    if (!adminUser || !["admin", "superadmin"].includes(adminUser.role)) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Only admin and superadmin can view teacher credentials"
+      );
+    }
+
+    const result = await TeacherCredentialsService.getTeacherCredentials(teacherId);
+    
+    if (!result) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Teacher credentials not found"
+      );
+    }
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Teacher credentials retrieved successfully",
+      data: result,
+    });
+  }
+);
+
+const resetTeacherPassword = catchAsync(
+  async (req: Request, res: Response) => {
+    const { teacherId } = req.params;
+    const adminUser = (req as any).user;
+
+    // Verify admin permissions
+    if (!adminUser || !["admin", "superadmin"].includes(adminUser.role)) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Only admin and superadmin can reset teacher passwords"
+      );
+    }
+
+    const result = await TeacherCredentialsService.resetTeacherPassword(teacherId);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Teacher password reset successfully",
+      data: result,
+    });
+  }
+);
+
 export const TeacherController = {
   createTeacher,
   getAllTeachers,
@@ -204,4 +260,6 @@ export const TeacherController = {
   deleteTeacherPhoto,
   getTeacherPhotos,
   getAvailablePhotoSlots,
+  getTeacherCredentials,
+  resetTeacherPassword,
 };

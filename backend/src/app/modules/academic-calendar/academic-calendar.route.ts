@@ -1,7 +1,9 @@
 import express from "express";
-import { authenticate, authorize } from "../../middlewares/auth";
+import { authenticate, authorize, enforceSchoolIsolation } from "../../middlewares/auth";
 import { UserRole } from "../user/user.interface";
 import { validateRequest } from "../../middlewares/validateRequest";
+import { multerUpload } from "../../config/multer.config";
+import { parseBody } from "../../middlewares/bodyParser";
 import { AcademicCalendarController } from "./academic-calendar.controller";
 import { AcademicCalendarValidation } from "./academic-calendar.validation";
 
@@ -12,6 +14,9 @@ router.post(
   "/",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
+  multerUpload.array("attachments", 5), // Allow up to 5 attachments
+  parseBody,
   validateRequest(
     AcademicCalendarValidation.createAcademicCalendarValidationSchema
   ),
@@ -30,6 +35,7 @@ router.get(
     UserRole.PARENT,
     UserRole.ACCOUNTANT
   ),
+  enforceSchoolIsolation,
   AcademicCalendarController.getAllCalendarEvents
 );
 
@@ -102,6 +108,9 @@ router.patch(
   "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
+  multerUpload.array("attachments", 5), // Allow up to 5 attachments
+  parseBody,
   validateRequest(
     AcademicCalendarValidation.updateAcademicCalendarValidationSchema
   ),
@@ -113,6 +122,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  enforceSchoolIsolation,
   AcademicCalendarController.deleteCalendarEvent
 );
 
