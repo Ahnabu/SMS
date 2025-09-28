@@ -181,7 +181,7 @@ router.post(
 );
 
 router.get(
-  "/attendance/students/:gradeId/:sectionId/:subjectId",
+  "/attendance/students/:classId/:subjectId/:period",
   authenticate,
   authorize(UserRole.TEACHER),
   TeacherController.getStudentsForAttendance

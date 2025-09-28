@@ -195,18 +195,20 @@ export const teacherApi = {
   getCurrentPeriods: () => api.get<ApiResponse>("/teachers/attendance/periods"),
   
   markStudentAttendance: (attendanceData: {
-    grade: string;
+    classId: string;
+    subjectId: string;
+    grade: number;
     section: string;
-    subject: string;
     date: string;
+    period: number;
     students: Array<{
       studentId: string;
-      isPresent: boolean;
+      status: "present" | "absent" | "late" | "excused";
     }>;
   }) => api.post<ApiResponse>("/teachers/attendance/mark", attendanceData),
 
-  getStudentsForAttendance: (gradeId: string, sectionId: string, subjectId: string) =>
-    api.get<ApiResponse>(`/teachers/attendance/students/${gradeId}/${sectionId}/${subjectId}`),
+  getStudentsForAttendance: (classId: string, subjectId: string, period: number) =>
+    api.get<ApiResponse>(`/teachers/attendance/students/${classId}/${subjectId}/${period}`),
 
   // Homework APIs
   assignHomework: (formData: FormData) => {

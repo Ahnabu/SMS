@@ -338,7 +338,7 @@ const markAttendance = catchAsync(async (req: Request, res: Response) => {
 
 const getStudentsForAttendance = catchAsync(async (req: Request, res: Response) => {
   const teacherUser = (req as any).user;
-  const { gradeId, sectionId, subjectId } = req.params;
+  const { classId, subjectId, period } = req.params;
   
   if (!teacherUser || teacherUser.role !== 'teacher') {
     throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
@@ -346,9 +346,9 @@ const getStudentsForAttendance = catchAsync(async (req: Request, res: Response) 
 
   const students = await teacherService.getStudentsForAttendance(
     teacherUser.id,
-    gradeId,
-    sectionId,
-    subjectId
+    classId,
+    subjectId,
+    parseInt(period)
   );
 
   sendResponse(res, {
