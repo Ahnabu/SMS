@@ -192,6 +192,7 @@ router.post(
   "/homework/assign",
   authenticate,
   authorize(UserRole.TEACHER),
+  upload.array("attachments", 5), // Allow up to 5 attachments
   TeacherController.assignHomework
 );
 

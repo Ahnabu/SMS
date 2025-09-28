@@ -18,10 +18,11 @@ import { Student } from '../student/student.model';
 import { Teacher } from '../teacher/teacher.model';
 import { Subject } from '../subject/subject.model';
 import { School } from '../school/school.model';
+import { validatePhotoUpload, uploadToCloudinary } from '../../utils/cloudinaryUtils';
 
 class HomeworkService {
   // Create homework
-  async createHomework(data: ICreateHomeworkRequest, teacherId: string): Promise<IHomeworkResponse> {
+  async createHomework(data: ICreateHomeworkRequest, teacherId: string, attachments?: Express.Multer.File[]): Promise<IHomeworkResponse> {
     // Verify teacher has permission to create homework for this school
     const teacher = await Teacher.findById(data.teacherId).populate('schoolId');
     if (!teacher || teacher.id !== teacherId) {
@@ -34,6 +35,29 @@ class HomeworkService {
       throw new AppError(404, 'Subject not found');
     }
 
+    // Upload attachments to Cloudinary if provided
+    let attachmentUrls: string[] = [];
+    if (attachments && attachments.length > 0) {
+      // Validate file count
+      if (attachments.length > 5) {
+        throw new AppError(400, 'Maximum 5 attachments allowed per homework');
+      }
+
+      try {
+        for (const file of attachments) {
+          const uploadResult = await uploadToCloudinary(file.buffer, {
+            folder: 'homework-attachments',
+            resource_type: 'auto',
+            use_filename: true,
+            unique_filename: true,
+          });
+          attachmentUrls.push(uploadResult.secure_url);
+        }
+      } catch (error) {
+        throw new AppError(500, 'Failed to upload attachments');
+      }
+    }
+
     // Create homework
     const homeworkData = {
       ...data,
@@ -43,6 +67,7 @@ class HomeworkService {
       classId: data.classId ? new Types.ObjectId(data.classId) : undefined,
       assignedDate: new Date(data.assignedDate),
       dueDate: new Date(data.dueDate),
+      attachments: attachmentUrls,
       isPublished: false, // Default to unpublished
     };
 
@@ -104,7 +129,8 @@ class HomeworkService {
   async updateHomework(
     id: string,
     data: IUpdateHomeworkRequest,
-    userId: string
+    userId: string,
+    newAttachments?: Express.Multer.File[]
   ): Promise<IHomeworkResponse> {
     const homework = await Homework.findById(id);
     if (!homework) {
@@ -122,6 +148,28 @@ class HomeworkService {
       const submissionCount = await HomeworkSubmission.countDocuments({ homeworkId: id });
       if (submissionCount > 0 && (data.totalMarks || data.passingMarks || data.dueDate)) {
         throw new AppError(400, 'Cannot update critical fields when submissions exist');
+      }
+    }
+
+    // Upload new attachments if provided
+    let newAttachmentUrls: string[] = [];
+    if (newAttachments && newAttachments.length > 0) {
+      try {
+        for (const file of newAttachments) {
+          const uploadResult = await uploadToCloudinary(file.buffer, {
+            folder: 'homework-attachments',
+            resource_type: 'auto',
+            use_filename: true,
+            unique_filename: true,
+          });
+          newAttachmentUrls.push(uploadResult.secure_url);
+        }
+        
+        // Add new attachments to existing ones
+        const existingAttachments = homework.attachments || [];
+        data.attachments = [...existingAttachments, ...newAttachmentUrls];
+      } catch (error) {
+        throw new AppError(500, 'Failed to upload attachments');
       }
     }
 
@@ -197,7 +245,15 @@ class HomeworkService {
     }
 
     const homework = await Homework.findByTeacher(teacherId);
-    return homework.map(hw => this.formatHomeworkResponse(hw));
+    
+    // Sort by createdAt/updatedAt (newest first) as requested
+    const sortedHomework = homework.sort((a, b) => {
+      const aDate = a.updatedAt || a.createdAt || new Date(0);
+      const bDate = b.updatedAt || b.createdAt || new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+    
+    return sortedHomework.map(hw => this.formatHomeworkResponse(hw));
   }
 
   // Get homework for student

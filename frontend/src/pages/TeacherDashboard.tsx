@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
 import TeacherScheduleView from '../components/teacher/TeacherScheduleView';
 import MyClassesView from '../components/teacher/MyClassesView';
+import TeacherHomeworkView from '../components/teacher/TeacherHomeworkView';
 
 const TeacherDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -90,7 +91,7 @@ const TeacherDashboard: React.FC = () => {
           <Route path="/" element={<TeacherHome dashboardData={dashboardData} />} />
           <Route path="/classes" element={<MyClassesView />} />
           <Route path="/attendance" element={<AttendanceManagement />} />
-          <Route path="/homework" element={<HomeworkManagement />} />
+          <Route path="/homework" element={<TeacherHomeworkView />} />
           <Route path="/grades" element={<GradeManagement />} />
           <Route path="/schedule" element={<TeacherScheduleView />} />
         </Routes>
@@ -191,15 +192,6 @@ const AttendanceManagement: React.FC = () => (
     <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Attendance Management</h2>
       <p className="text-gray-500">Attendance management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
-const HomeworkManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Homework Management</h2>
-      <p className="text-gray-500">Homework management interface will be implemented here.</p>
     </div>
   </div>
 );

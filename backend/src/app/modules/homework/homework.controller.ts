@@ -21,7 +21,10 @@ const createHomework = catchAsync(async (req: AuthenticatedRequest, res: Respons
     throw new AppError(404, 'Teacher not found');
   }
 
-  const homework = await homeworkService.createHomework(req.body, teacher._id.toString());
+  // Handle file uploads if any
+  const files = req.files as Express.Multer.File[] | undefined;
+
+  const homework = await homeworkService.createHomework(req.body, teacher._id.toString(), files);
 
   sendResponse(res, {
     statusCode: 201,
@@ -59,7 +62,10 @@ const updateHomework = catchAsync(async (req: AuthenticatedRequest, res: Respons
     throw new AppError(403, 'Only teachers can update homework');
   }
 
-  const homework = await homeworkService.updateHomework(id, req.body, user.id);
+  // Handle file uploads if any
+  const files = req.files as Express.Multer.File[] | undefined;
+
+  const homework = await homeworkService.updateHomework(id, req.body, user.id, files);
 
   sendResponse(res, {
     statusCode: 200,

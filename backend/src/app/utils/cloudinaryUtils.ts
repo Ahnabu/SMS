@@ -203,6 +203,48 @@ export const getAvailablePhotoSlots = (
 };
 
 /**
+ * Generic file upload to Cloudinary for homework attachments
+ */
+export const uploadToCloudinary = async (
+  fileBuffer: Buffer,
+  options: {
+    folder: string;
+    resource_type?: 'image' | 'video' | 'raw' | 'auto';
+    use_filename?: boolean;
+    unique_filename?: boolean;
+  }
+): Promise<{
+  public_id: string;
+  secure_url: string;
+  resource_type: string;
+  format: string;
+  bytes: number;
+}> => {
+  try {
+    const result = await cloudinary.uploader.upload(
+      `data:application/octet-stream;base64,${fileBuffer.toString('base64')}`,
+      {
+        folder: options.folder,
+        resource_type: options.resource_type || 'auto',
+        use_filename: options.use_filename || true,
+        unique_filename: options.unique_filename !== false,
+      }
+    );
+
+    return {
+      public_id: result.public_id,
+      secure_url: result.secure_url,
+      resource_type: result.resource_type,
+      format: result.format,
+      bytes: result.bytes,
+    };
+  } catch (error) {
+    console.error('Cloudinary upload failed:', error);
+    throw new Error('Failed to upload file to cloud storage');
+  }
+};
+
+/**
  * Validate photo upload requirements
  */
 export const validatePhotoUpload = (

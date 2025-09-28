@@ -1365,27 +1365,86 @@ class TeacherService {
     }
   }
 
-  async assignHomework(userId: string, homeworkData: any): Promise<any> {
+  async assignHomework(userId: string, homeworkData: any, attachments?: Express.Multer.File[]): Promise<any> {
     try {
-      const teacher = await Teacher.findOne({ userId });
+      const teacher = await Teacher.findOne({ userId }).populate('schoolId');
 
       if (!teacher) {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      // TODO: Verify teacher has permission for the specified grade/section/subject
-      // TODO: Save homework to homework collection
-      // TODO: Send notifications to students/parents
+      // Upload attachments to Cloudinary if provided
+      let attachmentUrls: string[] = [];
+      if (attachments && attachments.length > 0) {
+        try {
+          const { uploadToCloudinary } = await import('../../utils/cloudinaryUtils');
+          
+          for (const file of attachments) {
+            const uploadResult = await uploadToCloudinary(file.buffer, {
+              folder: 'homework-attachments',
+              resource_type: 'auto',
+              use_filename: true,
+              unique_filename: true,
+            });
+            attachmentUrls.push(uploadResult.secure_url);
+          }
+        } catch (error) {
+          throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to upload attachments');
+        }
+      }
 
-      const result = {
-        success: true,
-        homeworkId: new Types.ObjectId().toString(),
-        assignedAt: new Date().toISOString(),
+      // Import Homework model
+      const { Homework } = await import('../homework/homework.model');
+
+      // Create homework data
+      const homework = new Homework({
+        schoolId: teacher.schoolId,
         teacherId: teacher._id,
-        ...homeworkData,
-      };
+        subjectId: homeworkData.subjectId,
+        grade: parseInt(homeworkData.grade),
+        section: homeworkData.section || undefined,
+        title: homeworkData.title,
+        description: homeworkData.description,
+        instructions: homeworkData.instructions,
+        homeworkType: homeworkData.homeworkType || 'assignment',
+        priority: homeworkData.priority || 'medium',
+        assignedDate: new Date(),
+        dueDate: new Date(homeworkData.dueDate),
+        estimatedDuration: parseInt(homeworkData.estimatedDuration) || 60,
+        totalMarks: parseInt(homeworkData.totalMarks) || 100,
+        passingMarks: parseInt(homeworkData.passingMarks) || 40,
+        attachments: attachmentUrls,
+        submissionType: homeworkData.submissionType || 'both',
+        allowLateSubmission: homeworkData.allowLateSubmission !== false,
+        latePenalty: parseInt(homeworkData.latePenalty) || 10,
+        maxLateDays: parseInt(homeworkData.maxLateDays) || 3,
+        isGroupWork: homeworkData.isGroupWork === true,
+        maxGroupSize: homeworkData.isGroupWork ? parseInt(homeworkData.maxGroupSize) || 4 : undefined,
+        rubric: homeworkData.rubric || [],
+        tags: homeworkData.tags || [],
+        isPublished: homeworkData.isPublished === true,
+      });
 
-      return result;
+      await homework.save();
+
+      // Populate the homework with related data
+      const populatedHomework = await Homework.findById(homework._id)
+        .populate({
+          path: 'teacherId',
+          select: 'userId teacherId',
+          populate: {
+            path: 'userId',
+            select: 'firstName lastName'
+          }
+        })
+        .populate('subjectId', 'name code')
+        .populate('schoolId', 'name');
+
+      return {
+        id: homework._id,
+        ...populatedHomework?.toJSON(),
+        message: 'Homework assigned successfully'
+      };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
@@ -1395,7 +1454,7 @@ class TeacherService {
     }
   }
 
-  async getMyHomeworkAssignments(userId: string): Promise<any> {
+  async getMyHomeworkAssignments(userId: string, filters?: any): Promise<any> {
     try {
       const teacher = await Teacher.findOne({ userId });
 
@@ -1403,11 +1462,105 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      // TODO: Get actual homework assignments from homework collection
+      // Import Homework model
+      const { Homework } = await import('../homework/homework.model');
+
+      // Create query for teacher's homework
+      const query: any = { teacherId: teacher._id };
+
+      // Apply filters
+      if (filters?.grade) {
+        query.grade = parseInt(filters.grade);
+      }
+      if (filters?.section) {
+        query.section = filters.section;
+      }
+      if (filters?.subjectId) {
+        query.subjectId = filters.subjectId;
+      }
+      if (filters?.isPublished !== undefined) {
+        query.isPublished = filters.isPublished === 'true';
+      }
+      if (filters?.priority) {
+        query.priority = filters.priority;
+      }
+      if (filters?.homeworkType) {
+        query.homeworkType = filters.homeworkType;
+      }
+
+      // Date range filter
+      if (filters?.startDate || filters?.endDate) {
+        query.dueDate = {};
+        if (filters.startDate) {
+          query.dueDate.$gte = new Date(filters.startDate);
+        }
+        if (filters.endDate) {
+          query.dueDate.$lte = new Date(filters.endDate);
+        }
+      }
+
+      // Get homework assignments sorted by createdAt/updatedAt (newest first)
+      const assignments = await Homework.find(query)
+        .populate({
+          path: 'teacherId',
+          select: 'userId teacherId',
+          populate: {
+            path: 'userId',
+            select: 'firstName lastName'
+          }
+        })
+        .populate('subjectId', 'name code')
+        .populate('schoolId', 'name')
+        .sort({ updatedAt: -1, createdAt: -1 }) // Newest first as requested
+        .lean();
+
+      // Add submission stats for each homework
+      const assignmentsWithStats = await Promise.all(
+        assignments.map(async (assignment) => {
+          const homework = await Homework.findById(assignment._id);
+          const stats = homework ? await homework.getSubmissionStats() : null;
+          
+          return {
+            ...assignment,
+            submissionStats: stats,
+            isOverdue: homework ? homework.isOverdue() : false,
+            isDueToday: homework ? homework.isDueToday() : false,
+            isDueTomorrow: homework ? homework.isDueTomorrow() : false,
+            daysUntilDue: homework ? homework.getDaysUntilDue() : 0,
+            canSubmit: homework ? homework.canSubmit() : false,
+          };
+        })
+      );
+
+      // Calculate summary statistics
+      const summary = {
+        total: assignments.length,
+        published: assignments.filter(a => a.isPublished).length,
+        draft: assignments.filter(a => !a.isPublished).length,
+        overdue: assignmentsWithStats.filter(a => a.isOverdue).length,
+        dueToday: assignmentsWithStats.filter(a => a.isDueToday).length,
+        upcoming: assignmentsWithStats.filter(a => a.daysUntilDue > 0 && a.daysUntilDue <= 7).length,
+        byPriority: {
+          urgent: assignments.filter(a => a.priority === 'urgent').length,
+          high: assignments.filter(a => a.priority === 'high').length,
+          medium: assignments.filter(a => a.priority === 'medium').length,
+          low: assignments.filter(a => a.priority === 'low').length,
+        },
+        byType: {
+          assignment: assignments.filter(a => a.homeworkType === 'assignment').length,
+          project: assignments.filter(a => a.homeworkType === 'project').length,
+          reading: assignments.filter(a => a.homeworkType === 'reading').length,
+          practice: assignments.filter(a => a.homeworkType === 'practice').length,
+          research: assignments.filter(a => a.homeworkType === 'research').length,
+          presentation: assignments.filter(a => a.homeworkType === 'presentation').length,
+          other: assignments.filter(a => a.homeworkType === 'other').length,
+        }
+      };
 
       return {
         teacherId: teacher._id,
-        assignments: [], // TODO: Populate from database
+        assignments: assignmentsWithStats,
+        summary
       };
     } catch (error) {
       if (error instanceof AppError) throw error;

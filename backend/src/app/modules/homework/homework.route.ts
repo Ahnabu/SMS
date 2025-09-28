@@ -3,6 +3,7 @@ import { HomeworkController } from './homework.controller';
 import { authenticate, authorize } from '../../middlewares/auth';
 import { validateRequest } from '../../middlewares/validateRequest';
 import { HomeworkValidation } from './homework.validation';
+import { uploadHomeworkAttachments } from '../../middlewares/fileUpload';
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ router.post(
   '/create',
   authenticate,
   authorize('teacher'),
+  uploadHomeworkAttachments, // Allow up to 5 attachments
   validateRequest(HomeworkValidation.createHomeworkValidation),
   HomeworkController.createHomework
 );
@@ -19,6 +21,7 @@ router.patch(
   '/:id',
   authenticate,
   authorize('teacher'),
+  uploadHomeworkAttachments, // Allow up to 5 attachments for updates
   validateRequest(HomeworkValidation.homeworkIdParamValidation),
   validateRequest(HomeworkValidation.updateHomeworkValidation),
   HomeworkController.updateHomework

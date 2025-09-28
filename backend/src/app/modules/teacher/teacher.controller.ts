@@ -362,15 +362,16 @@ const getStudentsForAttendance = catchAsync(async (req: Request, res: Response) 
 const assignHomework = catchAsync(async (req: Request, res: Response) => {
   const teacherUser = (req as any).user;
   const homeworkData = req.body;
+  const files = req.files as Express.Multer.File[];
   
   if (!teacherUser || teacherUser.role !== 'teacher') {
     throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
   }
 
-  const result = await teacherService.assignHomework(teacherUser.id, homeworkData);
+  const result = await teacherService.assignHomework(teacherUser.id, homeworkData, files);
 
   sendResponse(res, {
-    statusCode: httpStatus.OK,
+    statusCode: httpStatus.CREATED,
     success: true,
     message: "Homework assigned successfully",
     data: result,

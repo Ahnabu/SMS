@@ -147,6 +147,7 @@ export interface IUpdateHomeworkRequest {
   estimatedDuration?: number;
   totalMarks?: number;
   passingMarks?: number;
+  attachments?: string[];
   allowLateSubmission?: boolean;
   latePenalty?: number;
   maxLateDays?: number;

@@ -209,6 +209,23 @@ export const teacherApi = {
     api.get<ApiResponse>(`/teachers/attendance/students/${gradeId}/${sectionId}/${subjectId}`),
 
   // Homework APIs
+  assignHomework: (formData: FormData) => {
+    return api.post<ApiResponse>("/teachers/homework/assign", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  getMyHomeworkAssignments: (params?: {
+    grade?: string;
+    section?: string;
+    subjectId?: string;
+    isPublished?: boolean;
+    priority?: string;
+    homeworkType?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => api.get<ApiResponse>("/teachers/homework/my-assignments", { params }),
+
   assignNewHomework: (homeworkData: {
     title: string;
     description: string;
@@ -234,6 +251,27 @@ export const teacherApi = {
   },
 
   getTeacherHomeworkAssignments: () => api.get<ApiResponse>("/teachers/homework/my-assignments"),
+
+  updateHomework: (id: string, formData: FormData) => {
+    return api.patch<ApiResponse>(`/homework/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  deleteHomework: (id: string) => api.delete<ApiResponse>(`/homework/${id}`),
+
+  publishHomework: (id: string) => api.patch<ApiResponse>(`/homework/${id}/publish`),
+
+  getHomeworkById: (id: string) => api.get<ApiResponse>(`/homework/${id}`),
+
+  getHomeworkSubmissions: (id: string) => api.get<ApiResponse>(`/homework/${id}/submissions`),
+
+  gradeHomeworkSubmission: (data: {
+    submissionId: string;
+    marksObtained: number;
+    feedback?: string;
+    teacherComments?: string;
+  }) => api.post<ApiResponse>("/homework/grade", data),
 
   // Disciplinary Actions APIs
   getTeacherStudents: () => api.get<ApiResponse>("/teachers/discipline/students"),
