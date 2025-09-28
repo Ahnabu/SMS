@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Save, ArrowLeft, Info, User, GraduationCap, MapPin, Phone, Briefcase, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { adminApi } from "../../../services/admin.api";
 
 interface TeacherFormData {
   // Basic Information (Required)
@@ -105,14 +106,9 @@ const DESIGNATIONS = [
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-const SUBJECTS = [
-  'Mathematics', 'English', 'Science', 'Physics', 'Chemistry', 'Biology', 
-  'History', 'Geography', 'Computer Science', 'Physical Education', 
-  'Art', 'Music', 'Urdu', 'Islamiyat', 'Economics', 'Political Science'
-];
-
 const ComprehensiveTeacherForm: React.FC<ComprehensiveTeacherFormProps> = ({ onBack, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [availableSubjects, setAvailableSubjects] = useState<Array<{_id: string, name: string}>>([]);
   const [formData, setFormData] = useState<TeacherFormData>({
     // Basic Information
     firstName: "",
@@ -126,7 +122,7 @@ const ComprehensiveTeacherForm: React.FC<ComprehensiveTeacherFormProps> = ({ onB
     joinDate: "",
     
     // Teaching Details
-    subjects: [""],
+    subjects: [],
     grades: [1],
     sections: ["A"],
     
@@ -182,6 +178,23 @@ const ComprehensiveTeacherForm: React.FC<ComprehensiveTeacherFormProps> = ({ onB
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
+
+  // Fetch available subjects on component mount
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await adminApi.getSubjects();
+        if (response.data.success) {
+          setAvailableSubjects(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subjects:', error);
+        toast.error('Failed to load subjects');
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   const steps = [
     { id: 1, title: "Basic Information", icon: User },
@@ -575,23 +588,27 @@ const ComprehensiveTeacherForm: React.FC<ComprehensiveTeacherFormProps> = ({ onB
             Subjects * (Select multiple)
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {SUBJECTS.map((subject) => (
-              <label key={subject} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.subjects.includes(subject)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      handleChange("subjects", [...formData.subjects, subject]);
-                    } else {
-                      handleChange("subjects", formData.subjects.filter(s => s !== subject));
-                    }
-                  }}
-                  className="mr-2"
-                />
-                <span className="text-sm">{subject}</span>
-              </label>
-            ))}
+            {availableSubjects.length === 0 ? (
+              <p className="text-sm text-gray-500 col-span-full">Loading subjects...</p>
+            ) : (
+              availableSubjects.map((subject) => (
+                <label key={subject._id} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.subjects.includes(subject._id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        handleChange("subjects", [...formData.subjects, subject._id]);
+                      } else {
+                        handleChange("subjects", formData.subjects.filter(s => s !== subject._id));
+                      }
+                    }}
+                    className="mr-2 flex-shrink-0"
+                  />
+                  <span className="text-sm truncate">{subject.name}</span>
+                </label>
+              ))
+            )}
           </div>
           {errors.subjects && (
             <p className="text-red-500 text-sm mt-1">{errors.subjects}</p>

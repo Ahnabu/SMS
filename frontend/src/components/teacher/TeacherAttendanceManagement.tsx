@@ -12,8 +12,8 @@ import {
   Save,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "sonner";
 import { teacherApi } from "../../services/teacher.api";
+import { showApiError, showToast } from "../../utils/toast";
 
 interface Student {
   id: string;
@@ -64,7 +64,7 @@ const TeacherAttendanceManagement: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Failed to load current periods:", error);
-      toast.error(error.response?.data?.message || "Failed to load current periods");
+      showApiError(error, "Unable to load your class periods");
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ const TeacherAttendanceManagement: React.FC = () => {
 
   const selectPeriodForAttendance = async (period: Period) => {
     if (!period.canMarkAttendance) {
-      toast.error("Attendance can only be marked during the active period");
+      showToast.warning("Attendance can only be marked during the active period");
       return;
     }
 
@@ -91,7 +91,7 @@ const TeacherAttendanceManagement: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Failed to load students:", error);
-      toast.error(error.response?.data?.message || "Failed to load students");
+      showApiError(error, "Unable to load student list for this class");
     } finally {
       setLoading(false);
     }
@@ -149,14 +149,14 @@ const TeacherAttendanceManagement: React.FC = () => {
       const response = await teacherApi.markStudentAttendance(attendanceData);
 
       if (response.data.success) {
-        toast.success("Attendance marked successfully!");
+        showToast.success("Attendance marked successfully!");
         setSelectedPeriod(null);
         setStudents([]);
         loadCurrentPeriods(); // Refresh periods
       }
     } catch (error: any) {
       console.error("Failed to submit attendance:", error);
-      toast.error(error.response?.data?.message || "Failed to submit attendance");
+      showApiError(error, "Unable to save attendance");
     } finally {
       setSubmitting(false);
     }

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { toast } from "react-hot-toast";
 import { Save, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../../../context/AuthContext";
+import { showApiError, showToast } from "../../../utils/toast";
 import BasicInfo from "./BasicInfo";
 import AddressInfo from "./AddressInfo";
 import QualificationsInfo from "./QualificationsInfo";
@@ -274,13 +274,13 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors before submitting");
+      showToast.error("Please fix the errors before submitting");
       return;
     }
 
     // Check if user has schoolId
     if (!user?.schoolId) {
-      toast.error("School ID not found. Please login again.");
+      showToast.error("School ID not found. Please login again.");
       return;
     }
 
@@ -354,7 +354,7 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
       const result = await response.json();
 
       // Show success and credentials
-      toast.success("Teacher created successfully!");
+      showToast.success("Teacher created successfully!");
       setCredentials(result.credentials);
 
       // Reset form
@@ -400,9 +400,7 @@ const TeacherForm: React.FC<TeacherFormProps> = ({ onBack }) => {
       });
     } catch (error) {
       console.error("Error creating teacher:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create teacher"
-      );
+      showApiError(error, "Failed to create teacher");
     } finally {
       setIsSubmitting(false);
     }

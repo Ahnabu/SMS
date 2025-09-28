@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Save, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../../../context/AuthContext";
+import { adminApi } from "../../../services/admin.api";
 
 interface MinimalTeacherFormData {
   firstName: string;
@@ -60,11 +61,6 @@ const DESIGNATIONS = [
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-const COMMON_SUBJECTS = [
-  'Mathematics', 'English', 'Science', 'Physics', 'Chemistry', 'Biology',
-  'History', 'Geography', 'Computer Science', 'Physical Education', 'Art', 'Music'
-];
-
 interface MinimalTeacherFormProps {
   onBack?: () => void;
   onSave?: (teacher: any) => void;
@@ -75,6 +71,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [availableSubjects, setAvailableSubjects] = useState<Array<{_id: string, name: string}>>([]);
 
   const [formData, setFormData] = useState<MinimalTeacherFormData>({
     firstName: "",
@@ -85,7 +82,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     bloodGroup: "O+",
     dob: "",
     joinDate: "",
-    subjects: ["Mathematics"],
+    subjects: [],
     grades: [1],
     sections: ["A"],
     experience: {
@@ -119,6 +116,23 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     isClassTeacher: false,
     isActive: true,
   });
+
+  // Fetch available subjects on component mount
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await adminApi.getSubjects();
+        if (response.data.success) {
+          setAvailableSubjects(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subjects:', error);
+        toast.error('Failed to load subjects');
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -289,25 +303,25 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white">
+    <div className="w-full max-w-none p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-gray-900">Add New Teacher</h1>
-          <p className="text-gray-600">Fill out the required information to create a new teacher account</p>
+          <p className="text-gray-600 truncate">Fill out the required information to create a new teacher account</p>
         </div>
         {onBack && (
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} className="ml-4 flex-shrink-0">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="w-full space-y-6 max-w-none">
         {/* Basic Information */}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
               <input
@@ -404,29 +418,33 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
         </div>
 
         {/* Teaching Details */}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Teaching Details</h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Subjects *</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {COMMON_SUBJECTS.map((subject) => (
-                  <label key={subject} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.subjects.includes(subject)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleChange("subjects", [...formData.subjects, subject]);
-                        } else {
-                          handleChange("subjects", formData.subjects.filter(s => s !== subject));
-                        }
-                      }}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">{subject}</span>
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {availableSubjects.length === 0 ? (
+                  <p className="text-sm text-gray-500 col-span-full">Loading subjects...</p>
+                ) : (
+                  availableSubjects.map((subject) => (
+                    <label key={subject._id} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={formData.subjects.includes(subject._id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleChange("subjects", [...formData.subjects, subject._id]);
+                          } else {
+                            handleChange("subjects", formData.subjects.filter(s => s !== subject._id));
+                          }
+                        }}
+                        className="mr-2 flex-shrink-0"
+                      />
+                      <span className="text-sm truncate">{subject.name}</span>
+                    </label>
+                  ))
+                )}
               </div>
             </div>
 
@@ -445,9 +463,9 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
         </div>
 
         {/* Qualification */}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Qualification</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Degree *</label>
               <input
@@ -499,9 +517,9 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
         </div>
 
         {/* Address */}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Address</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
               <input
@@ -552,9 +570,9 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
         </div>
 
         {/* Emergency Contact */}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Emergency Contact</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
               <input

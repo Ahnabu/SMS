@@ -182,12 +182,24 @@ const SubjectManagement: React.FC = () => {
   };
 
   const toggleTeacher = (teacherId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      teachers: prev.teachers.includes(teacherId)
-        ? prev.teachers.filter(id => id !== teacherId)
-        : [...prev.teachers, teacherId]
-    }));
+    console.log('Toggling teacher:', teacherId);
+    console.log('Current teachers:', formData.teachers);
+    
+    setFormData(prev => {
+      const currentTeachers = prev.teachers || []; // Ensure it's an array
+      const isCurrentlySelected = currentTeachers.includes(teacherId);
+      
+      const newTeachers = isCurrentlySelected
+        ? currentTeachers.filter(id => id !== teacherId)
+        : [...currentTeachers, teacherId];
+      
+      console.log('New teachers:', newTeachers);
+      
+      return {
+        ...prev,
+        teachers: newTeachers
+      };
+    });
   };
 
   const getSubjectStats = () => {
@@ -384,24 +396,27 @@ const SubjectManagement: React.FC = () => {
                     {teachers.length === 0 ? (
                       <p className="text-sm text-gray-500">No teachers available</p>
                     ) : (
-                      teachers.map((teacher) => (
-                        <label key={teacher._id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={formData.teachers.includes(teacher._id)}
-                            onChange={() => toggleTeacher(teacher._id)}
-                            className="mr-3"
-                          />
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">
-                              {teacher.user.firstName} {teacher.user.lastName}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-2">
-                              ({teacher.designation})
-                            </span>
-                          </div>
-                        </label>
-                      ))
+                      teachers.map((teacher, index) => {
+                        console.log(`Teacher ${index}:`, teacher._id, teacher.user.firstName, teacher.user.lastName);
+                        return (
+                          <label key={teacher._id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.teachers && formData.teachers.includes(teacher._id)}
+                              onChange={() => toggleTeacher(teacher._id)}
+                              className="mr-3"
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm font-medium">
+                                {teacher.user.firstName} {teacher.user.lastName}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({teacher.designation})
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })
                     )}
                   </div>
                 </div>
