@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
 import TeacherScheduleView from '../components/teacher/TeacherScheduleView';
+import MyClassesView from '../components/teacher/MyClassesView';
 
 const TeacherDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -87,7 +88,7 @@ const TeacherDashboard: React.FC = () => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<TeacherHome dashboardData={dashboardData} />} />
-          <Route path="/classes" element={<ClassManagement />} />
+          <Route path="/classes" element={<MyClassesView />} />
           <Route path="/attendance" element={<AttendanceManagement />} />
           <Route path="/homework" element={<HomeworkManagement />} />
           <Route path="/grades" element={<GradeManagement />} />
@@ -185,15 +186,6 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
 };
 
 // Placeholder components
-const ClassManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Class Management</h2>
-      <p className="text-gray-500">Class management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
 const AttendanceManagement: React.FC = () => (
   <div className="px-4 py-6 sm:px-0">
     <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">

@@ -70,6 +70,28 @@ router.get(
   TeacherController.getTeachersBySubject
 );
 
+// Teacher Dashboard Routes (for logged-in teachers) - MUST come before /:id routes
+router.get(
+  "/dashboard",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getDashboard
+);
+
+router.get(
+  "/my-schedule",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMySchedule
+);
+
+router.get(
+  "/my-classes",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyClasses
+);
+
 router.get(
   "/:id",
   authenticate,
@@ -141,28 +163,6 @@ router.post(
   authenticate,
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
   TeacherController.resetTeacherPassword
-);
-
-// Teacher Dashboard Routes (for logged-in teachers)
-router.get(
-  "/dashboard",
-  authenticate,
-  authorize(UserRole.TEACHER),
-  TeacherController.getDashboard
-);
-
-router.get(
-  "/my-schedule",
-  authenticate,
-  authorize(UserRole.TEACHER),
-  TeacherController.getMySchedule
-);
-
-router.get(
-  "/my-classes",
-  authenticate,
-  authorize(UserRole.TEACHER),
-  TeacherController.getMyClasses
 );
 
 // Attendance Management Routes
