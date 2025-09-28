@@ -218,6 +218,21 @@ const getAvailablePhotoSlots = catchAsync(
   }
 );
 
+const getStudentCredentials = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    
+    const result = await studentService.getStudentCredentials(id);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Student credentials retrieved successfully",
+      data: result,
+    });
+  }
+);
+
 export const StudentController = {
   createStudent,
   getAllStudents,
@@ -230,4 +245,5 @@ export const StudentController = {
   deleteStudentPhoto,
   getStudentPhotos,
   getAvailablePhotoSlots,
+  getStudentCredentials,
 };

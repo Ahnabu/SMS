@@ -6,13 +6,16 @@ export interface INotification {
   recipientType: 'parent' | 'student' | 'teacher' | 'admin';
   senderId: Types.ObjectId; // User ID of sender
   senderType: 'teacher' | 'admin' | 'system';
-  type: 'attendance_alert' | 'homework_assigned' | 'grade_published' | 'announcement' | 'warning';
+  type: 'attendance_alert' | 'homework_assigned' | 'grade_published' | 'announcement' | 'warning' | 'disciplinary_warning' | 'red_warrant' | 'punishment_issued';
   title: string;
   message: string;
   data?: any; // Additional data related to the notification
   priority: 'low' | 'medium' | 'high' | 'urgent';
   isRead: boolean;
   readAt?: Date;
+  relatedEntityId?: Types.ObjectId;
+  relatedEntityType?: string;
+  metadata?: any;
   createdAt?: Date;
   updatedAt?: Date;
 }

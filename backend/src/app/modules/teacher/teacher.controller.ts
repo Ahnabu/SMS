@@ -448,6 +448,137 @@ const submitGrades = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const issuePunishment = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const punishmentData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.issuePunishment(teacherUser.id, punishmentData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Punishment issued successfully",
+    data: result,
+  });
+});
+
+const issueRedWarrant = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const warrantData = req.body;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.issuePunishment(teacherUser.id, {
+    ...warrantData,
+    actionType: 'red_warrant',
+    severity: 'critical',
+    urgentNotification: true,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Red warrant issued successfully",
+    data: result,
+  });
+});
+
+const getMyDisciplinaryActions = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const filters = req.query;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.getMyDisciplinaryActions(teacherUser.id, filters);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Disciplinary actions retrieved successfully",
+    data: result,
+  });
+});
+
+const getStudentsByGrade = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { grade } = req.params;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.getStudentsByGrade(teacherUser.id, parseInt(grade));
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students retrieved successfully",
+    data: result,
+  });
+});
+
+const getStudentsByGradeAndSection = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { grade, section } = req.params;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.getStudentsByGrade(teacherUser.id, parseInt(grade), section.toUpperCase());
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students retrieved successfully",
+    data: result,
+  });
+});
+
+const getExamGradingDetails = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { examId } = req.params;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.getExamGradingDetails(teacherUser.id, examId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Exam grading details retrieved successfully",
+    data: result,
+  });
+});
+
+const getExamGradingDetailsWithItem = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { examId, examItemId } = req.params;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const result = await teacherService.getExamGradingDetails(teacherUser.id, examId, examItemId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Exam grading details retrieved successfully",
+    data: result,
+  });
+});
+
 export const TeacherController = {
   createTeacher,
   getAllTeachers,
@@ -474,4 +605,14 @@ export const TeacherController = {
   issueWarning,
   getMyGradingTasks,
   submitGrades,
+  // Disciplinary Methods
+  issuePunishment,
+  issueRedWarrant,
+  getMyDisciplinaryActions,
+  // Student Management Methods
+  getStudentsByGrade,
+  getStudentsByGradeAndSection,
+  // Enhanced Grading Methods
+  getExamGradingDetails,
+  getExamGradingDetailsWithItem,
 };

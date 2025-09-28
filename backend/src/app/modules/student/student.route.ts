@@ -162,6 +162,14 @@ router.get(
   StudentController.getAvailablePhotoSlots
 );
 
+router.get(
+  "/:id/credentials",
+  authenticate,
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  validateRequest(getStudentValidationSchema),
+  StudentController.getStudentCredentials
+);
+
 router.delete(
   "/:studentId/photos/:photoId",
   authenticate,

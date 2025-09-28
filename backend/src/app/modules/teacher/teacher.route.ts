@@ -211,12 +211,62 @@ router.post(
   TeacherController.issueWarning
 );
 
+router.post(
+  "/discipline/punishment",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.issuePunishment
+);
+
+router.post(
+  "/discipline/red-warrant",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.issueRedWarrant
+);
+
+router.get(
+  "/discipline/my-actions",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyDisciplinaryActions
+);
+
+// Student Management Routes
+router.get(
+  "/students/grade/:grade",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getStudentsByGrade
+);
+
+router.get(
+  "/students/grade/:grade/section/:section",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getStudentsByGradeAndSection
+);
+
 // Grading Routes
 router.get(
   "/grading/exams",
   authenticate,
   authorize(UserRole.TEACHER),
   TeacherController.getMyGradingTasks
+);
+
+router.get(
+  "/grading/exam/:examId",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getExamGradingDetails
+);
+
+router.get(
+  "/grading/exam/:examId/item/:examItemId",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getExamGradingDetailsWithItem
 );
 
 router.post(

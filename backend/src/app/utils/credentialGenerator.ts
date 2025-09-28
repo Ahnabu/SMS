@@ -123,7 +123,10 @@ export class CredentialGenerator {
           ]
         }),
         User.findOne({
-          username: { $in: [`student_${candidateStudentId}`, `parent_${candidateStudentId}`] },
+          username: { $in: [
+            this.generateStudentUsername(candidateStudentId), 
+            this.generateParentUsername(candidateStudentId)
+          ] },
           $or: [
             { isDeleted: { $exists: false } },
             { isDeleted: false }
@@ -223,17 +226,39 @@ export class CredentialGenerator {
   }
 
   /**
-   * Generate username from student ID
+   * Generate username from student ID - optimized for 30 char limit
+   * Format: stuSCH001STU202507001 (removes hyphens and shortens prefix)
    */
   static generateStudentUsername(studentId: string): string {
-    return `student_${studentId}`;
+    // Remove hyphens and create compact username: stuSCH001STU202507001
+    const compactId = studentId.replace(/-/g, '');
+    let username = `stu${compactId}`.toLowerCase();
+    
+    // Ensure username doesn't exceed 30 characters
+    if (username.length > 30) {
+      // If still too long, truncate from the end
+      username = username.substring(0, 30);
+    }
+    
+    return username;
   }
 
   /**
-   * Generate parent username from student ID
+   * Generate parent username from student ID - optimized for 30 char limit  
+   * Format: parSCH001STU202507001 (removes hyphens and shortens prefix)
    */
   static generateParentUsername(studentId: string): string {
-    return `parent_${studentId}`;
+    // Remove hyphens and create compact username: parSCH001STU202507001
+    const compactId = studentId.replace(/-/g, '');
+    let username = `par${compactId}`.toLowerCase();
+    
+    // Ensure username doesn't exceed 30 characters
+    if (username.length > 30) {
+      // If still too long, truncate from the end
+      username = username.substring(0, 30);
+    }
+    
+    return username;
   }
 
   /**

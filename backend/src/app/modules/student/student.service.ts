@@ -514,7 +514,9 @@ class StudentService {
       if (session.inTransaction()) {
         await session.abortTransaction();
       }
+
       if (error instanceof AppError) {
+       
         throw error;
       }
       throw new AppError(
@@ -1128,6 +1130,90 @@ class StudentService {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
         `Failed to fetch student photos: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getStudentCredentials(studentId: string): Promise<{
+    student: {
+      id: string;
+      username: string;
+      password: string;
+      email?: string;
+      phone?: string;
+    };
+    parent: {
+      id: string;
+      username: string;
+      password: string;
+      email?: string;
+      phone?: string;
+    };
+  } | null> {
+    try {
+      if (!Types.ObjectId.isValid(studentId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid student ID format");
+      }
+
+      // Get student with populated data
+      const student = await Student.findById(studentId)
+        .populate("userId", "firstName lastName username email phone")
+        .populate({
+          path: "parentId",
+          populate: {
+            path: "userId",
+            select: "firstName lastName username email phone",
+          },
+        })
+        .lean();
+
+      if (!student) {
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+      }
+
+      // Get stored credentials for student and parent
+      const [studentCredentials, parentCredentials] = await Promise.all([
+        UserCredentials.findOne({
+          userId: student.userId,
+          role: "student",
+        }).lean(),
+        student.parentId
+          ? UserCredentials.findOne({
+              userId: (student.parentId as any).userId,
+              role: "parent",
+            }).lean()
+          : null,
+      ]);
+
+      if (!studentCredentials) {
+        return null; // No credentials found
+      }
+
+      const result = {
+        student: {
+          id: student.studentId,
+          username: studentCredentials.initialUsername,
+          password: studentCredentials.initialPassword,
+          email: (student.userId as any).email,
+          phone: (student.userId as any).phone,
+        },
+        parent: {
+          id: student.parentId ? ((student.parentId as any).parentId || 'N/A') : 'N/A',
+          username: parentCredentials?.initialUsername || 'N/A',
+          password: parentCredentials?.initialPassword || 'N/A',
+          email: student.parentId ? ((student.parentId as any).userId?.email) : undefined,
+          phone: student.parentId ? ((student.parentId as any).userId?.phone) : undefined,
+        },
+      };
+
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to retrieve student credentials: ${(error as Error).message}`
       );
     }
   }

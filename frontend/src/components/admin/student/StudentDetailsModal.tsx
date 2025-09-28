@@ -1,6 +1,8 @@
-import React from "react";
-import { X } from "lucide-react";
+import React, { useState } from "react";
+import { X, Key } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CredentialsModal } from "../CredentialsModal";
+import { studentApi } from "@/services/student.api";
 
 interface Student {
   id: string;
@@ -68,7 +70,29 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [credentials, setCredentials] = useState<any>(null);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
+
   if (!isOpen || !student) return null;
+
+  const handleShowCredentials = async () => {
+    try {
+      setLoadingCredentials(true);
+      const response = await studentApi.getCredentials(student.id);
+      
+      if (response.data.success) {
+        setCredentials(response.data.data);
+        setShowCredentials(true);
+      }
+    } catch (error) {
+      console.error("Error fetching credentials:", error);
+      // You could add a toast notification here
+      alert("Failed to fetch credentials. Please try again.");
+    } finally {
+      setLoadingCredentials(false);
+    }
+  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -379,12 +403,32 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-6 border-t border-gray-200 space-x-3">
+        <div className="flex justify-between p-6 border-t border-gray-200">
+          <Button
+            variant="outline"
+            onClick={handleShowCredentials}
+            disabled={loadingCredentials}
+            className="flex items-center space-x-2"
+          >
+            <Key className="h-4 w-4" />
+            <span>
+              {loadingCredentials ? "Loading..." : "Show Credentials"}
+            </span>
+          </Button>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
         </div>
       </div>
+
+      {/* Credentials Modal */}
+      <CredentialsModal
+        isOpen={showCredentials}
+        onClose={() => setShowCredentials(false)}
+        credentials={credentials}
+        studentName={student.user?.fullName || "Unknown Student"}
+        parentName={student.parent?.fullName || "Unknown Parent"}
+      />
     </div>
   );
 };

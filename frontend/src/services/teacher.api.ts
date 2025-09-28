@@ -314,4 +314,27 @@ export const teacherApi = {
       grade: string;
     }>;
   }) => api.post<ApiResponse>("/teachers/grading/submit-legacy", gradesData),
+
+  // Grading Tasks from Academic Calendar
+  getMyGradingTasks: () => api.get<ApiResponse>("/teachers/grading/tasks"),
+  
+  // Enhanced grade submission with notifications
+  submitGrades: (data: {
+    examId: string;
+    grades: Array<{
+      studentId: string;
+      obtainedMarks: number;
+      percentage: number;
+      grade: string;
+      remarks?: string;
+    }>;
+    publishImmediately?: boolean;
+  }) => api.post<ApiResponse>("/teachers/grading/submit-enhanced", data),
+  
+  // Publish grades to students and parents
+  publishGrades: (examId: string) => api.post<ApiResponse>(`/teachers/grading/${examId}/publish`),
+  
+  // Generic HTTP methods for flexibility
+  get: (endpoint: string) => api.get<ApiResponse>(endpoint),
+  post: (endpoint: string, data?: any) => api.post<ApiResponse>(endpoint, data),
 };

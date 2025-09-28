@@ -31,6 +31,10 @@ interface Period {
   endTime: string;
   isActive: boolean;
   canMarkAttendance: boolean;
+  // Add required IDs for API calls
+  classId: string;
+  subjectId: string;
+  periodNumber: number;
 }
 
 interface CurrentPeriod extends Period {
@@ -75,9 +79,9 @@ const TeacherAttendanceManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await teacherApi.getStudentsForAttendance(
-        period.grade,
-        period.section,
-        period.subject
+        period.classId,
+        period.subjectId,
+        period.periodNumber
       );
 
       if (response.data.success) {
@@ -128,15 +132,17 @@ const TeacherAttendanceManagement: React.FC = () => {
     try {
       setSubmitting(true);
       const attendanceData = {
-        grade: selectedPeriod.grade,
+        classId: selectedPeriod.classId,
+        subjectId: selectedPeriod.subjectId,
+        grade: parseInt(selectedPeriod.grade),
         section: selectedPeriod.section,
-        subject: selectedPeriod.subject,
         date: new Date().toISOString().split('T')[0],
+        period: selectedPeriod.periodNumber,
         students: students
           .filter(s => s.isPresent !== null)
           .map(s => ({
             studentId: s.id,
-            isPresent: s.isPresent as boolean,
+            status: s.isPresent ? "present" as const : "absent" as const,
           })),
       };
 

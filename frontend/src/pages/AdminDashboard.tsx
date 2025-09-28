@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { adminApi } from "../services/admin.api";
+import MobileNavigation from "../components/layout/MobileNavigation";
 import StudentList, {
   StudentListRef,
 } from "../components/admin/student/StudentList";
@@ -19,6 +20,15 @@ const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const navItems = [
+    { href: '/admin', label: 'Dashboard' },
+    { href: '/admin/students', label: 'Students' },
+    { href: '/admin/teachers', label: 'Teachers' },
+    { href: '/admin/subjects', label: 'Subjects' },
+    { href: '/admin/schedules', label: 'Schedules' },
+    { href: '/admin/calendar', label: 'Calendar' },
+  ];
 
   useEffect(() => {
     loadDashboardData();
@@ -55,71 +65,15 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Admin Dashboard
-              </h1>
-              <p className="text-gray-600">Welcome back, {user?.username}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition duration-200"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <MobileNavigation
+        title="Admin Dashboard"
+        subtitle={`Welcome back, ${user?.username}`}
+        navItems={navItems}
+        onLogout={handleLogout}
+        primaryColor="blue"
+      />
 
-      {/* Navigation */}
-      <nav className="bg-blue-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <a
-              href="/admin"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Dashboard
-            </a>
-            <a
-              href="/admin/students"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Students
-            </a>
-            <a
-              href="/admin/teachers"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Teachers
-            </a>
-            <a
-              href="/admin/subjects"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Subjects
-            </a>
-            <a
-              href="/admin/schedules"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Schedules
-            </a>
-            <a
-              href="/admin/calendar"
-              className="text-white px-3 py-4 text-sm font-medium hover:bg-blue-700"
-            >
-              Calendar
-            </a>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <Routes>
           <Route
             path="/"
@@ -138,21 +92,20 @@ const AdminDashboard: React.FC = () => {
 
 // Admin Home Component
 const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
-  
   return (
-    <div className="px-4 sm:px-0">
-      <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
           School Overview
         </h2>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-sm p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="p-2 sm:p-3 bg-blue-200 rounded-lg mb-2 sm:mb-0 w-fit">
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -165,9 +118,9 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                   />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Total Students</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="sm:ml-3">
+                <p className="text-xs sm:text-sm text-gray-600">Students</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
                   {dashboardData?.totalStudents || 0}
                 </p>
               </div>
@@ -285,12 +238,18 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link to="/admin/students">
+            <Link 
+              to="/admin/students" 
+              state={{ openAddForm: true }}
+            >
               <button className="bg-blue-600 hover:bg-blue-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
                 Add Student
               </button>
             </Link>
-            <Link to="/admin/teachers">
+            <Link 
+              to="/admin/teachers" 
+              state={{ openAddForm: true }}
+            >
               <button className="bg-green-600 hover:bg-green-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
                 Add Teacher
               </button>
@@ -371,6 +330,15 @@ const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChan
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const studentListRef = useRef<StudentListRef>(null);
+  const location = useLocation();
+  
+  useEffect(() => {
+    if (location.state?.openAddForm) {
+      setShowForm(true);
+      // Clear the state to prevent reopening on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleCreateStudent = () => {
     setSelectedStudent(null);
@@ -454,6 +422,15 @@ const TeacherManagement: React.FC = () => {
   const [viewTeacher, setViewTeacher] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const teacherListRef = useRef<TeacherListRef>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.openAddForm) {
+      setShowForm(true);
+      // Clear the state to prevent reopening on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleCreateTeacher = () => {
     setSelectedTeacher(null);

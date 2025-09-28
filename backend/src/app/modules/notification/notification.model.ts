@@ -35,7 +35,7 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
   },
   type: {
     type: String,
-    enum: ['attendance_alert', 'homework_assigned', 'grade_published', 'announcement', 'warning'],
+    enum: ['attendance_alert', 'homework_assigned', 'grade_published', 'announcement', 'warning', 'disciplinary_warning', 'red_warrant', 'punishment_issued'],
     required: true,
     index: true,
   },
@@ -54,6 +54,7 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium',
+    index: true,
   },
   isRead: {
     type: Boolean,
@@ -62,6 +63,16 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
   },
   readAt: {
     type: Date,
+  },
+  relatedEntityId: {
+    type: Schema.Types.ObjectId,
+    index: true,
+  },
+  relatedEntityType: {
+    type: String,
+  },
+  metadata: {
+    type: Schema.Types.Mixed,
   },
 }, {
   timestamps: true,

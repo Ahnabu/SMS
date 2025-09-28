@@ -106,4 +106,7 @@ export const studentApi = {
     api.get<ApiResponse>(`/admin/students/${studentId}/photos`),
 
   getStats: () => api.get<ApiResponse>("/admin/students/stats"),
+
+  getCredentials: (id: string) => 
+    api.get<ApiResponse>(`/admin/students/${id}/credentials`),
 };
