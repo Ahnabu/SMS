@@ -73,13 +73,14 @@ const AdminDashboard: React.FC = () => {
         primaryColor="blue"
       />
 
-      <main className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
-        <Routes>
+      <main className="max-w-7xl text-lg xl:text-xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
+        <Routes >
           <Route
+          
             path="/"
             element={<AdminHome dashboardData={dashboardData} />}
           />
-                    <Route path="/students" element={<StudentManagement onDataChange={loadDashboardData} />} />
+          <Route path="/students" element={<StudentManagement onDataChange={loadDashboardData} />} />
           <Route path="/teachers" element={<TeacherManagement />} />
           <Route path="/subjects" element={<SubjectManagementPage />} />
           <Route path="/schedules" element={<ScheduleManagementPage />} />

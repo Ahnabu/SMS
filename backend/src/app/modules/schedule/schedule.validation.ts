@@ -101,6 +101,9 @@ const createScheduleValidationSchema = z.object({
 });
 
 const updateScheduleValidationSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, "Schedule ID is required"),
+  }),
   body: z.object({
     periods: z
       .array(createSchedulePeriodSchema)

@@ -283,11 +283,12 @@ const updateSchedule = async (
       if (subjectIds.length > 0) {
         const subjects = await Subject.find({
           _id: { $in: subjectIds },
+          schoolId: schedule.schoolId, // Filter by school
         }).session(session);
         if (subjects.length !== subjectIds.length) {
           throw new AppError(
             httpStatus.NOT_FOUND,
-            "One or more subjects not found"
+            "One or more subjects not found in this school"
           );
         }
       }
@@ -299,11 +300,12 @@ const updateSchedule = async (
       if (teacherIds.length > 0) {
         const teachers = await Teacher.find({
           _id: { $in: teacherIds },
+          schoolId: schedule.schoolId, // Filter by school
         }).session(session);
         if (teachers.length !== teacherIds.length) {
           throw new AppError(
             httpStatus.NOT_FOUND,
-            "One or more teachers not found"
+            "One or more teachers not found in this school"
           );
         }
       }

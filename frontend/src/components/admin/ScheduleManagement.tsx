@@ -15,7 +15,8 @@ import { adminApi } from "../../services/admin.api";
 import { useAuth } from "../../context/AuthContext";
 
 interface Schedule {
-  _id: string;
+  _id?: string;  // MongoDB default
+  id?: string;   // API response format
   dayOfWeek: string;
   grade: string;
   section: string;
@@ -56,7 +57,6 @@ interface SchedulePeriod {
   roomNumber?: string;
   isBreak: boolean;
   breakType?: "short" | "lunch" | "long";
-  breakDuration?: number;
 }
 
 interface Period {
@@ -79,7 +79,6 @@ interface Period {
   venue?: string;
   isBreak: boolean;
   breakType?: "short" | "lunch" | "long";
-  breakDuration?: number;
 }
 
 const ScheduleManagement: React.FC = () => {
@@ -98,6 +97,27 @@ const ScheduleManagement: React.FC = () => {
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+
+  // Calculate duration in minutes from start and end time
+  const calculateDuration = (startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 15; // Default duration
+    
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+      return 15; // Default duration for invalid times
+    }
+    
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    
+    const duration = endTotalMinutes - startTotalMinutes;
+    
+    // Ensure positive duration
+    return duration > 0 ? duration : 15;
+  };
+
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
@@ -164,23 +184,41 @@ const ScheduleManagement: React.FC = () => {
           ? formData.academicYear
           : `${formData.academicYear}-${parseInt(formData.academicYear) + 1}`,
         dayOfWeek: formData.dayOfWeek,
-        periods: formData.periods.map((period) => ({
-          periodNumber: period.periodNumber,
-          subjectId: period.subject?._id,
-          teacherId: period.teacher?.id,
-          roomNumber: period.venue,
-          startTime: period.startTime,
-          endTime: period.endTime,
-          isBreak: period.isBreak,
-          breakType: period.isBreak ? period.breakType || "short" : undefined,
-          breakDuration: period.isBreak
-            ? period.breakDuration || 15
-            : undefined,
-        })),
+        periods: formData.periods.map((period) => {
+          const duration = calculateDuration(period.startTime, period.endTime);
+          
+          const periodData = period.isBreak ? {
+            // For break periods, only send break-specific fields
+            periodNumber: period.periodNumber,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            isBreak: true,
+            breakType: period.breakType || "short",
+            breakDuration: duration, // Calculate from time difference
+          } : {
+            // For class periods, send subject and teacher fields
+            periodNumber: period.periodNumber,
+            subjectId: period.subject?._id,
+            teacherId: period.teacher?.id,
+            roomNumber: period.venue,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            isBreak: false,
+          };
+          
+          console.log('🔍 Period data being sent:', periodData);
+          return periodData;
+        }),
       };
 
+      console.log('🚀 Full request data being sent:', JSON.stringify(transformedFormData, null, 2));
+
       if (editingSchedule) {
-        await adminApi.updateSchedule(editingSchedule._id, transformedFormData);
+        const scheduleId = editingSchedule._id || editingSchedule.id;
+        if (!scheduleId) {
+          throw new Error('Schedule ID is missing. Cannot update schedule.');
+        }
+        await adminApi.updateSchedule(scheduleId, transformedFormData);
         toast.success("Schedule updated successfully");
       } else {
         await adminApi.createSchedule(transformedFormData);
@@ -191,9 +229,18 @@ const ScheduleManagement: React.FC = () => {
       setEditingSchedule(null);
       resetForm();
       fetchSchedules();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Schedule creation error:", error);
-      toast.error("Error saving schedule");
+      
+      // Check if it's a validation error from our frontend checks
+      if (error.message && error.message.includes('Period')) {
+        toast.error(error.message);
+      } else if (error.response?.data?.message) {
+        // Backend validation error
+        toast.error(`Validation Error: ${error.response.data.message}`);
+      } else {
+        toast.error("Error saving schedule");
+      }
     } finally {
       setLoading(false);
     }
@@ -239,9 +286,14 @@ const ScheduleManagement: React.FC = () => {
   };
 
   const updatePeriod = (index: number, updatedPeriod: Partial<Period>) => {
+    console.log(`🔍 Updating period ${index} with:`, updatedPeriod);
+    console.log(`🔍 Current period before update:`, formData.periods[index]);
+    
     const updatedPeriods = formData.periods.map((period, i) =>
       i === index ? { ...period, ...updatedPeriod } : period
     );
+    
+    console.log(`🔍 Updated period after merge:`, updatedPeriods[index]);
     setFormData({ ...formData, periods: updatedPeriods });
   };
 
@@ -253,38 +305,72 @@ const ScheduleManagement: React.FC = () => {
   };
 
   const openEditForm = (schedule: Schedule) => {
+    console.log('🔍 Schedule data for editing:', schedule);
+    console.log('🔍 Schedule periods:', schedule.periods);
+    
     setEditingSchedule(schedule);
     setFormData({
-      dayOfWeek: schedule.dayOfWeek, // Backend should return lowercase, frontend expects lowercase
+      dayOfWeek: schedule.dayOfWeek,
       grade: schedule.grade,
       section: schedule.section,
       academicYear: schedule.academicYear,
-      periods: schedule.periods.map((period) => ({
-        ...period,
-        subject: period.subject || (period as any).subjectId || undefined,
-        teacher: period.teacher
-          ? {
-              id: period.teacher._id,
-              user: {
-                firstName: period.teacher.firstName,
-                lastName: period.teacher.lastName,
-                fullName: `${period.teacher.firstName} ${period.teacher.lastName}`,
-              },
-            }
-          : (period as any).teacherId
-          ? {
-              id: (period as any).teacherId._id,
-              user: {
-                firstName: (period as any).teacherId.userId?.firstName || "",
-                lastName: (period as any).teacherId.userId?.lastName || "",
-                fullName: `${(period as any).teacherId.userId?.firstName || ""} ${(period as any).teacherId.userId?.lastName || ""}`,
-              },
-            }
-          : undefined,
-        venue: period.venue || period.roomNumber || "",
-        breakType: period.breakType,
-        breakDuration: period.isBreak ? period.breakDuration || 15 : undefined,
-      })),
+      periods: schedule.periods.map((period, index) => {
+        console.log(`🔍 Period ${index + 1} raw data:`, period);
+        
+        // Handle subject mapping
+        let mappedSubject;
+        if (period.subject) {
+          mappedSubject = {
+            _id: period.subject._id || (period.subject as any).id,
+            name: period.subject.name,
+            code: period.subject.code,
+          };
+        } else if ((period as any).subjectId) {
+          mappedSubject = {
+            _id: (period as any).subjectId._id || (period as any).subjectId,
+            name: (period as any).subjectId.name || 'Unknown Subject',
+            code: (period as any).subjectId.code || 'UNK',
+          };
+        }
+
+        // Handle teacher mapping - try multiple possible structures
+        let mappedTeacher;
+        if (period.teacher) {
+          // Direct teacher object
+          mappedTeacher = {
+            id: period.teacher._id || (period.teacher as any).id,
+            user: {
+              firstName: period.teacher.firstName || (period.teacher as any).user?.firstName,
+              lastName: period.teacher.lastName || (period.teacher as any).user?.lastName,
+              fullName: (period.teacher as any).fullName || 
+                       `${period.teacher.firstName || (period.teacher as any).user?.firstName || ''} ${period.teacher.lastName || (period.teacher as any).user?.lastName || ''}`.trim(),
+            },
+          };
+        } else if ((period as any).teacherId) {
+          // Teacher ID reference
+          const teacherData = (period as any).teacherId;
+          mappedTeacher = {
+            id: teacherData._id || teacherData.id || teacherData,
+            user: {
+              firstName: teacherData.firstName || teacherData.user?.firstName || teacherData.userId?.firstName || '',
+              lastName: teacherData.lastName || teacherData.user?.lastName || teacherData.userId?.lastName || '',
+              fullName: teacherData.fullName || 
+                       `${teacherData.firstName || teacherData.user?.firstName || teacherData.userId?.firstName || ''} ${teacherData.lastName || teacherData.user?.lastName || teacherData.userId?.lastName || ''}`.trim(),
+            },
+          };
+        }
+
+        const mappedPeriod = {
+          ...period,
+          subject: mappedSubject,
+          teacher: mappedTeacher,
+          venue: period.venue || period.roomNumber || "",
+          breakType: period.breakType,
+        };
+
+        console.log(`🔍 Period ${index + 1} mapped data:`, mappedPeriod);
+        return mappedPeriod;
+      }),
     });
     setIsFormOpen(true);
   };
@@ -547,87 +633,102 @@ const ScheduleManagement: React.FC = () => {
                               required
                             />
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
-                              Subject
-                            </label>
-                            <div className="flex gap-2">
-                              <Select
-                                value={period.subject?._id || ""}
-                                onValueChange={(value) => {
-                                  const subject = subjects.find(
-                                    (s: any) => s._id === value
-                                  );
-                                  updatePeriod(index, { subject });
-                                }}
-                              >
-                                <SelectTrigger className="flex-1 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
-                                  <SelectValue placeholder="Select Subject" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {subjects && Array.isArray(subjects) && subjects.length > 0 ? (
-                                    subjects.map((subject: any) => (
-                                      <SelectItem
-                                        key={subject._id}
-                                        value={subject._id}
-                                      >
-                                        {subject.name} ({subject.code})
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    <SelectItem value="no-subjects" disabled>
-                                      No subjects available - Please add subjects first
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={fetchSubjects}
-                                title="Refresh subjects"
-                                className="border-2 border-gray-200 hover:border-blue-300"
-                              >
-                                🔄
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
-                              Venue
-                            </label>
-                            <Input
-                              value={period.venue || ""}
-                              onChange={(e) =>
-                                updatePeriod(index, { venue: e.target.value })
-                              }
-                              placeholder="Room/Hall"
-                              className="border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
-                            />
-                          </div>
+                          
+                          {/* Only show subject and venue for non-break periods */}
+                          {!period.isBreak && (
+                            <>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                  Subject
+                                </label>
+                                <div className="flex gap-2">
+                                  <Select
+                                    value={period.subject?._id || ""}
+                                    onValueChange={(value) => {
+                                      console.log('🔍 Subject selection - value:', value);
+                                      console.log('🔍 Available subjects:', subjects);
+                                      const subject = subjects.find(
+                                        (s: any) => s._id === value
+                                      );
+                                      console.log('🔍 Selected subject:', subject);
+                                      updatePeriod(index, { subject });
+                                    }}
+                                  >
+                                    <SelectTrigger className="flex-1 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
+                                      <SelectValue placeholder="Select Subject" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {subjects && Array.isArray(subjects) && subjects.length > 0 ? (
+                                        subjects.map((subject: any) => (
+                                          <SelectItem
+                                            key={subject._id}
+                                            value={subject._id}
+                                          >
+                                            {subject.name} ({subject.code})
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="no-subjects" disabled>
+                                          No subjects available - Please add subjects first
+                                        </SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={fetchSubjects}
+                                    title="Refresh subjects"
+                                    className="border-2 border-gray-200 hover:border-blue-300"
+                                  >
+                                    🔄
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                  Venue
+                                </label>
+                                <Input
+                                  value={period.venue || ""}
+                                  onChange={(e) =>
+                                    updatePeriod(index, { venue: e.target.value })
+                                  }
+                                  placeholder="Room/Hall"
+                                  className="border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
 
                         {/* Second Row */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
-                              Teacher
-                            </label>
-                            <Select
-                              value={period.teacher?.id || ""}
-                              onValueChange={(value) => {
-                                const teacher = teachers.find(
-                                  (t: any) => t.id === value
-                                );
-                                updatePeriod(index, { teacher });
-                              }}
-                            >
-                              <SelectTrigger className="border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
-                                <SelectValue placeholder="Select Teacher" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {teachers.map((teacher: any) => (
+                          {/* Only show teacher for non-break periods */}
+                          {!period.isBreak && (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">
+                                Teacher
+                              </label>
+                              <Select
+                                value={period.teacher?.id || ""}
+                                onValueChange={(value) => {
+                                  console.log('🔍 Teacher selection - value:', value);
+                                  console.log('🔍 Available teachers:', teachers);
+                                  console.log('🔍 Current period teacher:', period.teacher);
+                                  const teacher = teachers.find(
+                                    (t: any) => t.id === value
+                                  );
+                                  console.log('🔍 Selected teacher:', teacher);
+                                  updatePeriod(index, { teacher });
+                                }}
+                              >
+                                <SelectTrigger className="border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
+                                  <SelectValue placeholder="Select Teacher" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teachers.map((teacher: any) => (
                                   <SelectItem
                                     key={teacher.id}
                                     value={teacher.id}
@@ -639,6 +740,7 @@ const ScheduleManagement: React.FC = () => {
                               </SelectContent>
                             </Select>
                           </div>
+                          )}
                           
                           {/* Break-specific fields */}
                           {period.isBreak && (
@@ -668,25 +770,6 @@ const ScheduleManagement: React.FC = () => {
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">
-                                  Duration (minutes)*
-                                </label>
-                                <Input
-                                  type="number"
-                                  min="5"
-                                  max="60"
-                                  value={period.breakDuration || 15}
-                                  onChange={(e) =>
-                                    updatePeriod(index, {
-                                      breakDuration:
-                                        parseInt(e.target.value) || 15,
-                                    })
-                                  }
-                                  placeholder="15"
-                                  className="border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
-                                />
                               </div>
                             </>
                           )}
@@ -901,7 +984,10 @@ const ScheduleManagement: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(schedule._id)}
+                          onClick={() => {
+                            const scheduleId = schedule._id || schedule.id;
+                            if (scheduleId) handleDelete(scheduleId);
+                          }}
                           className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300 shadow-sm"
                         >
                           <Trash2 className="w-4 h-4" />

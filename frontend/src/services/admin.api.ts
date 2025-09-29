@@ -86,7 +86,7 @@ export const adminApi = {
         breakDuration?: number;
       }>;
     }
-  ) => api.put<ApiResponse>(`/schedules/${id}`, data),
+  ) => api.patch<ApiResponse>(`/schedules/${id}`, data),
 
   deleteSchedule: (id: string) => api.delete<ApiResponse>(`/schedules/${id}`),
 
