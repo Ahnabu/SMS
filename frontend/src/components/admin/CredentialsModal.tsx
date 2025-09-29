@@ -98,7 +98,7 @@ Generated on: ${new Date().toLocaleString()}
   };
 
   if (!credentials) return null;
-
+console.log(credentials);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -107,21 +107,21 @@ Generated on: ${new Date().toLocaleString()}
             <User className="h-5 w-5" />
             Account Credentials Generated
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-600">
             Student and parent accounts have been created successfully. Please
             save these credentials securely.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Student Credentials */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-blue-600">
+          <Card className="p-0">
+            <CardHeader className="p-0 pt-0">
+              <CardTitle className="text-sm ">
                 Student Account - {studentName}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Student ID</label>
