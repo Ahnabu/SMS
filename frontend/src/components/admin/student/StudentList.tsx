@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Eye, UserCheck, UserX } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DataTableFilter, FilterConfig } from "@/components/ui/DataTableFilter";
 import StudentDetailsModal from "./StudentDetailsModal";
 import ConfirmDialog from "../../ui/ConfirmDialog";
 import { showToast } from "@/utils/toast";
 import { apiService } from "@/services";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Student {
   id: string;
@@ -199,7 +206,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
         }
       } catch (error) {
         console.error("Failed to load students:", error);
-        
+
         // Set demo data for testing when API is not available
         const demoStudents = [
           {
@@ -220,7 +227,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               lastName: "Brown",
               fullName: "Alice Brown",
               email: "alice.brown@student.com",
-              phone: "+1234567800"
+              phone: "+1234567800",
             },
             parent: {
               id: "parent-1",
@@ -228,16 +235,16 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               email: "robert.brown@parent.com",
               phone: "+1234567801",
               relationship: "Father",
-              occupation: "Engineer"
+              occupation: "Engineer",
             },
             address: {
               street: "123 Main Street",
               city: "Springfield",
               state: "IL",
               country: "USA",
-              postalCode: "62701"
+              postalCode: "62701",
             },
-            createdAt: "2022-04-01T10:00:00Z"
+            createdAt: "2022-04-01T10:00:00Z",
           },
           {
             id: "demo-std-2",
@@ -257,7 +264,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               lastName: "Wilson",
               fullName: "David Wilson",
               email: "david.wilson@student.com",
-              phone: "+1234567802"
+              phone: "+1234567802",
             },
             parent: {
               id: "parent-2",
@@ -265,9 +272,9 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               email: "sarah.wilson@parent.com",
               phone: "+1234567803",
               relationship: "Mother",
-              occupation: "Doctor"
+              occupation: "Doctor",
             },
-            createdAt: "2021-04-01T10:00:00Z"
+            createdAt: "2021-04-01T10:00:00Z",
           },
           {
             id: "demo-std-3",
@@ -287,7 +294,7 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               lastName: "Davis",
               fullName: "Emma Davis",
               email: "emma.davis@student.com",
-              phone: "+1234567804"
+              phone: "+1234567804",
             },
             parent: {
               id: "parent-3",
@@ -295,10 +302,10 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
               email: "michael.davis@parent.com",
               phone: "+1234567805",
               relationship: "Father",
-              occupation: "Teacher"
+              occupation: "Teacher",
             },
-            createdAt: "2023-04-01T10:00:00Z"
-          }
+            createdAt: "2023-04-01T10:00:00Z",
+          },
         ];
         setStudents(demoStudents);
         setTotalPages(1);
@@ -417,21 +424,13 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
     const getStatusBadge = (isActive: boolean) => {
       return (
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            isActive
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
           }`}
         >
-          {isActive ? (
-            <>
-              <UserCheck className="w-3 h-3 mr-1" />
-              Active
-            </>
-          ) : (
-            <>
-              <UserX className="w-3 h-3 mr-1" />
-              Inactive
-            </>
-          )}
+          {isActive ? "Active" : "Inactive"}
         </span>
       );
     };
@@ -466,14 +465,20 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-lg hover:scale-105 hover:border-indigo-300 transition-all duration-300 cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">Total Students</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">
+                    Total Students
+                  </p>
                   <p className="text-xl md:text-3xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">
                     {students.length}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-6 h-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  <svg
+                    className="w-6 h-6 text-indigo-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
@@ -482,9 +487,11 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-lg hover:scale-105 hover:border-green-300 transition-all duration-300 cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">Active Students</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">
+                    Active Students
+                  </p>
                   <p className="text-xl md:text-3xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300">
-                    {students.filter(s => s.isActive).length}
+                    {students.filter((s) => s.isActive).length}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 group-hover:rotate-6 transition-all duration-300">
@@ -496,14 +503,20 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-lg hover:scale-105 hover:border-purple-300 transition-all duration-300 cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">Grades</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">
+                    Grades
+                  </p>
                   <p className="text-xl md:text-3xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors duration-300">
-                    {[...new Set(students.map(s => s.grade))].length}
+                    {[...new Set(students.map((s) => s.grade))].length}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-200 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.84L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.84l-7-3z"/>
+                  <svg
+                    className="w-6 h-6 text-purple-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.84L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.84l-7-3z" />
                   </svg>
                 </div>
               </div>
@@ -512,14 +525,26 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-lg hover:scale-105 hover:border-orange-300 transition-all duration-300 cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">Classes</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 group-hover:text-gray-800">
+                    Classes
+                  </p>
                   <p className="text-xl md:text-3xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300">
-                    {[...new Set(students.map(s => `${s.grade}-${s.section}`))].length}
+                    {
+                      [
+                        ...new Set(
+                          students.map((s) => `${s.grade}-${s.section}`)
+                        ),
+                      ].length
+                    }
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-orange-200 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                  <svg
+                    className="w-6 h-6 text-orange-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                   </svg>
                 </div>
               </div>
@@ -530,210 +555,171 @@ const StudentList = React.forwardRef<StudentListRef, StudentListProps>(
         {/* Students Table */}
         {loading ? (
           <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
             <p className="mt-2 text-gray-600">Loading students...</p>
           </div>
         ) : students.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <UserCheck className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No students found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                {searchTerm || classFilter !== "all" || statusFilter !== "all"
-                  ? "No students match your search criteria."
-                  : "Get started by adding your first student."}
-              </p>
-              {!searchTerm &&
-                classFilter === "all" &&
-                statusFilter === "all" && (
-                  <Button onClick={onCreateStudent}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First Student
-                  </Button>
-                )}
-            </CardContent>
-          </Card>
+          <div className="border border-gray-200 rounded-lg p-12 text-center">
+            <UserCheck className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No students found
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {searchTerm || classFilter !== "all" || statusFilter !== "all"
+                ? "No students match your search criteria."
+                : "Get started by adding your first student."}
+            </p>
+            {!searchTerm && classFilter === "all" && statusFilter === "all" && (
+              <Button onClick={onCreateStudent}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Student
+              </Button>
+            )}
+          </div>
         ) : (
-          <div className="grid gap-6">
-            {students.map((student) => (
-              <Card key={student.id}>
-                <CardContent className="p-6  pt-4 md:pt-6 xl:pt-8">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                          <span className="text-xl font-bold text-white">
-                            {student.user?.firstName?.[0] || "S"}
-                            {student.user?.lastName?.[0] || "T"}
-                          </span>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Student ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Roll No
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Parent
+                    </TableHead>
+                    <TableHead className="hidden xl:table-cell">
+                      Contact
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students.map((student) => (
+                    <TableRow key={student.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                          {student.photos && student.photos.length > 0 ? (
+                            <img
+                              src={student.photos[0].photoPath}
+                              alt="Student"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <UserCheck className="w-4 h-4 text-gray-400" />
+                          )}
                         </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-bold text-gray-900">
-                            {student.user?.fullName || `${student.user?.firstName || "Unknown"} ${student.user?.lastName || "Student"}`}
-                          </h3>
-                          {getStatusBadge(student.isActive)}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Student ID:</span>
-                              <span className="text-gray-600 font-mono">{student.studentId}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Class:</span>
-                              <span className="text-gray-600">
-                                Grade {student.grade}-{student.section}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Roll Number:</span>
-                              <span className="text-gray-600">{student.rollNumber}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Age:</span>
-                              <span className="text-gray-600">{student.age || 'N/A'} years</span>
-                            </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {student.studentId}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {student.user?.fullName ||
+                              `${student.user?.firstName || "Unknown"} ${
+                                student.user?.lastName || "Student"
+                              }`}
                           </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Email:</span>
-                              <span className="text-gray-600 truncate">{student.user?.email || "N/A"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Phone:</span>
-                              <span className="text-gray-600">{student.user?.phone || "N/A"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Blood Group:</span>
-                              <span className="text-gray-600">{student.bloodGroup || "N/A"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Admission Date:</span>
-                              <span className="text-gray-600">
-                                {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : "N/A"}
-                              </span>
-                            </div>
+                          <div className="text-sm text-gray-500">
+                            Age: {student.age || "N/A"}
                           </div>
                         </div>
-                        
-                        {/* Parent Information */}
-                        {student.parent && (
-                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-sm font-medium text-gray-700">Parent/Guardian:</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>
+                            Grade {student.grade}-{student.section}
+                          </div>
+                          <div className="text-gray-500">
+                            {student.bloodGroup || "N/A"}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {student.rollNumber}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(student.isActive)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="text-sm">
+                          <div className="font-medium">
+                            {student.parent?.fullName || "N/A"}
+                          </div>
+                          {student.parent?.relationship && (
+                            <div className="text-gray-500">
+                              {student.parent.relationship}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <span className="text-gray-600">
-                                  <strong>{student.parent.fullName}</strong> ({student.parent.relationship || 'Guardian'})
-                                </span>
-                              </div>
-                              <div className="text-gray-600">
-                                {student.parent.phone && (
-                                  <span>📞 {student.parent.phone}</span>
-                                )}
-                                {student.parent.email && (
-                                  <span className="ml-3">✉️ {student.parent.email}</span>
-                                )}
-                              </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        <div className="text-sm">
+                          {student.user?.phone && (
+                            <div>{student.user.phone}</div>
+                          )}
+                          {student.user?.email && (
+                            <div className="text-gray-500 truncate max-w-32">
+                              {student.user.email}
                             </div>
-                            {student.parent.occupation && (
-                              <div className="mt-1 text-sm text-gray-600">
-                                <span>Occupation: {student.parent.occupation}</span>
-                              </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewStudent(student)}
+                            className="h-8 w-8 p-0"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEditStudent(student)}
+                            className="h-8 w-8 p-0"
+                            title="Edit Student"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleStatusChange(student.id, !student.isActive)
+                            }
+                            className="h-8 w-8 p-0"
+                            title={student.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {student.isActive ? (
+                              <UserX className="w-4 h-4" />
+                            ) : (
+                              <UserCheck className="w-4 h-4" />
                             )}
-                          </div>
-                        )}
-                        
-                        {/* Address Information */}
-                        {student.address && (
-                          <div className="mt-3 text-sm">
-                            <span className="font-medium text-gray-700">Address: </span>
-                            <span className="text-gray-600">
-                              {[
-                                student.address.street,
-                                student.address.city,
-                                student.address.state,
-                                student.address.country
-                              ].filter(Boolean).join(', ')}
-                              {student.address.postalCode && ` - ${student.address.postalCode}`}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 sm:border-l border-gray-100 sm:pl-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewStudent(student)}
-                        className="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 hover:scale-105 transition-all duration-200 justify-center"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        <span className="sm:hidden">View</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEditStudent(student)}
-                        className="flex-1 sm:flex-none bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300 hover:scale-105 transition-all duration-200 justify-center"
-                        title="Edit Student"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        <span className="sm:hidden">Edit</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleStatusChange(student.id, !student.isActive)
-                        }
-                        className={`flex-1 sm:flex-none justify-center hover:scale-105 transition-all duration-200 ${
-                          student.isActive
-                            ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
-                            : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
-                        }`}
-                        title={
-                          student.isActive
-                            ? "Deactivate Student"
-                            : "Activate Student"
-                        }
-                      >
-                        {student.isActive ? (
-                          <>
-                            <UserX className="w-4 h-4 mr-2" />
-                            <span className="sm:hidden">Deactivate</span>
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="w-4 h-4 mr-2" />
-                            <span className="sm:hidden">Activate</span>
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteStudent(student.id)}
-                        className="flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300 hover:scale-105 transition-all duration-200 justify-center"
-                        title="Delete Student"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        <span className="sm:hidden">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteStudent(student.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete Student"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
 

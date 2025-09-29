@@ -18,9 +18,20 @@ const createStudent = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(httpStatus.UNAUTHORIZED, "Admin user not found");
   }
 
-  // Handle files from multer fields (FoundX pattern)
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  const photos = files?.photos || [];
+  // Handle files from different multer configurations
+  let photos: Express.Multer.File[] = [];
+
+  if (Array.isArray(req.files)) {
+    // Student route: upload.any() - files are in an array
+    photos =
+      (req.files as Express.Multer.File[]).filter(
+        (file) => file.fieldname === "photos"
+      ) || [];
+  } else {
+    // Admin route: multerUpload.fields() - files are in an object
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    photos = files?.photos || [];
+  }
 
   const result = await studentService.createStudent(
     studentData,
@@ -58,23 +69,26 @@ const createStudent = catchAsync(async (req: Request, res: Response) => {
 
 const getAllStudents = catchAsync(async (req: Request, res: Response) => {
   const filters = req.query as any;
-  
+
   // Get admin user from auth middleware
   const adminUser = (req as any).user;
   if (!adminUser?.schoolId) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Admin user or school ID not found");
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Admin user or school ID not found"
+    );
   }
-  
+
   // Use schoolId from authenticated user and set defaults
   const filtersWithSchoolId = {
     page: Number(filters.page) || 1,
     limit: Number(filters.limit) || 20,
-    sortBy: filters.sortBy || 'createdAt',
-    sortOrder: filters.sortOrder || 'desc',
+    sortBy: filters.sortBy || "createdAt",
+    sortOrder: filters.sortOrder || "desc",
     ...filters,
     schoolId: adminUser.schoolId, // This ensures students are filtered by the admin's school
   };
-  
+
   const result = await studentService.getStudents(filtersWithSchoolId);
 
   sendResponse(res, {
@@ -221,7 +235,7 @@ const getAvailablePhotoSlots = catchAsync(
 const getStudentCredentials = catchAsync(
   async (req: Request, res: Response) => {
     const { id } = req.params;
-    
+
     const result = await studentService.getStudentCredentials(id);
 
     sendResponse(res, {
