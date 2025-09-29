@@ -18,7 +18,9 @@ import { Student } from '../student/student.model';
 import { Teacher } from '../teacher/teacher.model';
 import { Subject } from '../subject/subject.model';
 import { School } from '../school/school.model';
-import { validatePhotoUpload, uploadToCloudinary } from '../../utils/cloudinaryUtils';
+import { 
+     //validatePhotoUpload,
+     uploadToCloudinary } from '../../utils/cloudinaryUtils';
 
 class HomeworkService {
   // Create homework
