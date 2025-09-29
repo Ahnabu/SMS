@@ -36,44 +36,6 @@ const upload = multer({
   },
 });
 
-// Student CRUD routes
-// router.post(
-//   "/",
-//   authenticate,
-//   authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
-//   (req, res, next) => {
-//     console.log("=== Before Multer ===");
-//     console.log("Content-Type:", req.headers["content-type"]);
-//     next();
-//   },
-//   upload.any(), // This should capture all fields and files
-//   (req, res, next) => {
-//     console.log("=== After Multer ===");
-//     console.log("req.body:", req.body);
-//     console.log("req.files:", req.files);
-//     console.log("Body keys:", Object.keys(req.body || {}));
-
-//     // Debug: Log all form fields received
-//     if (req.files && Array.isArray(req.files)) {
-//       req.files.forEach((file: any) => {
-//         if (file.fieldname !== "photos") {
-//           console.log(`Form field ${file.fieldname}:`, file.buffer?.toString());
-//         }
-//       });
-//     }
-
-//     next();
-//   },
-//   parseBody,
-//   (req, res, next) => {
-//     console.log("=== After ParseFormData ===");
-//     console.log("Final req.body:", req.body);
-//     next();
-//   },
-//   validateRequest(createStudentValidationSchema),
-//   StudentController.createStudent
-// );
-
 router.get(
   "/",
   authenticate,
@@ -96,6 +58,49 @@ router.get(
   authorize(UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.TEACHER),
   validateRequest(getStudentsByGradeAndSectionSchema),
   StudentController.getStudentsByGradeAndSection
+);
+
+// Student dashboard routes (accessible by students only)
+router.get(
+  "/dashboard",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentDashboard
+);
+
+router.get(
+  "/attendance",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentAttendance
+);
+
+router.get(
+  "/grades",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentGrades
+);
+
+router.get(
+  "/homework",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentHomework
+);
+
+router.get(
+  "/schedule",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentSchedule
+);
+
+router.get(
+  "/calendar",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentCalendar
 );
 
 router.get(

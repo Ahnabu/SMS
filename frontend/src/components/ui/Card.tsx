@@ -33,7 +33,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
     return (
       <div
         ref={ref}
-        className={cn('flex flex-col space-y-2 p-6 sm:p-8 lg:p-10 pt-8 sm:pt-10 lg:pt-12', className)}
+        className={cn('flex flex-col space-y-2 p-6 pt-8', className)}
         {...props}
       >
         {children}
@@ -54,7 +54,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, CardTitleProps>(
       <h3
         ref={ref}
         className={cn(
-          'text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight tracking-tight text-gray-900',
+          'text-xl lg:text-2xl font-bold leading-tight tracking-tight text-gray-900',
           className
         )}
         {...props}

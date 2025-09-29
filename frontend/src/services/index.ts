@@ -41,12 +41,12 @@ export const apiService = {
     assignAdmin: superadminApi.assignAdmin,
     getAdminCredentials: superadminApi.getAdminCredentials,
     resetAdminPassword: superadminApi.resetAdminPassword,
-    resetPassword: superadminApi.resetAdminPassword, 
+    resetPassword: superadminApi.resetAdminPassword,
     regenerateApiKey: superadminApi.regenerateApiKey,
     getSystemSettings: superadminApi.getSystemSettings,
     updateSystemSettings: superadminApi.updateSystemSettings,
-    getAllSchools: superadminApi.getSchools, 
-    assignSchoolAdmin: superadminApi.assignAdmin, 
+    getAllSchools: superadminApi.getSchools,
+    assignSchoolAdmin: superadminApi.assignAdmin,
   },
 
   // Admin routes
@@ -96,6 +96,7 @@ export const apiService = {
     getHomework: studentApi.getHomework,
     getSchedule: studentApi.getSchedule,
     getCalendar: studentApi.getCalendar,
+    getProfile: studentApi.getProfile,
   },
 
   // Parent routes
