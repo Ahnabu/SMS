@@ -6,22 +6,51 @@ import {
   IAttendanceMethods,
   IAttendanceModel,
   IMarkAttendanceData,
-  IAttendanceStats
+  IAttendanceStats,
+  IStudentAttendance
 } from './attendance.interface';
 
-// Attendance schema definition
+// Student attendance sub-schema
+const studentAttendanceSchema = new Schema<IStudentAttendance>({
+  studentId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Student',
+    required: [true, 'Student ID is required'],
+  },
+  status: {
+    type: String,
+    required: [true, 'Attendance status is required'],
+    enum: {
+      values: ['present', 'absent', 'late', 'excused'],
+      message: 'Status must be present, absent, late, or excused',
+    },
+  },
+  markedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  modifiedAt: {
+    type: Date,
+  },
+  modifiedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  modificationReason: {
+    type: String,
+    maxlength: [200, 'Modification reason cannot exceed 200 characters'],
+  },
+}, {
+  _id: false, // Don't create separate _id for sub-documents
+});
+
+// Main attendance schema definition
 const attendanceSchema = new Schema<IAttendanceDocument, IAttendanceModel, IAttendanceMethods>(
   {
     schoolId: {
       type: Schema.Types.ObjectId,
       ref: 'School',
       required: [true, 'School ID is required'],
-      index: true,
-    },
-    studentId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Student',
-      required: [true, 'Student ID is required'],
       index: true,
     },
     teacherId: {
@@ -64,15 +93,7 @@ const attendanceSchema = new Schema<IAttendanceDocument, IAttendanceModel, IAtte
       max: [config.max_periods_per_day || 8, 'Period cannot exceed maximum periods per day'],
       index: true,
     },
-    status: {
-      type: String,
-      required: [true, 'Attendance status is required'],
-      enum: {
-        values: ['present', 'absent', 'late', 'excused'],
-        message: 'Status must be present, absent, late, or excused',
-      },
-      index: true,
-    },
+    students: [studentAttendanceSchema],
     markedAt: {
       type: Date,
       required: [true, 'Marked at time is required'],
@@ -84,10 +105,6 @@ const attendanceSchema = new Schema<IAttendanceDocument, IAttendanceModel, IAtte
     modifiedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-    },
-    modificationReason: {
-      type: String,
-      maxlength: [200, 'Modification reason cannot exceed 200 characters'],
     },
     isLocked: {
       type: Boolean,
@@ -120,20 +137,58 @@ attendanceSchema.methods.lockAttendance = function (): void {
   this.isLocked = true;
 };
 
-attendanceSchema.methods.getStatusIcon = function (): string {
-  const icons = {
-    present: '✅',
-    absent: '❌',
-    late: '⏰',
-    excused: '📝'
+attendanceSchema.methods.getAttendanceStats = function () {
+  const totalStudents = this.students.length;
+  const presentCount = this.students.filter(s => s.status === 'present').length;
+  const absentCount = this.students.filter(s => s.status === 'absent').length;
+  const lateCount = this.students.filter(s => s.status === 'late').length;
+  const excusedCount = this.students.filter(s => s.status === 'excused').length;
+  
+  const attendancePercentage = totalStudents > 0 
+    ? Math.round(((presentCount + lateCount) / totalStudents) * 100)
+    : 0;
+
+  return {
+    totalStudents,
+    presentCount,
+    absentCount,
+    lateCount,
+    excusedCount,
+    attendancePercentage,
   };
-  return icons[this.status] || '❓';
 };
 
-attendanceSchema.methods.getTimeSinceMarked = function (): number {
-  const now = new Date();
-  const markedTime = this.modifiedAt || this.markedAt;
-  return Math.floor((now.getTime() - markedTime.getTime()) / (1000 * 60)); // Minutes
+attendanceSchema.methods.getStudentStatus = function (studentId: string) {
+  const student = this.students.find(s => s.studentId.toString() === studentId);
+  return student ? student.status : null;
+};
+
+attendanceSchema.methods.updateStudentStatus = function (
+  studentId: string, 
+  status: 'present' | 'absent' | 'late' | 'excused',
+  modifiedBy: string,
+  reason?: string
+): boolean {
+  if (!this.canBeModified()) {
+    return false;
+  }
+
+  const student = this.students.find(s => s.studentId.toString() === studentId);
+  if (!student) {
+    return false;
+  }
+
+  student.status = status;
+  student.modifiedAt = new Date();
+  student.modifiedBy = new Types.ObjectId(modifiedBy);
+  if (reason) {
+    student.modificationReason = reason;
+  }
+
+  this.modifiedAt = new Date();
+  this.modifiedBy = new Types.ObjectId(modifiedBy);
+
+  return true;
 };
 
 // Static methods
@@ -144,9 +199,7 @@ attendanceSchema.statics.markAttendance = async function (
   date: Date,
   period: number,
   attendanceData: IMarkAttendanceData[]
-): Promise<IAttendanceDocument[]> {
-  const results: IAttendanceDocument[] = [];
-  
+): Promise<IAttendanceDocument> {
   // Get the school ID from the teacher
   const Teacher = model('Teacher');
   const teacher = await Teacher.findById(teacherId).populate('schoolId');
@@ -154,45 +207,67 @@ attendanceSchema.statics.markAttendance = async function (
     throw new Error('Teacher not found');
   }
 
-  for (const data of attendanceData) {
-    const existingAttendance = await this.findOne({
-      studentId: data.studentId,
-      date,
-      period,
-      subjectId,
+  // Check if attendance already exists for this class/subject/date/period
+  let existingAttendance = await this.findOne({
+    classId,
+    subjectId,
+    date,
+    period,
+  });
+
+  if (existingAttendance) {
+    // Update existing attendance if it can be modified
+    if (!existingAttendance.canBeModified()) {
+      throw new Error('Attendance is locked and cannot be modified');
+    }
+
+    // Update student statuses
+    attendanceData.forEach(data => {
+      const studentIndex = existingAttendance.students.findIndex(
+        s => s.studentId.toString() === data.studentId
+      );
+      
+      if (studentIndex >= 0) {
+        // Update existing student
+        existingAttendance.students[studentIndex].status = data.status;
+        existingAttendance.students[studentIndex].modifiedAt = new Date();
+        existingAttendance.students[studentIndex].modifiedBy = new Types.ObjectId(teacherId);
+      } else {
+        // Add new student
+        existingAttendance.students.push({
+          studentId: new Types.ObjectId(data.studentId),
+          status: data.status,
+          markedAt: new Date(),
+        });
+      }
     });
 
-    if (existingAttendance) {
-      // Update existing attendance if it can be modified
-      if (existingAttendance.canBeModified()) {
-        existingAttendance.status = data.status;
-        existingAttendance.modifiedAt = new Date();
-        existingAttendance.modifiedBy = new Types.ObjectId(teacherId);
-        await existingAttendance.save();
-        results.push(existingAttendance);
-      } else {
-        throw new Error(`Attendance for student ${data.studentId} is locked and cannot be modified`);
-      }
-    } else {
-      // Create new attendance record
-      const newAttendance = new this({
-        schoolId: teacher.schoolId,
-        studentId: data.studentId,
-        teacherId,
-        subjectId,
-        classId,
-        date,
-        period,
-        status: data.status,
-        markedAt: new Date(),
-      });
+    existingAttendance.modifiedAt = new Date();
+    existingAttendance.modifiedBy = new Types.ObjectId(teacherId);
+    await existingAttendance.save();
+    return existingAttendance;
+  } else {
+    // Create new attendance record
+    const students = attendanceData.map(data => ({
+      studentId: new Types.ObjectId(data.studentId),
+      status: data.status,
+      markedAt: new Date(),
+    }));
 
-      await newAttendance.save();
-      results.push(newAttendance);
-    }
+    const newAttendance = new this({
+      schoolId: teacher.schoolId,
+      teacherId: new Types.ObjectId(teacherId),
+      subjectId: new Types.ObjectId(subjectId),
+      classId: new Types.ObjectId(classId),
+      date,
+      period,
+      students,
+      markedAt: new Date(),
+    });
+
+    await newAttendance.save();
+    return newAttendance;
   }
-
-  return results;
 };
 
 attendanceSchema.statics.getClassAttendance = function (
@@ -206,17 +281,17 @@ attendanceSchema.statics.getClassAttendance = function (
   }
 
   return this.find(query)
-    .populate('studentId', 'userId studentId rollNumber')
+    .populate('teacherId', 'userId teacherId')
+    .populate('subjectId', 'name code')
+    .populate('students.studentId', 'userId studentId rollNumber')
     .populate({
-      path: 'studentId',
+      path: 'students.studentId',
       populate: {
         path: 'userId',
         select: 'firstName lastName'
       }
     })
-    .populate('teacherId', 'userId teacherId')
-    .populate('subjectId', 'name code')
-    .sort({ period: 1, 'studentId.rollNumber': 1 });
+    .sort({ period: 1 });
 };
 
 attendanceSchema.statics.getStudentAttendance = function (
@@ -225,7 +300,7 @@ attendanceSchema.statics.getStudentAttendance = function (
   endDate: Date
 ): Promise<IAttendanceDocument[]> {
   return this.find({
-    studentId,
+    'students.studentId': studentId,
     date: { $gte: startDate, $lte: endDate },
   })
     .populate('teacherId', 'userId teacherId')
@@ -233,13 +308,13 @@ attendanceSchema.statics.getStudentAttendance = function (
     .sort({ date: -1, period: 1 });
 };
 
-attendanceSchema.statics.calculateAttendancePercentage = async function (
+attendanceSchema.statics.calculateStudentAttendancePercentage = async function (
   studentId: string,
   startDate: Date,
   endDate: Date
 ): Promise<number> {
   const attendanceRecords = await this.find({
-    studentId,
+    'students.studentId': studentId,
     date: { $gte: startDate, $lte: endDate },
   });
 
@@ -247,11 +322,20 @@ attendanceSchema.statics.calculateAttendancePercentage = async function (
     return 0;
   }
 
-  const presentCount = attendanceRecords.filter(
-    record => record.status === 'present' || record.status === 'late'
-  ).length;
+  let totalClasses = 0;
+  let presentClasses = 0;
 
-  return Math.round((presentCount / attendanceRecords.length) * 100);
+  attendanceRecords.forEach(record => {
+    const student = record.students.find(s => s.studentId.toString() === studentId);
+    if (student) {
+      totalClasses++;
+      if (student.status === 'present' || student.status === 'late') {
+        presentClasses++;
+      }
+    }
+  });
+
+  return totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
 };
 
 attendanceSchema.statics.getAttendanceStats = async function (
@@ -267,20 +351,23 @@ attendanceSchema.statics.getAttendanceStats = async function (
       },
     },
     {
+      $unwind: '$students',
+    },
+    {
       $group: {
         _id: null,
         totalRecords: { $sum: 1 },
         presentCount: {
-          $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$students.status', 'present'] }, 1, 0] },
         },
         absentCount: {
-          $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$students.status', 'absent'] }, 1, 0] },
         },
         lateCount: {
-          $sum: { $cond: [{ $eq: ['$status', 'late'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$students.status', 'late'] }, 1, 0] },
         },
         excusedCount: {
-          $sum: { $cond: [{ $eq: ['$status', 'excused'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$students.status', 'excused'] }, 1, 0] },
         },
       },
     },
@@ -353,16 +440,15 @@ attendanceSchema.statics.lockOldAttendance = async function (): Promise<void> {
 
 // Indexes for performance
 attendanceSchema.index({ schoolId: 1, date: -1 });
-attendanceSchema.index({ studentId: 1, date: -1 });
-attendanceSchema.index({ classId: 1, date: 1, period: 1 });
+attendanceSchema.index({ classId: 1, date: 1, period: 1 }, { unique: true }); // One attendance per class/date/period
 attendanceSchema.index({ teacherId: 1, date: -1 });
 attendanceSchema.index({ date: 1, period: 1 });
-attendanceSchema.index({ studentId: 1, date: 1, period: 1, subjectId: 1 }, { unique: true });
+attendanceSchema.index({ 'students.studentId': 1, date: -1 }); // For student-specific queries
 
 // Pre-save middleware
 attendanceSchema.pre('save', function (next) {
-  // Auto-lock attendance after modification time limit
-  if (!this.isNew && this.isModified('status')) {
+  // Auto-update modifiedAt when students array is modified
+  if (this.isModified('students')) {
     this.modifiedAt = new Date();
   }
 
@@ -376,12 +462,12 @@ attendanceSchema.pre('save', function (next) {
 
 // Transform for JSON output
 attendanceSchema.set('toJSON', {
-  transform: function (doc, ret) {
+  transform: function (doc: any, ret: any) {
     ret.id = ret._id;
-    (ret as any).canModify = doc.canBeModified();
-    (ret as any).timeSinceMarked = doc.getTimeSinceMarked();
-    delete (ret as any)._id;
-    delete (ret as any).__v;
+    ret.canModify = doc.canBeModified();
+    ret.attendanceStats = doc.getAttendanceStats();
+    delete ret._id;
+    delete ret.__v;
     return ret;
   },
 });

@@ -3,6 +3,7 @@ import { api, ApiResponse } from "./api-base";
 // Teacher API service
 export const teacherApi = {
   // Admin endpoints for teacher management
+  getClasses: () => api.get<ApiResponse>("/teachers/my-classes"),
   create: (data: {
     schoolId: string;
     firstName: string;
@@ -106,8 +107,8 @@ export const teacherApi = {
   delete: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
 
   // Teacher dashboard endpoints
-  getDashboard: () => api.get<ApiResponse>("/teacher/dashboard"),
-  getClasses: () => api.get<ApiResponse>("/teacher/classes"),
+  getDashboard: () => api.get<ApiResponse>("/teachers/dashboard"),
+  getMyClasses: () => api.get<ApiResponse>("/teachers/my-classes"),
 
   // Attendance management
   getAttendance: (classId: string) =>
@@ -207,6 +208,10 @@ export const teacherApi = {
     }>;
   }) => api.post<ApiResponse>("/teachers/attendance/mark", attendanceData),
 
+  // Get teacher's students for attendance (simplified)
+  getMyStudentsForAttendance: () =>
+    api.get<ApiResponse>("/teachers/attendance/my-students"),
+  
   getStudentsForAttendance: (classId: string, subjectId: string, period: number) =>
     api.get<ApiResponse>(`/teachers/attendance/students/${classId}/${subjectId}/${period}`),
 

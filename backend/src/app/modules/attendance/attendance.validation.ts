@@ -31,7 +31,7 @@ const createAttendanceValidationSchema = z.object({
       .int('Period must be an integer')
       .min(1, 'Period must be at least 1')
       .max(8, 'Period cannot exceed 8'),
-    attendanceData: z
+    students: z
       .array(
         z.object({
           studentId: z
@@ -198,7 +198,7 @@ const markBulkAttendanceValidationSchema = z.object({
             .int('Period must be an integer')
             .min(1, 'Period must be at least 1')
             .max(8, 'Period cannot exceed 8'),
-          attendanceData: z
+          students: z
             .array(
               z.object({
                 studentId: z

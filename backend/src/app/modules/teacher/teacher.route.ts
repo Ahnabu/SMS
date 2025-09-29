@@ -173,6 +173,14 @@ router.get(
   TeacherController.getCurrentPeriods
 );
 
+// Get students for current teacher's classes
+router.get(
+  "/attendance/my-students",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyStudentsForAttendance
+);
+
 router.post(
   "/attendance/mark",
   authenticate,
@@ -247,9 +255,25 @@ router.get(
   TeacherController.getStudentsByGradeAndSection
 );
 
+// Get all students for this teacher (for discipline, etc.)
+router.get(
+  "/discipline/students",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getTeacherStudents
+);
+
 // Grading Routes
 router.get(
   "/grading/exams",
+  authenticate,
+  authorize(UserRole.TEACHER),
+  TeacherController.getMyGradingTasks
+);
+
+// Alternative endpoint for grading tasks (frontend compatibility)
+router.get(
+  "/grading/tasks",
   authenticate,
   authorize(UserRole.TEACHER),
   TeacherController.getMyGradingTasks

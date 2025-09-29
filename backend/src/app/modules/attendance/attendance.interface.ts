@@ -1,18 +1,25 @@
 import { Document, Types, Model } from 'mongoose';
 
+export interface IStudentAttendance {
+  studentId: Types.ObjectId;
+  status: 'present' | 'absent' | 'late' | 'excused';
+  markedAt?: Date;
+  modifiedAt?: Date;
+  modifiedBy?: Types.ObjectId;
+  modificationReason?: string;
+}
+
 export interface IAttendance {
   schoolId: Types.ObjectId;
-  studentId: Types.ObjectId;
   teacherId: Types.ObjectId;
   subjectId: Types.ObjectId;
   classId: Types.ObjectId; // Grade + Section combination
   date: Date;
   period: number; // 1-8
-  status: 'present' | 'absent' | 'late' | 'excused';
+  students: IStudentAttendance[];
   markedAt: Date;
   modifiedAt?: Date;
-  modifiedBy?: Types.ObjectId; // User who modified
-  modificationReason?: string;
+  modifiedBy?: Types.ObjectId; // User who modified the attendance session
   isLocked: boolean; // Cannot be modified after certain time
   createdAt?: Date;
   updatedAt?: Date;
@@ -25,8 +32,21 @@ export interface IAttendanceDocument extends IAttendance, Document, IAttendanceM
 export interface IAttendanceMethods {
   canBeModified(): boolean;
   lockAttendance(): void;
-  getStatusIcon(): string;
-  getTimeSinceMarked(): number; // Minutes
+  getAttendanceStats(): {
+    totalStudents: number;
+    presentCount: number;
+    absentCount: number;
+    lateCount: number;
+    excusedCount: number;
+    attendancePercentage: number;
+  };
+  getStudentStatus(studentId: string): 'present' | 'absent' | 'late' | 'excused' | null;
+  updateStudentStatus(
+    studentId: string, 
+    status: 'present' | 'absent' | 'late' | 'excused',
+    modifiedBy: string,
+    reason?: string
+  ): boolean;
 }
 
 export interface IAttendanceModel extends Model<IAttendanceDocument> {
@@ -37,7 +57,7 @@ export interface IAttendanceModel extends Model<IAttendanceDocument> {
     date: Date,
     period: number,
     attendanceData: IMarkAttendanceData[]
-  ): Promise<IAttendanceDocument[]>;
+  ): Promise<IAttendanceDocument>;
   getClassAttendance(
     classId: string,
     date: Date,
@@ -48,7 +68,7 @@ export interface IAttendanceModel extends Model<IAttendanceDocument> {
     startDate: Date,
     endDate: Date
   ): Promise<IAttendanceDocument[]>;
-  calculateAttendancePercentage(
+  calculateStudentAttendancePercentage(
     studentId: string,
     startDate: Date,
     endDate: Date
@@ -69,12 +89,15 @@ export interface IMarkAttendanceData {
 export interface ICreateAttendanceRequest {
   classId: string;
   subjectId: string;
+  grade: number;
+  section: string;
   date: string; // ISO date string
   period: number;
-  attendanceData: IMarkAttendanceData[];
+  students: IMarkAttendanceData[];
 }
 
 export interface IUpdateAttendanceRequest {
+  studentId: string;
   status?: 'present' | 'absent' | 'late' | 'excused';
   modificationReason?: string;
 }
@@ -82,29 +105,33 @@ export interface IUpdateAttendanceRequest {
 export interface IAttendanceResponse {
   id: string;
   schoolId: string;
-  studentId: string;
   teacherId: string;
   subjectId: string;
   classId: string;
   date: Date;
   period: number;
-  status: string;
+  students: Array<{
+    studentId: string;
+    status: string;
+    markedAt: Date;
+    modifiedAt?: Date;
+    modifiedBy?: string;
+    modificationReason?: string;
+    student?: {
+      id: string;
+      userId: string;
+      studentId: string;
+      fullName: string;
+      rollNumber: number;
+    };
+  }>;
   markedAt: Date;
   modifiedAt?: Date;
   modifiedBy?: string;
-  modificationReason?: string;
   isLocked: boolean;
   canModify: boolean;
-  timeSinceMarked: number;
   createdAt: Date;
   updatedAt: Date;
-  student?: {
-    id: string;
-    userId: string;
-    studentId: string;
-    fullName: string;
-    rollNumber: number;
-  };
   teacher?: {
     id: string;
     userId: string;
@@ -121,6 +148,14 @@ export interface IAttendanceResponse {
     grade: number;
     section: string;
     name: string;
+  };
+  attendanceStats: {
+    totalStudents: number;
+    presentCount: number;
+    absentCount: number;
+    lateCount: number;
+    excusedCount: number;
+    attendancePercentage: number;
   };
 }
 

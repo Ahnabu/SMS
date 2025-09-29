@@ -336,6 +336,24 @@ const markAttendance = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Get students for teacher's current classes (simplified attendance access)
+const getMyStudentsForAttendance = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  const studentsData = await teacherService.getMyStudentsForAttendance(teacherUser.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Students retrieved successfully for attendance",
+    data: studentsData,
+  });
+});
+
 const getStudentsForAttendance = catchAsync(async (req: Request, res: Response) => {
   const teacherUser = (req as any).user;
   const { classId, subjectId, period } = req.params;
@@ -579,6 +597,36 @@ const getExamGradingDetailsWithItem = catchAsync(async (req: Request, res: Respo
   });
 });
 
+// Get all students that this teacher can manage (for discipline, etc.)
+const getTeacherStudents = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  
+  if (!teacherUser || teacherUser.role !== 'teacher') {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher access required");
+  }
+
+  // Get students from the teacher's classes
+  const classes = await teacherService.getTeacherClasses(teacherUser.id);
+  const students: any[] = classes.reduce((acc: any[], classItem: any) => {
+    if (classItem.students && Array.isArray(classItem.students)) {
+      acc.push(...classItem.students);
+    }
+    return acc;
+  }, []);
+
+  // Remove duplicates based on student ID
+  const uniqueStudents = students.filter((student: any, index: number, self: any[]) => 
+    index === self.findIndex((s: any) => s._id.toString() === student._id.toString())
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Teacher students retrieved successfully",
+    data: uniqueStudents,
+  });
+});
+
 export const TeacherController = {
   createTeacher,
   getAllTeachers,
@@ -600,6 +648,7 @@ export const TeacherController = {
   getCurrentPeriods,
   markAttendance,
   getStudentsForAttendance,
+  getMyStudentsForAttendance,
   assignHomework,
   getMyHomeworkAssignments,
   issueWarning,
@@ -612,6 +661,7 @@ export const TeacherController = {
   // Student Management Methods
   getStudentsByGrade,
   getStudentsByGradeAndSection,
+  getTeacherStudents,
   // Enhanced Grading Methods
   getExamGradingDetails,
   getExamGradingDetailsWithItem,

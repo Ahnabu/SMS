@@ -1275,12 +1275,20 @@ class TeacherService {
           if (period.teacherId?.toString() === teacher._id.toString() && !period.isBreak) {
             const periodData = {
               scheduleId: schedule._id,
-              classId: schedule.classId,
+              classId: schedule.classId._id || schedule.classId, // Ensure we get the ObjectId string
               grade: schedule.grade,
               section: schedule.section,
               className: `Grade ${schedule.grade} - Section ${schedule.section}`,
               periodNumber: period.periodNumber,
-              subject: period.subjectId,
+              subject: period.subjectId ? {
+                id: (period.subjectId as any)._id || period.subjectId,
+                name: (period.subjectId as any).name || 'Unknown Subject',
+                code: (period.subjectId as any).code || 'UNK',
+              } : {
+                id: '',
+                name: 'No Subject',
+                code: 'N/A',
+              },
               startTime: period.startTime,
               endTime: period.endTime,
               roomNumber: period.roomNumber,
@@ -1321,6 +1329,10 @@ class TeacherService {
 
   // Check if attendance can be marked now for the given period
   private canMarkAttendanceNow(startTime: string, endTime: string, now: Date): boolean {
+    if (!startTime || !endTime) {
+      return false; // Cannot mark attendance without valid time slots
+    }
+    
     const currentTime = now.toTimeString().substring(0, 5);
     
     // Allow attendance marking from 5 minutes before start time to end time
@@ -1337,6 +1349,10 @@ class TeacherService {
 
   // Get period time status (upcoming, current, past)
   private getPeriodTimeStatus(startTime: string, endTime: string, now: Date): 'upcoming' | 'current' | 'past' {
+    if (!startTime || !endTime) {
+      return 'upcoming'; // Default status if times are not available
+    }
+    
     const currentTime = now.toTimeString().substring(0, 5);
     
     const [startHour, startMin] = startTime.split(':').map(Number);
@@ -1375,6 +1391,18 @@ class TeacherService {
       const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const attendanceDate = new Date(attendanceData.date);
 
+      console.log('🔍 Debugging attendance marking:');
+      console.log('📅 Current Day:', currentDay);
+      console.log('� Attendance Date:', attendanceData.date);
+      console.log('�👨‍🏫 Teacher ID:', teacher._id);
+      console.log('📚 Looking for:', {
+        grade: attendanceData.grade,
+        section: attendanceData.section,
+        period: attendanceData.period,
+        subjectId: attendanceData.subjectId,
+        classId: attendanceData.classId,
+      });
+      
       // Verify teacher has permission for this subject/grade/section
       const schedule = await Schedule.findOne({
         schoolId: teacher.schoolId,
@@ -1396,11 +1424,23 @@ class TeacherService {
       }
 
       // Find the specific period
-      const period = schedule.periods.find(p => 
-        p.periodNumber === attendanceData.period &&
-        p.teacherId?.toString() === teacher._id.toString() &&
-        p.subjectId?.toString() === attendanceData.subjectId
-      );
+      const period = schedule.periods.find(p => {
+        // Handle both populated and non-populated subjectId
+        let subjectId: string;
+        if (p.subjectId && typeof p.subjectId === 'object' && '_id' in p.subjectId) {
+          // If populated (object with _id)
+          subjectId = (p.subjectId as any)._id.toString();
+        } else if (p.subjectId) {
+          // If not populated (just ObjectId)
+          subjectId = String(p.subjectId);
+        } else {
+          subjectId = '';
+        }
+        
+        return p.periodNumber === attendanceData.period &&
+          p.teacherId?.toString() === teacher._id.toString() &&
+          subjectId === attendanceData.subjectId;
+      });
 
       if (!period) {
         throw new AppError(httpStatus.FORBIDDEN, "Period not found in your schedule");
@@ -1429,32 +1469,28 @@ class TeacherService {
         throw new AppError(httpStatus.CONFLICT, "Attendance already marked for this period");
       }
 
-      // Create attendance records
-      const attendanceRecords = attendanceData.students.map(student => ({
-        schoolId: teacher.schoolId,
-        studentId: new Types.ObjectId(student.studentId),
-        teacherId: teacher._id,
-        subjectId: new Types.ObjectId(attendanceData.subjectId),
-        classId: new Types.ObjectId(attendanceData.classId),
-        date: attendanceDate,
-        period: attendanceData.period,
-        status: student.status,
-        markedAt: now,
-        isLocked: false,
-      }));
+      // Use the new Attendance.markAttendance static method
+      const savedAttendance = await Attendance.markAttendance(
+        teacher._id.toString(),
+        attendanceData.classId,
+        attendanceData.subjectId,
+        attendanceDate,
+        attendanceData.period,
+        attendanceData.students
+      );
 
-      // Save attendance records
-      const savedRecords = await Attendance.insertMany(attendanceRecords);
-
+      // Get attendance stats from the saved record
+      const stats = savedAttendance.getAttendanceStats();
+      
       // Get absent students for parent notification
-      const absentStudents = attendanceData.students.filter(s => s.status === 'absent');
+      const absentStudents = savedAttendance.students.filter(s => s.status === 'absent');
       
       // Send notifications to parents of absent students
       if (absentStudents.length > 0) {
         try {
           for (const absentStudent of absentStudents) {
             await Notification.createAttendanceAlert({
-              studentId: absentStudent.studentId,
+              studentId: absentStudent.studentId.toString(),
               teacherId: teacher._id.toString(),
               subjectName: (period.subjectId as any).name,
               className: `Grade ${attendanceData.grade} - Section ${attendanceData.section}`,
@@ -1471,12 +1507,14 @@ class TeacherService {
 
       return {
         success: true,
-        attendanceMarked: savedRecords.length,
-        absentCount: absentStudents.length,
-        presentCount: attendanceData.students.filter(s => s.status === 'present').length,
-        lateCount: attendanceData.students.filter(s => s.status === 'late').length,
-        excusedCount: attendanceData.students.filter(s => s.status === 'excused').length,
-        markedAt: now.toISOString(),
+        attendanceId: savedAttendance._id.toString(),
+        totalStudents: stats.totalStudents,
+        presentCount: stats.presentCount,
+        absentCount: stats.absentCount,
+        lateCount: stats.lateCount,
+        excusedCount: stats.excusedCount,
+        attendancePercentage: stats.attendancePercentage,
+        markedAt: savedAttendance.markedAt.toISOString(),
         period: {
           number: attendanceData.period,
           startTime: period.startTime,
@@ -1496,6 +1534,15 @@ class TeacherService {
 
   async getStudentsForAttendance(userId: string, classId: string, subjectId: string, period: number): Promise<any> {
     try {
+      // Validate ObjectId parameters
+      if (!classId || !Types.ObjectId.isValid(classId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid classId provided");
+      }
+      
+      if (!subjectId || !Types.ObjectId.isValid(subjectId)) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid subjectId provided");
+      }
+
       const teacher = await Teacher.findOne({ userId }).populate('schoolId userId');
 
       if (!teacher) {
@@ -1544,8 +1591,10 @@ class TeacherService {
       // Check if attendance already marked today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      
+      const dateString = now.toISOString().split('T')[0]; // Use current date for display
 
-      const existingAttendance = await Attendance.find({
+      const existingAttendance = await Attendance.findOne({
         teacherId: teacher._id,
         subjectId: new Types.ObjectId(subjectId),
         classId: new Types.ObjectId(classId),
@@ -1554,9 +1603,11 @@ class TeacherService {
       });
 
       const attendanceMap = new Map();
-      existingAttendance.forEach(record => {
-        attendanceMap.set(record.studentId.toString(), record.status);
-      });
+      if (existingAttendance) {
+        existingAttendance.students.forEach(student => {
+          attendanceMap.set(student.studentId.toString(), student.status);
+        });
+      }
 
       const studentsWithAttendance = students.map(student => ({
         id: student._id.toString(),
@@ -1585,18 +1636,85 @@ class TeacherService {
         subjectInfo: periodInfo?.subjectId,
         periodInfo: {
           number: period,
-          startTime: periodInfo?.startTime,
-          endTime: periodInfo?.endTime,
-          canMarkAttendance: this.canMarkAttendanceNow(periodInfo?.startTime!, periodInfo?.endTime!, now),
-          timeStatus: this.getPeriodTimeStatus(periodInfo?.startTime!, periodInfo?.endTime!, now),
+          startTime: periodInfo?.startTime || '00:00',
+          endTime: periodInfo?.endTime || '00:00',
+          canMarkAttendance: this.canMarkAttendanceNow(periodInfo?.startTime || '00:00', periodInfo?.endTime || '00:00', now),
+          timeStatus: this.getPeriodTimeStatus(periodInfo?.startTime || '00:00', periodInfo?.endTime || '00:00', now),
         },
         students: studentsWithAttendance,
-        attendanceAlreadyMarked: existingAttendance.length > 0,
+        attendanceAlreadyMarked: existingAttendance !== null,
         teacherInfo: {
           id: teacher._id,
           name: `${(teacher.userId as any).firstName} ${(teacher.userId as any).lastName}`,
         },
-        date: today.toISOString().split('T')[0],
+        date: dateString,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get students for attendance: ${(error as Error).message}`
+      );
+    }
+  }
+
+  // Get students for attendance based on teacher's current schedule (simplified)
+  async getMyStudentsForAttendance(userId: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId }).populate('schoolId userId');
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      const now = new Date();
+      const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+      // Get all schedules for this teacher for today
+      const schedules = await Schedule.find({
+        schoolId: teacher.schoolId,
+        dayOfWeek: currentDay,
+        isActive: true,
+        'periods.teacherId': teacher._id,
+      }).populate('classId');
+
+      const classesWithStudents = [];
+
+      for (const schedule of schedules) {
+        // Get all students for this class
+        const students = await Student.find({
+          schoolId: teacher.schoolId,
+          grade: schedule.grade,
+          section: schedule.section,
+          isActive: true,
+        }).populate('userId', 'firstName lastName profilePhoto');
+
+        if (students.length > 0) {
+          classesWithStudents.push({
+            classId: schedule.classId._id,
+            grade: schedule.grade,
+            section: schedule.section,
+            className: `Grade ${schedule.grade} - Section ${schedule.section}`,
+            students: students.map(student => ({
+              id: student._id,
+              studentId: student.studentId,
+              rollNumber: student.rollNumber,
+              name: `${(student.userId as any).firstName} ${(student.userId as any).lastName}`,
+              profilePhoto: (student.userId as any).profilePhoto,
+              grade: student.grade,
+              section: student.section,
+            })),
+          });
+        }
+      }
+
+      return {
+        teacherInfo: {
+          id: teacher._id,
+          name: `${(teacher.userId as any).firstName} ${(teacher.userId as any).lastName}`,
+        },
+        classes: classesWithStudents,
+        date: now.toISOString().split('T')[0],
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -2087,7 +2205,16 @@ class TeacherService {
       }
 
       // Verify teacher has permission for this grade
-      if (!teacher.grades.includes(grade)) {
+      // For student access, allow teachers to access grades they teach through schedules
+      const teacherSchedules = await Schedule.find({
+        schoolId: teacher.schoolId,
+        'periods.teacherId': teacher._id,
+        grade,
+        isActive: true,
+      });
+
+      // If teacher doesn't have any schedules for this grade, check the assigned grades
+      if (teacherSchedules.length === 0 && !teacher.grades.includes(grade)) {
         throw new AppError(httpStatus.FORBIDDEN, `You don't have permission to access Grade ${grade}`);
       }
 

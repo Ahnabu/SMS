@@ -75,6 +75,12 @@ const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({ className
   const loadStudents = async (period: Period) => {
     try {
       setLoading(true);
+      
+      console.log('🔍 Loading students for period:', period);
+      console.log('🔍 ClassId:', period.classId);
+      console.log('🔍 Subject ID:', period.subject.id);
+      console.log('🔍 Period Number:', period.periodNumber);
+      
       const response = await teacherApi.getStudentsForAttendance(
         period.classId,
         period.subject.id,

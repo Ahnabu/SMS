@@ -21,7 +21,7 @@ export class AttendanceService {
   static async markAttendance(
     teacherId: string,
     attendanceData: ICreateAttendanceRequest
-  ): Promise<IAttendanceResponse[]> {
+  ): Promise<IAttendanceResponse> {
     // Validate teacher exists and is active
     const teacher = await Teacher.findById(teacherId).populate('schoolId userId');
     if (!teacher || !teacher.isActive) {
@@ -41,19 +41,19 @@ export class AttendanceService {
     }
 
     // Mark attendance
-    const attendanceRecords = await Attendance.markAttendance(
+    const attendanceRecord = await Attendance.markAttendance(
       teacherId,
       attendanceData.classId,
       attendanceData.subjectId,
       new Date(attendanceData.date),
       attendanceData.period,
-      attendanceData.attendanceData
+      attendanceData.students
     );
 
     // Populate and return formatted response
-    const populatedRecords = await Attendance.populate(attendanceRecords, [
+    const populatedRecord = await Attendance.populate(attendanceRecord, [
       {
-        path: 'studentId',
+        path: 'students.studentId',
         select: 'userId studentId rollNumber',
         populate: {
           path: 'userId',
@@ -74,14 +74,15 @@ export class AttendanceService {
       }
     ]);
 
-    return this.formatAttendanceResponse(populatedRecords);
+    return this.formatAttendanceResponse(populatedRecord);
   }
 
   /**
-   * Update existing attendance record
+   * Update existing attendance record for a specific student
    */
   static async updateAttendance(
     attendanceId: string,
+    studentId: string,
     userId: string,
     updateData: IUpdateAttendanceRequest
   ): Promise<IAttendanceResponse> {
@@ -95,24 +96,26 @@ export class AttendanceService {
       throw new AppError(403, 'Attendance record is locked and cannot be modified');
     }
 
-    // Update the attendance record
+    // Update the specific student's attendance
     if (updateData.status) {
-      attendance.status = updateData.status;
+      const success = attendance.updateStudentStatus(
+        studentId,
+        updateData.status,
+        userId,
+        updateData.modificationReason
+      );
+      
+      if (!success) {
+        throw new AppError(404, 'Student not found in this attendance record');
+      }
     }
-    
-    if (updateData.modificationReason) {
-      attendance.modificationReason = updateData.modificationReason;
-    }
-
-    attendance.modifiedAt = new Date();
-    attendance.modifiedBy = new Types.ObjectId(userId);
 
     await attendance.save();
 
     // Populate and return
     await attendance.populate([
       {
-        path: 'studentId',
+        path: 'students.studentId',
         select: 'userId studentId rollNumber',
         populate: {
           path: 'userId',
@@ -121,7 +124,11 @@ export class AttendanceService {
       },
       {
         path: 'teacherId',
-        select: 'userId teacherId'
+        select: 'userId teacherId',
+        populate: {
+          path: 'userId',
+          select: 'firstName lastName'
+        }
       },
       {
         path: 'subjectId',
@@ -129,7 +136,7 @@ export class AttendanceService {
       }
     ]);
 
-    return this.formatAttendanceResponse([attendance])[0];
+    return this.formatAttendanceResponse(attendance);
   }
 
   /**
@@ -159,7 +166,7 @@ export class AttendanceService {
       throw new AppError(404, 'Attendance record not found');
     }
 
-    return this.formatAttendanceResponse([attendance])[0];
+    return this.formatAttendanceResponse(attendance);
   }
 
   /**
@@ -174,7 +181,7 @@ export class AttendanceService {
       request.period
     );
 
-    return this.formatAttendanceResponse(attendanceRecords);
+    return this.formatAttendanceResponses(attendanceRecords);
   }
 
   /**
@@ -199,7 +206,7 @@ export class AttendanceService {
       );
     }
 
-    return this.formatAttendanceResponse(attendanceRecords);
+    return this.formatAttendanceResponses(attendanceRecords);
   }
 
   /**
@@ -230,30 +237,49 @@ export class AttendanceService {
       throw new AppError(404, 'Student not found');
     }
 
-    const attendanceRecords = await Attendance.find({
+    const attendanceRecords = await Attendance.getStudentAttendance(
       studentId,
-      date: { $gte: startDate, $lte: endDate }
-    }).populate('subjectId', 'name code');
+      startDate,
+      endDate
+    );
 
-    const totalClasses = attendanceRecords.length;
-    const presentClasses = attendanceRecords.filter(
-      record => record.status === 'present' || record.status === 'late'
-    ).length;
-    const absentClasses = attendanceRecords.filter(
-      record => record.status === 'absent'
-    ).length;
-    const lateClasses = attendanceRecords.filter(
-      record => record.status === 'late'
-    ).length;
-    const excusedClasses = attendanceRecords.filter(
-      record => record.status === 'excused'
-    ).length;
+    // Extract student-specific data from nested structure
+    let totalClasses = 0;
+    let presentClasses = 0;
+    let absentClasses = 0;
+    let lateClasses = 0;
+    let excusedClasses = 0;
+
+    const studentRecords: any[] = [];
+
+    attendanceRecords.forEach(record => {
+      const studentAttendance = record.students.find(
+        s => s.studentId.toString() === studentId
+      );
+      
+      if (studentAttendance) {
+        totalClasses++;
+        const status = studentAttendance.status;
+        
+        if (status === 'present' || status === 'late') presentClasses++;
+        if (status === 'absent') absentClasses++;
+        if (status === 'late') lateClasses++;
+        if (status === 'excused') excusedClasses++;
+        
+        studentRecords.push({
+          ...studentAttendance,
+          subjectId: record.subjectId,
+          date: record.date,
+          period: record.period
+        });
+      }
+    });
 
     // Calculate subject-wise attendance
-    const subjectWiseAttendance = this.calculateSubjectWiseAttendance(attendanceRecords);
+    const subjectWiseAttendance = this.calculateSubjectWiseAttendance(studentRecords);
     
     // Calculate monthly trend
-    const monthlyTrend = this.calculateMonthlyTrend(attendanceRecords);
+    const monthlyTrend = this.calculateMonthlyTrend(studentRecords);
 
     return {
       studentId,
@@ -329,7 +355,7 @@ export class AttendanceService {
       .limit(limit);
 
     return {
-      attendance: this.formatAttendanceResponse(attendanceRecords),
+      attendance: this.formatAttendanceResponses(attendanceRecords),
       total,
       page,
       totalPages
@@ -344,35 +370,39 @@ export class AttendanceService {
   }
 
   /**
-   * Format attendance records for response
+   * Format attendance record for response
    */
-  private static formatAttendanceResponse(records: any[]): IAttendanceResponse[] {
-    return records.map(record => ({
+  private static formatAttendanceResponse(record: any): IAttendanceResponse {
+    return {
       id: record._id.toString(),
       schoolId: record.schoolId.toString(),
-      studentId: record.studentId._id.toString(),
       teacherId: record.teacherId._id.toString(),
       subjectId: record.subjectId._id.toString(),
       classId: record.classId.toString(),
       date: record.date,
       period: record.period,
-      status: record.status,
+      students: record.students.map((student: any) => ({
+        studentId: student.studentId._id.toString(),
+        status: student.status,
+        markedAt: student.markedAt,
+        modifiedAt: student.modifiedAt,
+        modifiedBy: student.modifiedBy?.toString(),
+        modificationReason: student.modificationReason,
+        student: student.studentId ? {
+          id: student.studentId._id.toString(),
+          userId: student.studentId.userId._id.toString(),
+          studentId: student.studentId.studentId,
+          fullName: `${student.studentId.userId.firstName} ${student.studentId.userId.lastName}`,
+          rollNumber: student.studentId.rollNumber || 0
+        } : undefined,
+      })),
       markedAt: record.markedAt,
       modifiedAt: record.modifiedAt,
       modifiedBy: record.modifiedBy?.toString(),
-      modificationReason: record.modificationReason,
       isLocked: record.isLocked,
       canModify: record.canBeModified(),
-      timeSinceMarked: record.getTimeSinceMarked(),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
-      student: record.studentId ? {
-        id: record.studentId._id.toString(),
-        userId: record.studentId.userId._id.toString(),
-        studentId: record.studentId.studentId,
-        fullName: `${record.studentId.userId.firstName} ${record.studentId.userId.lastName}`,
-        rollNumber: record.studentId.rollNumber || 0
-      } : undefined,
       teacher: record.teacherId ? {
         id: record.teacherId._id.toString(),
         userId: record.teacherId.userId._id.toString(),
@@ -383,8 +413,17 @@ export class AttendanceService {
         id: record.subjectId._id.toString(),
         name: record.subjectId.name,
         code: record.subjectId.code
-      } : undefined
-    }));
+      } : undefined,
+      class: undefined, // Will be populated if needed
+      attendanceStats: record.getAttendanceStats()
+    };
+  }
+
+  /**
+   * Format attendance records array for response
+   */
+  private static formatAttendanceResponses(records: any[]): IAttendanceResponse[] {
+    return records.map(record => this.formatAttendanceResponse(record));
   }
 
   /**

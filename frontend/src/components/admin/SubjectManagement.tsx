@@ -181,26 +181,26 @@ const SubjectManagement: React.FC = () => {
     }));
   };
 
-  const toggleTeacher = (teacherId: string) => {
-    console.log('Toggling teacher:', teacherId);
-    console.log('Current teachers:', formData.teachers);
+  // const toggleTeacher = (teacherId: string) => {
+  //   console.log('Toggling teacher:', teacherId);
+  //   console.log('Current teachers:', formData.teachers);
     
-    setFormData(prev => {
-      const currentTeachers = prev.teachers || []; // Ensure it's an array
-      const isCurrentlySelected = currentTeachers.includes(teacherId);
+  //   setFormData(prev => {
+  //     const currentTeachers = prev.teachers || []; // Ensure it's an array
+  //     const isCurrentlySelected = currentTeachers.includes(teacherId);
       
-      const newTeachers = isCurrentlySelected
-        ? currentTeachers.filter(id => id !== teacherId)
-        : [...currentTeachers, teacherId];
+  //     const newTeachers = isCurrentlySelected
+  //       ? currentTeachers.filter(id => id !== teacherId)
+  //       : [...currentTeachers, teacherId];
       
-      console.log('New teachers:', newTeachers);
+  //     console.log('New teachers:', newTeachers);
       
-      return {
-        ...prev,
-        teachers: newTeachers
-      };
-    });
-  };
+  //     return {
+  //       ...prev,
+  //       teachers: newTeachers
+  //     };
+  //   });
+  // };
 
   const getSubjectStats = () => {
     const total = subjects.length;
@@ -388,7 +388,7 @@ const SubjectManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium mb-2">
                     Assign Teachers (Optional)
                   </label>
@@ -419,7 +419,7 @@ const SubjectManagement: React.FC = () => {
                       })
                     )}
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex gap-2 pt-4">
                   <Button
