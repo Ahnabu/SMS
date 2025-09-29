@@ -79,12 +79,15 @@ export const studentApi = {
   delete: (id: string) => api.delete<ApiResponse>(`/admin/students/${id}`),
 
   // Student dashboard endpoints
-  getDashboard: () => api.get<ApiResponse>("/student/dashboard"),
-  getAttendance: () => api.get<ApiResponse>("/student/attendance"),
-  getGrades: () => api.get<ApiResponse>("/student/grades"),
-  getHomework: () => api.get<ApiResponse>("/student/homework"),
-  getSchedule: () => api.get<ApiResponse>("/student/schedule"),
-  getCalendar: () => api.get<ApiResponse>("/student/calendar"),
+  getDashboard: () => api.get<ApiResponse>("/students/dashboard"),
+  getAttendance: () => api.get<ApiResponse>("/students/attendance"),
+  getGrades: () => api.get<ApiResponse>("/students/grades"),
+  getHomework: () => api.get<ApiResponse>("/students/homework"),
+  getSchedule: () => api.get<ApiResponse>("/students/schedule"),
+  getCalendar: () => api.get<ApiResponse>("/students/calendar"),
+
+  // Student profile endpoint
+  getProfile: (id: string) => api.get<ApiResponse>(`/students/${id}`),
 
   // Photo management
   uploadPhotos: (studentId: string, files: File[]) => {
@@ -107,6 +110,6 @@ export const studentApi = {
 
   getStats: () => api.get<ApiResponse>("/admin/students/stats"),
 
-  getCredentials: (id: string) => 
+  getCredentials: (id: string) =>
     api.get<ApiResponse>(`/admin/students/${id}/credentials`),
 };

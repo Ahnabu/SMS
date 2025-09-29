@@ -247,6 +247,106 @@ const getStudentCredentials = catchAsync(
   }
 );
 
+const getStudentDashboard = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const dashboardData = await studentService.getStudentDashboard(studentId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student dashboard data retrieved successfully",
+    data: dashboardData,
+  });
+});
+
+const getStudentAttendance = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const attendanceData = await studentService.getStudentAttendance(studentId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student attendance data retrieved successfully",
+    data: attendanceData,
+  });
+});
+
+const getStudentGrades = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const gradesData = await studentService.getStudentGrades(studentId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student grades data retrieved successfully",
+    data: gradesData,
+  });
+});
+
+const getStudentHomework = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const homeworkData = await studentService.getStudentHomework(studentId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student homework data retrieved successfully",
+    data: homeworkData,
+  });
+});
+
+const getStudentSchedule = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const scheduleData = await studentService.getStudentSchedule(studentId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student schedule data retrieved successfully",
+    data: scheduleData,
+  });
+});
+
+const getStudentCalendar = catchAsync(async (req: Request, res: Response) => {
+  const studentId = (req as any).user?.id;
+  console.log("getStudentCalendar called with studentId:", studentId);
+
+  if (!studentId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
+  }
+
+  const calendarData = await studentService.getStudentCalendar(studentId);
+  console.log("Calendar data retrieved:", calendarData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student calendar data retrieved successfully",
+    data: calendarData,
+  });
+});
+
 export const StudentController = {
   createStudent,
   getAllStudents,
@@ -260,4 +360,10 @@ export const StudentController = {
   getStudentPhotos,
   getAvailablePhotoSlots,
   getStudentCredentials,
+  getStudentDashboard,
+  getStudentAttendance,
+  getStudentGrades,
+  getStudentHomework,
+  getStudentSchedule,
+  getStudentCalendar,
 };

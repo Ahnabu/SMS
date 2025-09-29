@@ -6,6 +6,11 @@ import { School } from "../school/school.model";
 import { User } from "../user/user.model";
 import { Parent } from "../parent/parent.model";
 import { Student, StudentPhoto } from "./student.model";
+import { Attendance } from "../attendance/attendance.model";
+import { Exam, ExamResult } from "../exam/exam.model";
+import { Homework } from "../homework/homework.model";
+import { Schedule } from "../schedule/schedule.model";
+import { AcademicCalendar } from "../academic-calendar/academic-calendar.model";
 import { UserCredentials } from "../user/userCredentials.model";
 import { FileUtils } from "../../utils/fileUtils";
 import { CredentialGenerator } from "../../utils/credentialGenerator";
@@ -1382,18 +1387,18 @@ class StudentService {
             userId: student.parentId.userId
               ? extractId(student.parentId.userId)
               : undefined,
-            fullName: student.parentId.userId
-              ? `${student.parentId.userId.firstName || ""} ${
-                  student.parentId.userId.lastName || ""
+            fullName: (student.parentId as any).userId
+              ? `${(student.parentId as any).userId.firstName || ""} ${
+                  (student.parentId as any).userId.lastName || ""
                 }`.trim()
               : "Unknown Parent",
-            name: student.parentId.userId
-              ? `${student.parentId.userId.firstName || ""} ${
-                  student.parentId.userId.lastName || ""
+            name: (student.parentId as any).userId
+              ? `${(student.parentId as any).userId.firstName || ""} ${
+                  (student.parentId as any).userId.lastName || ""
                 }`.trim()
               : "Unknown Parent",
-            email: student.parentId.userId?.email || undefined,
-            phone: student.parentId.userId?.phone || undefined,
+            email: (student.parentId as any).userId?.email || undefined,
+            phone: (student.parentId as any).userId?.phone || undefined,
             address: student.parentId.address
               ? `${student.parentId.address.street || ""} ${
                   student.parentId.address.city || ""
@@ -1416,6 +1421,769 @@ class StudentService {
         })) || [],
       photoCount: student.photos?.length || 0,
     };
+  }
+
+  async getStudentDashboard(studentId: string) {
+    console.log(studentId);
+    // Get student details
+    const student = await Student.findOne({ userId: studentId })
+      .populate("schoolId", "name")
+      .populate("userId", "firstName lastName fullName email phone")
+      .populate(
+        "parentId",
+        "fullName email phone address occupation relationship"
+      );
+
+    if (!student) {
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+
+    // Get attendance percentage for current month
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    const attendanceRecords = await Attendance.aggregate([
+      {
+        $match: {
+          "students.studentId": student._id,
+          date: { $gte: currentMonth, $lt: nextMonth },
+        },
+      },
+      { $unwind: "$students" },
+      { $match: { "students.studentId": student._id } },
+    ]);
+
+    const totalDays = attendanceRecords.length;
+    const presentDays = attendanceRecords.filter(
+      (record) => record.students.status === "present"
+    ).length;
+    const attendancePercentage =
+      totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+    // Get pending homework count
+    const pendingHomework = await Homework.countDocuments({
+      "assignments.studentId": student._id,
+      "assignments.status": { $in: ["pending", "overdue"] },
+    });
+
+    // Get overall grade (average of recent exams)
+    const recentGrades = await ExamResult.aggregate([
+      { $match: { studentId: student._id } },
+      { $sort: { createdAt: -1 } },
+      { $limit: 10 },
+      {
+        $group: {
+          _id: null,
+          averageGrade: { $avg: "$percentage" },
+        },
+      },
+    ]);
+
+    const overallGrade =
+      recentGrades.length > 0 ? Math.round(recentGrades[0].averageGrade) : 0;
+
+    // Get today's classes count
+    const today = new Date();
+    const dayOfWeek = today
+      .toLocaleString("en-US", { weekday: "long" })
+      .toLowerCase();
+
+    const todayClasses = await Schedule.countDocuments({
+      grade: student.grade,
+      section: student.section,
+      dayOfWeek: dayOfWeek,
+      isActive: true,
+    });
+
+    // Get recent grades
+    const recentGradesList = await ExamResult.aggregate([
+      { $match: { studentId: student._id } },
+      {
+        $lookup: {
+          from: "exams",
+          localField: "examId",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "exam.subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $project: {
+          subject: "$subject.name",
+          grade: "$grade",
+          percentage: 1,
+          examDate: "$exam.date",
+        },
+      },
+      { $sort: { examDate: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Get upcoming assignments
+    const upcomingAssignments = await Homework.aggregate([
+      {
+        $match: {
+          "assignments.studentId": student._id,
+          "assignments.status": { $in: ["pending", "assigned"] },
+          dueDate: { $gte: new Date() },
+        },
+      },
+      { $unwind: "$assignments" },
+      { $match: { "assignments.studentId": student._id } },
+      {
+        $project: {
+          title: "$title",
+          subject: "$subject",
+          dueDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$dueDate" },
+          },
+          status: "$assignments.status",
+        },
+      },
+      { $sort: { dueDate: 1 } },
+      { $limit: 5 },
+    ]);
+
+    // Get upcoming events count
+    const upcomingEvents = await AcademicCalendar.countDocuments({
+      startDate: { $gte: today },
+      isActive: true,
+    });
+
+    return {
+      student: {
+        id: student._id,
+        studentId: student.studentId,
+        grade: student.grade,
+        section: student.section,
+        rollNumber: student.rollNumber,
+        fullName: (student as any).userId?.fullName || "",
+        email: (student as any).userId?.email || "",
+        phone: (student as any).userId?.phone || "",
+      },
+      attendancePercentage,
+      overallGrade,
+      pendingHomework,
+      todayClasses,
+      upcomingEvents,
+      recentGrades: recentGradesList,
+      upcomingAssignments,
+    };
+  }
+
+  async getStudentAttendance(studentId: string) {
+    const student = await Student.findOne({ userId: studentId });
+    if (!student) {
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+
+    // Get attendance records for the current academic year
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+    const endOfYear = new Date(currentYear + 1, 0, 1);
+
+    const attendanceRecords = await Attendance.aggregate([
+      {
+        $match: {
+          "students.studentId": student._id,
+          date: { $gte: startOfYear, $lte: endOfYear },
+        },
+      },
+      { $unwind: "$students" },
+      { $match: { "students.studentId": student._id } },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $project: {
+          date: 1,
+          status: "$students.status",
+          subject: "$subject.name",
+          period: 1,
+          markedAt: "$students.markedAt",
+        },
+      },
+      { $sort: { date: -1, period: 1 } },
+    ]);
+
+    // Calculate monthly statistics
+    const monthlyStats = await Attendance.aggregate([
+      {
+        $match: {
+          "students.studentId": student._id,
+          date: { $gte: startOfYear, $lte: endOfYear },
+        },
+      },
+      { $unwind: "$students" },
+      { $match: { "students.studentId": student._id } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$date" },
+            month: { $month: "$date" },
+          },
+          totalDays: { $sum: 1 },
+          presentDays: {
+            $sum: { $cond: [{ $eq: ["$students.status", "present"] }, 1, 0] },
+          },
+          absentDays: {
+            $sum: { $cond: [{ $eq: ["$students.status", "absent"] }, 1, 0] },
+          },
+          lateDays: {
+            $sum: { $cond: [{ $eq: ["$students.status", "late"] }, 1, 0] },
+          },
+        },
+      },
+      {
+        $project: {
+          month: "$_id.month",
+          year: "$_id.year",
+          totalDays: 1,
+          presentDays: 1,
+          absentDays: 1,
+          lateDays: 1,
+          percentage: {
+            $round: [
+              {
+                $multiply: [{ $divide: ["$presentDays", "$totalDays"] }, 100],
+              },
+              1,
+            ],
+          },
+        },
+      },
+      { $sort: { year: -1, month: -1 } },
+    ]);
+    const totalRecords = attendanceRecords.length;
+    const presentCount = attendanceRecords.filter(
+      (r) => r.status === "present"
+    ).length;
+    const absentCount = attendanceRecords.filter(
+      (r) => r.status === "absent"
+    ).length;
+    const lateCount = attendanceRecords.filter(
+      (r) => r.status === "late"
+    ).length;
+
+    return {
+      summary: {
+        totalDays: totalRecords,
+        presentDays: presentCount,
+        absentDays: absentCount,
+        lateDays: lateCount,
+        attendancePercentage:
+          totalRecords > 0
+            ? Math.round((presentCount / totalRecords) * 100)
+            : 0,
+      },
+      monthlyStats,
+      recentRecords: attendanceRecords.slice(0, 50), // Last 50 records
+    };
+  }
+
+  async getStudentGrades(studentId: string) {
+    const student = await Student.findOne({ userId: studentId });
+    if (!student) {
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+
+    // Get exam results with subject and exam details
+    const grades = await ExamResult.aggregate([
+      { $match: { studentId: student._id } },
+      {
+        $lookup: {
+          from: "exams",
+          localField: "examId",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "exam.subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $project: {
+          examId: "$exam._id",
+          examName: "$exam.name",
+          examType: "$exam.type",
+          subject: "$subject.name",
+          subjectId: "$subject._id",
+          marksObtained: "$marksObtained",
+          totalMarks: "$totalMarks",
+          percentage: { $round: ["$percentage", 1] },
+          grade: 1,
+          gradePoint: 1,
+          date: "$exam.date",
+          academicYear: "$exam.academicYear",
+        },
+      },
+      { $sort: { date: -1 } },
+    ]);
+
+    // Calculate subject-wise performance
+    const subjectPerformance = await ExamResult.aggregate([
+      { $match: { studentId: student._id } },
+      {
+        $lookup: {
+          from: "exams",
+          localField: "examId",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "exam.subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $group: {
+          _id: "$subject._id",
+          subjectName: { $first: "$subject.name" },
+          examsCount: { $sum: 1 },
+          averagePercentage: { $avg: "$percentage" },
+          highestScore: { $max: "$percentage" },
+          lowestScore: { $min: "$percentage" },
+          latestGrade: { $last: "$grade" },
+        },
+      },
+      {
+        $project: {
+          subjectId: "$_id",
+          subjectName: 1,
+          examsCount: 1,
+          averagePercentage: { $round: ["$averagePercentage", 1] },
+          highestScore: { $round: ["$highestScore", 1] },
+          lowestScore: { $round: ["$lowestScore", 1] },
+          latestGrade: 1,
+        },
+      },
+      { $sort: { averagePercentage: -1 } },
+    ]);
+
+    // Calculate grade progression over time
+    const gradeProgression = await ExamResult.aggregate([
+      { $match: { studentId: student._id } },
+      {
+        $lookup: {
+          from: "exams",
+          localField: "examId",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$exam.date" },
+            month: { $month: "$exam.date" },
+          },
+          averagePercentage: { $avg: "$percentage" },
+          examsCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          period: {
+            $concat: [
+              { $toString: "$_id.year" },
+              "-",
+              {
+                $cond: {
+                  if: { $lt: ["$_id.month", 10] },
+                  then: { $concat: ["0", { $toString: "$_id.month" }] },
+                  else: { $toString: "$_id.month" },
+                },
+              },
+            ],
+          },
+          averagePercentage: { $round: ["$averagePercentage", 1] },
+          examsCount: 1,
+        },
+      },
+      { $sort: { period: 1 } },
+    ]);
+
+    const overallStats = {
+      totalExams: grades.length,
+      averagePercentage:
+        grades.length > 0
+          ? Math.round(
+              grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length
+            )
+          : 0,
+      highestScore:
+        grades.length > 0 ? Math.max(...grades.map((g) => g.percentage)) : 0,
+      lowestScore:
+        grades.length > 0 ? Math.min(...grades.map((g) => g.percentage)) : 0,
+    };
+
+    return {
+      overallStats,
+      subjectPerformance,
+      gradeProgression,
+      recentGrades: grades.slice(0, 20), // Most recent 20 grades
+    };
+  }
+
+  async getStudentHomework(studentId: string) {
+    const student = await Student.findOne({ userId: studentId });
+    if (!student) {
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+
+    // Get homework assignments for the student
+    const homework = await Homework.aggregate([
+      {
+        $match: {
+          "assignments.studentId": student._id,
+        },
+      },
+      { $unwind: "$assignments" },
+      { $match: { "assignments.studentId": student._id } },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $lookup: {
+          from: "teachers",
+          localField: "teacherId",
+          foreignField: "_id",
+          as: "teacher",
+        },
+      },
+      { $unwind: "$teacher" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "teacher.userId",
+          foreignField: "_id",
+          as: "teacherUser",
+        },
+      },
+      { $unwind: "$teacherUser" },
+      {
+        $project: {
+          homeworkId: "$_id",
+          title: 1,
+          description: 1,
+          subject: "$subject.name",
+          teacherName: "$teacherUser.fullName",
+          assignedDate: 1,
+          dueDate: 1,
+          status: "$assignments.status",
+          submittedAt: "$assignments.submittedAt",
+          grade: "$assignments.grade",
+          feedback: "$assignments.feedback",
+          attachments: 1,
+        },
+      },
+      { $sort: { dueDate: 1, assignedDate: -1 } },
+    ]);
+
+    // Calculate statistics
+    const totalHomework = homework.length;
+    const completedHomework = homework.filter(
+      (h) => h.status === "submitted" || h.status === "graded"
+    ).length;
+    const pendingHomework = homework.filter(
+      (h) => h.status === "pending" || h.status === "assigned"
+    ).length;
+    const overdueHomework = homework.filter((h) => {
+      return (
+        (h.status === "pending" || h.status === "assigned") &&
+        new Date(h.dueDate) < new Date()
+      );
+    }).length;
+
+    return {
+      summary: {
+        totalHomework,
+        completedHomework,
+        pendingHomework,
+        overdueHomework,
+        completionRate:
+          totalHomework > 0
+            ? Math.round((completedHomework / totalHomework) * 100)
+            : 0,
+      },
+      homework: homework,
+    };
+  }
+
+  async getStudentSchedule(studentId: string) {
+    const student = await Student.findOne({ userId: studentId });
+    if (!student) {
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+
+    // Get schedule for the student's grade and section
+    const schedule = await Schedule.aggregate([
+      {
+        $match: {
+          grade: student.grade,
+          section: student.section,
+          isActive: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $lookup: {
+          from: "teachers",
+          localField: "teacherId",
+          foreignField: "_id",
+          as: "teacher",
+        },
+      },
+      { $unwind: "$teacher" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "teacher.userId",
+          foreignField: "_id",
+          as: "teacherUser",
+        },
+      },
+      { $unwind: "$teacherUser" },
+      {
+        $lookup: {
+          from: "classes",
+          localField: "classId",
+          foreignField: "_id",
+          as: "class",
+        },
+      },
+      { $unwind: "$class" },
+      {
+        $project: {
+          dayOfWeek: 1,
+          period: 1,
+          startTime: 1,
+          endTime: 1,
+          subject: "$subject.name",
+          subjectId: "$subject._id",
+          teacherName: "$teacherUser.fullName",
+          teacherId: "$teacher._id",
+          className: "$class.name",
+          room: 1,
+          isActive: 1,
+        },
+      },
+      { $sort: { dayOfWeek: 1, period: 1 } },
+    ]);
+
+    // Group by day of week
+    const daysOfWeek = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+    const scheduleByDay = daysOfWeek.map((day) => ({
+      day: day,
+      periods: schedule
+        .filter((s) => s.dayOfWeek === day)
+        .sort((a, b) => a.period - b.period),
+    }));
+
+    return {
+      grade: student.grade,
+      section: student.section,
+      scheduleByDay,
+      totalPeriods: schedule.length,
+    };
+  }
+
+  async getStudentCalendar(studentId: string) {
+    console.log("getStudentCalendar service called with studentId:", studentId);
+    const student = await Student.findOne({ userId: studentId });
+    if (!student) {
+      console.log("Student not found for userId:", studentId);
+      throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+    }
+    console.log(
+      "Student found:",
+      student._id,
+      "grade:",
+      student.grade,
+      "section:",
+      student.section
+    );
+
+    // Get academic calendar events
+    const calendarEvents = await AcademicCalendar.aggregate([
+      {
+        $match: {
+          schoolId: student.schoolId,
+          $or: [
+            { targetAudience: "all" },
+            { targetAudience: "students" },
+            {
+              $and: [
+                { targetAudience: "specific" },
+                {
+                  $or: [
+                    { "specificAudience.grades": student.grade },
+                    { "specificAudience.sections": student.section },
+                  ],
+                },
+              ],
+            },
+          ],
+          isActive: true,
+        },
+      },
+      {
+        $project: {
+          title: "$eventTitle",
+          description: "$eventDescription",
+          eventType: 1,
+          startDate: 1,
+          endDate: 1,
+          color: 1,
+          targetAudience: 1,
+        },
+      },
+      { $sort: { startDate: 1 } },
+    ]);
+
+    // Get upcoming exams
+    const upcomingExams = await Exam.aggregate([
+      {
+        $match: {
+          grade: student.grade,
+          section: student.section,
+          date: { $gte: new Date() },
+          isActive: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $project: {
+          title: { $concat: ["$name", " - ", "$subject.name"] },
+          description: { $concat: ["Exam: ", "$name"] },
+          eventType: "exam",
+          startDate: "$date",
+          endDate: "$date",
+          color: "#ef4444",
+          subject: "$subject.name",
+        },
+      },
+      { $sort: { startDate: 1 } },
+      { $limit: 10 },
+    ]);
+
+    // Get upcoming homework deadlines
+    const upcomingHomework = await Homework.aggregate([
+      {
+        $match: {
+          "assignments.studentId": student._id,
+          "assignments.status": { $in: ["pending", "assigned"] },
+          dueDate: { $gte: new Date() },
+        },
+      },
+      { $unwind: "$assignments" },
+      { $match: { "assignments.studentId": student._id } },
+      {
+        $lookup: {
+          from: "subjects",
+          localField: "subjectId",
+          foreignField: "_id",
+          as: "subject",
+        },
+      },
+      { $unwind: "$subject" },
+      {
+        $project: {
+          title: { $concat: ["Homework: ", "$title"] },
+          description: {
+            $concat: ["Due: ", "$title", " (", "$subject.name", ")"],
+          },
+          eventType: "homework",
+          startDate: "$dueDate",
+          endDate: "$dueDate",
+          color: "#f59e0b",
+          subject: "$subject.name",
+        },
+      },
+      { $sort: { startDate: 1 } },
+      { $limit: 10 },
+    ]);
+
+    // Combine all events
+    const allEvents = [
+      ...calendarEvents,
+      ...upcomingExams,
+      ...upcomingHomework,
+    ];
+
+    const result = {
+      events: allEvents,
+      summary: {
+        totalEvents: allEvents.length,
+        holidays: allEvents.filter((e) => e.eventType === "holiday").length,
+        exams: allEvents.filter((e) => e.eventType === "exam").length,
+        homework: allEvents.filter((e) => e.eventType === "homework").length,
+      },
+    };
+
+    console.log("Calendar data prepared:", result);
+    return result;
   }
 }
 
