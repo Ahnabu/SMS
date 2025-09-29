@@ -76,10 +76,12 @@ class StudentService {
       // Generate student ID and credentials using CredentialGenerator
       let studentId: string | undefined = undefined;
       let rollNumber: number | undefined = undefined;
-      let credentials: {
-        student: any;
-        parent: any;
-      } | undefined = undefined;
+      let credentials:
+        | {
+            student: any;
+            parent: any;
+          }
+        | undefined = undefined;
       let userCreationAttempts = 0;
       const maxUserCreationAttempts = 3;
       let newUser;
@@ -87,14 +89,15 @@ class StudentService {
       while (userCreationAttempts < maxUserCreationAttempts) {
         try {
           userCreationAttempts++;
-          
+
           // Generate fresh credentials for each attempt
-          const registration = await CredentialGenerator.generateStudentRegistration(
-            admissionYear,
-            studentData.grade.toString(),
-            studentData.schoolId
-          );
-          
+          const registration =
+            await CredentialGenerator.generateStudentRegistration(
+              admissionYear,
+              studentData.grade.toString(),
+              studentData.schoolId
+            );
+
           studentId = registration.studentId;
           rollNumber = registration.rollNumber;
           credentials = registration.credentials;
@@ -118,10 +121,17 @@ class StudentService {
 
           break; // Success, exit retry loop
         } catch (error: any) {
-          if (error.code === 11000 && userCreationAttempts < maxUserCreationAttempts) {
+          if (
+            error.code === 11000 &&
+            userCreationAttempts < maxUserCreationAttempts
+          ) {
             // Duplicate key error, retry with new credentials
-            console.log(`Duplicate username detected, retrying... (Attempt ${userCreationAttempts}/${maxUserCreationAttempts})`);
-            await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+            console.log(
+              `Duplicate username detected, retrying... (Attempt ${userCreationAttempts}/${maxUserCreationAttempts})`
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.random() * 200 + 100)
+            );
             continue;
           } else {
             // Re-throw if not a duplicate key error or if we've exhausted retries
@@ -179,13 +189,13 @@ class StudentService {
           const existingUser = await User.findOne({
             email: parentInfo.email,
             role: "parent",
-            schoolId: studentData.schoolId
+            schoolId: studentData.schoolId,
           }).session(session);
-          
+
           if (existingUser) {
             existingParent = await Parent.findOne({
               userId: existingUser._id,
-              schoolId: studentData.schoolId
+              schoolId: studentData.schoolId,
             }).session(session);
           }
         }
@@ -196,18 +206,23 @@ class StudentService {
             existingParent.children.push(newStudent[0]._id);
             await existingParent.save({ session });
           }
-          
+
           // Update student with existing parent reference
           newStudent[0].parentId = existingParent._id;
           await newStudent[0].save({ session });
-          
-          console.log(`Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`);
+
+          console.log(
+            `Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`
+          );
         } else {
           // Ensure credentials are available
           if (!credentials) {
-            throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to generate credentials");
+            throw new AppError(
+              httpStatus.INTERNAL_SERVER_ERROR,
+              "Failed to generate credentials"
+            );
           }
-          
+
           // Create new parent user account with generated credentials
           parentUser = await User.create(
             [
@@ -238,22 +253,26 @@ class StudentService {
                 undefined, // use current year
                 session // pass the session for transaction consistency
               );
-              
+
               // Verify this ID is not already taken
-              const existingParentCheck = await Parent.findOne({ parentId }).session(session);
+              const existingParentCheck = await Parent.findOne({
+                parentId,
+              }).session(session);
               if (!existingParentCheck) {
                 break; // We found a unique ID
               }
-              
+
               attempts++;
               if (attempts >= maxAttempts) {
                 // Use timestamp-based fallback for absolute uniqueness
-                parentId = `PAR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+                parentId = `PAR-${new Date().getFullYear()}-${Date.now()
+                  .toString()
+                  .slice(-6)}`;
                 break;
               }
-              
+
               // Add small delay to reduce race conditions
-              await new Promise(resolve => setTimeout(resolve, 10));
+              await new Promise((resolve) => setTimeout(resolve, 10));
             } catch (error) {
               attempts++;
               if (attempts >= maxAttempts) {
@@ -297,10 +316,17 @@ class StudentService {
             );
           } catch (parentError: any) {
             // If we get a duplicate key error even after our checks, try one more time with timestamp
-            if (parentError.code === 11000 && parentError.keyPattern?.parentId) {
-              console.warn("Duplicate parent ID detected, retrying with timestamp-based ID");
-              parentId = `PAR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-              
+            if (
+              parentError.code === 11000 &&
+              parentError.keyPattern?.parentId
+            ) {
+              console.warn(
+                "Duplicate parent ID detected, retrying with timestamp-based ID"
+              );
+              parentId = `PAR-${new Date().getFullYear()}-${Date.now()
+                .toString()
+                .slice(-6)}`;
+
               newParent = await Parent.create(
                 [
                   {
@@ -336,8 +362,10 @@ class StudentService {
           // Update student with parent reference
           newStudent[0].parentId = newParent[0]._id;
           await newStudent[0].save({ session });
-          
-          console.log(`Created new parent ${parentId} for student ${newStudent[0].studentId}`);
+
+          console.log(
+            `Created new parent ${parentId} for student ${newStudent[0].studentId}`
+          );
         }
       }
 
@@ -417,9 +445,12 @@ class StudentService {
 
       try {
         if (!studentId) {
-          throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Student ID is required for folder creation");
+          throw new AppError(
+            httpStatus.INTERNAL_SERVER_ERROR,
+            "Student ID is required for folder creation"
+          );
         }
-        
+
         await FileUtils.createStudentPhotoFolder(school.name, {
           firstName: studentData.firstName,
           age,
@@ -437,9 +468,12 @@ class StudentService {
       // Store credentials in database if adminUserId is provided
       if (adminUserId) {
         if (!credentials) {
-          throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "Credentials are required for storage");
+          throw new AppError(
+            httpStatus.INTERNAL_SERVER_ERROR,
+            "Credentials are required for storage"
+          );
         }
-        
+
         const credentialsToStore: any[] = [
           {
             userId: newUser[0]._id,
@@ -516,7 +550,6 @@ class StudentService {
       }
 
       if (error instanceof AppError) {
-       
         throw error;
       }
       throw new AppError(
@@ -1198,11 +1231,17 @@ class StudentService {
           phone: (student.userId as any).phone,
         },
         parent: {
-          id: student.parentId ? ((student.parentId as any).parentId || 'N/A') : 'N/A',
-          username: parentCredentials?.initialUsername || 'N/A',
-          password: parentCredentials?.initialPassword || 'N/A',
-          email: student.parentId ? ((student.parentId as any).userId?.email) : undefined,
-          phone: student.parentId ? ((student.parentId as any).userId?.phone) : undefined,
+          id: student.parentId
+            ? (student.parentId as any).parentId || "N/A"
+            : "N/A",
+          username: parentCredentials?.initialUsername || "N/A",
+          password: parentCredentials?.initialPassword || "N/A",
+          email: student.parentId
+            ? (student.parentId as any).userId?.email
+            : undefined,
+          phone: student.parentId
+            ? (student.parentId as any).userId?.phone
+            : undefined,
         },
       };
 
@@ -1306,9 +1345,8 @@ class StudentService {
             firstName: userData.firstName || "",
             lastName: userData.lastName || "",
             fullName:
-              `${userData.firstName || ""} ${
-                userData.lastName || ""
-              }`.trim() || "Unknown User",
+              `${userData.firstName || ""} ${userData.lastName || ""}`.trim() ||
+              "Unknown User",
             email: userData.email,
             phone: userData.phone,
           }

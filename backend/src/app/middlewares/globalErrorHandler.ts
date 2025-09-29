@@ -1,35 +1,41 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
-import config from '../config';
-import { AppError } from '../errors/AppError';
-import { handleCastError } from '../errors/handleCastError';
-import { handleDuplicateError } from '../errors/handleDuplicateError';
-import { handleValidationError } from '../errors/handleValidationError';
-import { handleZodErrors } from '../errors/handleZodErrors';
-import { TErrorSources } from '../interface/error';
+import { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import config from "../config";
+import { AppError } from "../errors/AppError";
+import { handleCastError } from "../errors/handleCastError";
+import { handleDuplicateError } from "../errors/handleDuplicateError";
+import { handleValidationError } from "../errors/handleValidationError";
+import { handleZodErrors } from "../errors/handleZodErrors";
+import { TErrorSources } from "../interface/error";
 
 const globalErrorHandler: ErrorRequestHandler = (
   err,
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   // Set default values
   let statusCode = 500;
-  let message = 'Something went wrong!';
+  let message = "Something went wrong!";
   let errorSources: TErrorSources = [
     {
-      path: '',
-      message: 'Something went wrong!',
+      path: "",
+      message: "Something went wrong!",
     },
   ];
 
   // Handle different error types
-  if (err?.name === 'ValidationError') {
-    const simplifiedError = handleValidationError(err);
-    statusCode = simplifiedError?.statusCode;
-    message = simplifiedError?.message;
-    errorSources = simplifiedError?.errorSources;
-  } else if (err?.name === 'CastError') {
+  if (err?.name === "ValidationError") {
+    const handled = handleValidationError(err);
+    // Send the first error message if available, otherwise the generic message
+    const firstErrorMsg = handled.errorSources?.[0]?.message || handled.message;
+    return res.status(handled.statusCode).json({
+      success: false,
+      message: firstErrorMsg,
+      errorSources: handled.errorSources,
+      err,
+      stack: err.stack,
+    });
+  } else if (err?.name === "CastError") {
     const simplifiedError = handleCastError(err);
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
@@ -39,7 +45,7 @@ const globalErrorHandler: ErrorRequestHandler = (
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
     errorSources = simplifiedError?.errorSources;
-  } else if (err?.name === 'ZodError') {
+  } else if (err?.name === "ZodError") {
     const simplifiedError = handleZodErrors(err);
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
@@ -49,7 +55,7 @@ const globalErrorHandler: ErrorRequestHandler = (
     message = err.message;
     errorSources = [
       {
-        path: '',
+        path: "",
         message: err?.message,
       },
     ];
@@ -57,15 +63,15 @@ const globalErrorHandler: ErrorRequestHandler = (
     message = err.message;
     errorSources = [
       {
-        path: '',
+        path: "",
         message: err?.message,
       },
     ];
   }
 
   // Log error in development
-  if (config.node_env === 'development') {
-    console.error('🚨 Error Details:', {
+  if (config.node_env === "development") {
+    console.error("🚨 Error Details:", {
       statusCode,
       message,
       errorSources,
@@ -79,7 +85,7 @@ const globalErrorHandler: ErrorRequestHandler = (
     message,
     errorSources,
     err,
-    stack: config.node_env === 'development' ? err?.stack : null,
+    stack: config.node_env === "development" ? err?.stack : null,
   });
 };
 

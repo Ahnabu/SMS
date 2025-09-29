@@ -35,7 +35,8 @@ const getStudentCredentials = catchAsync(
     })
       .populate("userId", "firstName lastName username")
       .populate("issuedBy", "firstName lastName username")
-      .sort({ role: 1 }); // student first, then parent
+      .sort({ role: 1 })
+      .lean({ includePassword: true }); 
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -84,7 +85,8 @@ const getAllCredentials = catchAsync(async (req: Request, res: Response) => {
     .populate("issuedBy", "firstName lastName username")
     .populate("associatedStudentId", "studentId")
     .sort({ createdAt: -1 })
-    .limit(100); // Limit for performance
+    .limit(100) // Limit for performance
+    .lean({ includePassword: true });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

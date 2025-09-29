@@ -45,7 +45,6 @@ const userSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
     },
     displayPassword: {
       type: String,
-      select: false, // Only accessible for superadmin viewing
       trim: true,
     },
     firstName: {
