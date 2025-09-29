@@ -13,8 +13,8 @@ if (!cloudinary.config().cloud_name) {
 
 /**
  * Generate folder path for photo storage
- * For students: schoolName/Students/student@firstName@age@grade@section@bloodGroup@admissionDate
- * For teachers: schoolName/Teachers/teacher@firstName@age@bloodGroup@joiningDate
+ * For students: schoolName/Students/student@firstName@age@grade@section@bloodGroup@studentId
+ * For teachers: schoolName/Teachers/teacher@firstName@age@bloodGroup@joiningDate@teacherId
  */
 export const generateCloudinaryFolderPath = (
   schoolName: string,
@@ -24,7 +24,8 @@ export const generateCloudinaryFolderPath = (
   bloodGroup: string,
   date: Date,
   grade?: number,
-  section?: string
+  section?: string,
+  entityId?: string // studentId or teacherId
 ): string => {
   // Sanitize school name (remove special characters, spaces, convert to title case)
   const sanitizedSchoolName = schoolName
@@ -43,10 +44,10 @@ export const generateCloudinaryFolderPath = (
   // Sanitize first name
   const sanitizedFirstName = firstName.replace(/[^a-zA-Z]/g, "").toLowerCase();
 
-  if (role === "student" && grade && section) {
-    return `${sanitizedSchoolName}/Students/${role}@${sanitizedFirstName}@${age}@${grade}@${section}@${bloodGroup}@${formattedDate}`;
-  } else if (role === "teacher") {
-    return `${sanitizedSchoolName}/Teachers/${role}@${sanitizedFirstName}@${age}@${bloodGroup}@${formattedDate}`;
+  if (role === "student" && grade && section && entityId) {
+    return `${sanitizedSchoolName}/Students/${role}@${sanitizedFirstName}@${age}@${grade}@${section}@${bloodGroup}@${entityId}`;
+  } else if (role === "teacher" && entityId) {
+    return `${sanitizedSchoolName}/Teachers/${role}@${sanitizedFirstName}@${age}@${bloodGroup}@${formattedDate}@${entityId}`;
   }
 
   throw new Error(
@@ -209,7 +210,7 @@ export const uploadToCloudinary = async (
   fileBuffer: Buffer,
   options: {
     folder: string;
-    resource_type?: 'image' | 'video' | 'raw' | 'auto';
+    resource_type?: "image" | "video" | "raw" | "auto";
     use_filename?: boolean;
     unique_filename?: boolean;
   }
@@ -222,10 +223,10 @@ export const uploadToCloudinary = async (
 }> => {
   try {
     const result = await cloudinary.uploader.upload(
-      `data:application/octet-stream;base64,${fileBuffer.toString('base64')}`,
+      `data:application/octet-stream;base64,${fileBuffer.toString("base64")}`,
       {
         folder: options.folder,
-        resource_type: options.resource_type || 'auto',
+        resource_type: options.resource_type || "auto",
         use_filename: options.use_filename || true,
         unique_filename: options.unique_filename !== false,
       }
@@ -239,54 +240,20 @@ export const uploadToCloudinary = async (
       bytes: result.bytes,
     };
   } catch (error) {
-    console.error('Cloudinary upload failed:', error);
-    throw new Error('Failed to upload file to cloud storage');
+    console.error("Cloudinary upload failed:", error);
+    throw new Error("Failed to upload file to cloud storage");
   }
 };
 
 /**
- * Validate photo upload requirements
+ * Delete file from Cloudinary
  */
-export const validatePhotoUpload = (
-  files: Express.Multer.File[],
-  existingPhotoCount: number
-): void => {
-  if (!files || files.length === 0) {
-    throw new Error("At least 3 photos are required for registration");
+export const deleteFromCloudinary = async (publicId: string): Promise<void> => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+    console.log(`Successfully deleted ${publicId} from Cloudinary`);
+  } catch (error) {
+    console.error(`Failed to delete ${publicId} from Cloudinary:`, error);
+    throw new Error(`Failed to delete file from cloud storage: ${publicId}`);
   }
-
-  if (files.length < 3) {
-    throw new Error("Minimum 3 photos required");
-  }
-
-  if (files.length > 8) {
-    throw new Error("Maximum 8 photos allowed");
-  }
-
-  if (existingPhotoCount + files.length > 8) {
-    throw new Error(
-      `Cannot upload ${files.length} photos. Maximum total is 8, current count is ${existingPhotoCount}`
-    );
-  }
-
-  // Validate each file
-  files.forEach((file, index) => {
-    if (!file.mimetype.startsWith("image/")) {
-      throw new Error(
-        `File ${index + 1} (${file.originalname}) is not an image`
-      );
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error(
-        `File ${index + 1} (${file.originalname}) exceeds 10MB limit`
-      );
-    }
-
-    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.mimetype)) {
-      throw new Error(
-        `File ${index + 1} (${file.originalname}) must be JPEG or PNG format`
-      );
-    }
-  });
 };

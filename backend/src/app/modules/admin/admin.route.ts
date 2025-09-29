@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   authenticate,
   requireSchoolAdmin,
@@ -8,6 +9,22 @@ import { validateRequest } from "../../middlewares/validateRequest";
 import { multerUpload } from "../../config/multer.config";
 import { parseBody } from "../../middlewares/bodyParser";
 import { parseTeacherData } from "../../middlewares/parseTeacherData";
+
+// Create multer instance with memory storage
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+    files: 20,
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 
 // Student imports
 import {
@@ -81,7 +98,7 @@ router.get(
 // Student management routes
 router.post(
   "/students",
-  multerUpload.fields([{ name: "photos" }]),
+  memoryUpload.fields([{ name: "photos" }]),
   parseBody,
   validateRequest(createStudentValidationSchema),
   StudentController.createStudent
@@ -179,14 +196,16 @@ router.put("/schedules/:id", updateSchedule);
 router.delete("/schedules/:id", deleteSchedule);
 
 // Calendar management routes
-router.post("/calendar", 
+router.post(
+  "/calendar",
   multerUpload.array("attachments", 5), // Allow up to 5 attachments
   parseBody,
   createCalendarEvent
 );
 router.get("/calendar", getAllCalendarEvents);
 router.get("/calendar/:id", getCalendarEventById);
-router.put("/calendar/:id", 
+router.put(
+  "/calendar/:id",
   multerUpload.array("attachments", 5), // Allow up to 5 attachments
   parseBody,
   updateCalendarEvent
