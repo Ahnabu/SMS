@@ -9,6 +9,11 @@ import { Student, StudentPhoto } from "./student.model";
 import { UserCredentials } from "../user/userCredentials.model";
 import { FileUtils } from "../../utils/fileUtils";
 import { CredentialGenerator } from "../../utils/credentialGenerator";
+import {
+  generateCloudinaryFolderPath,
+  uploadPhotosToCloudinary,
+  deleteFromCloudinary,
+} from "../../utils/cloudinaryUtils";
 
 import config from "../../config";
 import {
@@ -410,19 +415,47 @@ class StudentService {
         }
       }
 
-      // Create photo records with all required fields
-      const photoPromises = photos.map((photo, index) =>
+      // Generate Cloudinary folder path for student photos
+      const cloudinaryFolderPath = generateCloudinaryFolderPath(
+        school.name,
+        "student",
+        studentData.firstName,
+        new Date(studentData.dob),
+        studentData.bloodGroup,
+        new Date(studentData.admissionDate || Date.now()),
+        studentData.grade,
+        studentData.section,
+        studentId!
+      );
+
+      console.log(
+        `Uploading photos to Cloudinary folder: ${cloudinaryFolderPath}`
+      );
+
+      // Upload photos to Cloudinary
+      const cloudinaryResults = await uploadPhotosToCloudinary(
+        photos,
+        cloudinaryFolderPath,
+        studentId!
+      );
+
+      console.log(
+        `Successfully uploaded ${cloudinaryResults.length} photos to Cloudinary`
+      );
+
+      // Create photo records with Cloudinary data
+      const photoPromises = cloudinaryResults.map((result) =>
         StudentPhoto.create(
           [
             {
               studentId: newStudent[0]._id,
-              schoolId: studentData.schoolId, // Required field
-              photoNumber: index + 1,
-              photoPath: photo.path, // Cloudinary URL
-              filename: photo.filename, // Cloudinary public_id
-              originalName: photo.originalname, // Required field
-              mimetype: photo.mimetype, // Required field
-              size: photo.size,
+              schoolId: studentData.schoolId,
+              photoNumber: result.photoNumber,
+              photoPath: result.secure_url, // Cloudinary URL
+              filename: result.public_id, // Cloudinary public_id
+              originalName: result.originalName,
+              mimetype: "image/jpeg", // Cloudinary converts to JPEG
+              size: result.size || 0,
             },
           ],
           { session }
@@ -433,7 +466,7 @@ class StudentService {
       uploadedPhotos = photoResults.flat();
 
       console.log(
-        `Successfully processed ${uploadedPhotos.length} photos for student ${studentId}`
+        `Successfully created ${uploadedPhotos.length} photo records for student ${studentId}`
       );
 
       // Create photo folder structure for future uploads
@@ -952,60 +985,47 @@ class StudentService {
         }
       }
 
-      // Get student folder path
-      const age =
-        new Date().getFullYear() - new Date(student.dob).getFullYear();
-      const admitDate = student.admissionDate.toISOString().split("T")[0];
-
-      const folderPath = await FileUtils.createStudentPhotoFolder(
+      // Generate Cloudinary folder path for student photos
+      const cloudinaryFolderPath = generateCloudinaryFolderPath(
         (student.schoolId as any).name,
-        {
-          firstName: (student.userId as any).firstName,
-          age,
-          grade: student.grade,
-          section: student.section,
-          bloodGroup: student.bloodGroup,
-          admitDate,
-          studentId: student.studentId,
-        }
+        "student",
+        (student.userId as any).firstName,
+        new Date(student.dob),
+        student.bloodGroup,
+        new Date(student.admissionDate),
+        student.grade,
+        student.section,
+        student.studentId
       );
 
-      // Get available photo numbers
-      const availableNumbers = await FileUtils.getAvailablePhotoNumbers(
-        folderPath
+      console.log(
+        `Uploading additional photos to Cloudinary folder: ${cloudinaryFolderPath}`
       );
 
-      if (files.length > availableNumbers.length) {
-        throw new AppError(
-          httpStatus.BAD_REQUEST,
-          `Only ${availableNumbers.length} photo slots available`
-        );
-      }
+      // Upload photos to Cloudinary
+      const cloudinaryResults = await uploadPhotosToCloudinary(
+        files,
+        cloudinaryFolderPath,
+        student.studentId
+      );
 
-      // Upload files and create records
+      console.log(
+        `Successfully uploaded ${cloudinaryResults.length} additional photos to Cloudinary`
+      );
+
+      // Create photo records with Cloudinary data
       const uploadedPhotos: IStudentPhotoResponse[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const photoNumber = availableNumbers[i];
-
-        // Save file with numbered naming
-        const fileInfo = await FileUtils.savePhotoWithNumber(
-          file,
-          folderPath,
-          photoNumber
-        );
-
-        // Create photo record
+      for (const result of cloudinaryResults) {
         const photoRecord = await StudentPhoto.create({
           studentId,
           schoolId: student.schoolId,
-          photoPath: fileInfo.relativePath,
-          photoNumber,
-          filename: fileInfo.filename,
-          originalName: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
+          photoPath: result.secure_url, // Cloudinary URL
+          photoNumber: result.photoNumber,
+          filename: result.public_id, // Cloudinary public_id
+          originalName: result.originalName,
+          mimetype: "image/jpeg", // Cloudinary converts to JPEG
+          size: result.size || 0,
         });
 
         uploadedPhotos.push({
@@ -1044,9 +1064,8 @@ class StudentService {
         throw new AppError(httpStatus.NOT_FOUND, "Photo not found");
       }
 
-      // Delete physical file
-      const fullPath = path.resolve(config.upload_path, photo.photoPath);
-      await FileUtils.deleteFile(fullPath);
+      // Delete from Cloudinary using the public_id (filename field stores Cloudinary public_id)
+      await deleteFromCloudinary(photo.filename);
 
       // Delete database record
       await photo.deleteOne();
