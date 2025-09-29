@@ -59,6 +59,19 @@ interface Student {
   updatedAt?: string;
 }
 
+  interface CredentialUser {
+    _id: string;
+    email: string;
+    phone?: string;
+  }
+
+  interface Credential {
+    role: "student" | "parent";
+    userId?: CredentialUser;
+    initialUsername?: string;
+    initialPassword?: string;
+  }
+
 interface StudentDetailsModalProps {
   student: Student | null;
   isOpen: boolean;
@@ -80,7 +93,7 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     try {
       setLoadingCredentials(true);
       const response = await studentApi.getCredentials(student.id);
-      
+
       if (response.data.success) {
         setCredentials(response.data.data);
         setShowCredentials(true);
@@ -113,6 +126,28 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         {isActive ? "Active" : "Inactive"}
       </span>
     );
+  };
+
+  // Example mapping for CredentialsModal
+  const studentCred = credentials?.find((c: Credential) => c.role === "student");
+console.log(studentCred);
+  const parentCred: Credential | undefined = (credentials as Credential[])?.find((c) => c.role === "parent");
+
+  const credentialsData = {
+    student: {
+      id: studentCred?.userId?._id ?? "",
+      username: studentCred?.initialUsername ?? "",
+      password: studentCred?.initialPassword ?? "",
+      email: studentCred?.userId?.email ?? "",
+      phone: studentCred?.userId?.phone ?? "",
+    },
+    parent: {
+      id: parentCred?.userId?._id ?? "",
+      username: parentCred?.initialUsername ?? "",
+      password: parentCred?.initialPassword ?? "",
+      email: parentCred?.userId?.email ?? "",
+      phone: parentCred?.userId?.phone ?? "",
+    },
   };
 
   return (
@@ -425,7 +460,7 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       <CredentialsModal
         isOpen={showCredentials}
         onClose={() => setShowCredentials(false)}
-        credentials={credentials}
+        credentials={credentialsData}
         studentName={student.user?.fullName || "Unknown Student"}
         parentName={student.parent?.fullName || "Unknown Parent"}
       />

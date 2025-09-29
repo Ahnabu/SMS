@@ -1,7 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IUserCredentialsDocument } from "./userCredentials.interface";
 
-
 // User Credentials schema for storing initial login credentials
 const userCredentialsSchema = new Schema<IUserCredentialsDocument>(
   {
@@ -26,7 +25,6 @@ const userCredentialsSchema = new Schema<IUserCredentialsDocument>(
     initialPassword: {
       type: String,
       required: [true, "Initial password is required"],
-      select: false, // Don't include in normal queries
     },
     hasChangedPassword: {
       type: Boolean,
@@ -74,11 +72,18 @@ userCredentialsSchema.index({ hasChangedPassword: 1 });
 
 // Transform output to exclude sensitive fields
 userCredentialsSchema.set("toJSON", {
-  transform: function (doc, ret: Record<string, any>) {
+  transform: function (
+    doc,
+    ret: Record<string, any>,
+    options: Record<string, any> & { includePassword?: boolean }
+  ) {
     ret.id = ret._id;
     delete ret._id;
     delete ret.__v;
-    delete ret.initialPassword;
+    // Only exclude initialPassword if not for admin/credential fetch
+    if (!options || !options.includePassword) {
+      delete ret.initialPassword;
+    }
     return ret;
   },
 });

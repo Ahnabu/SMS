@@ -48,8 +48,8 @@ export class FileUtils {
     const cleanSchoolName = schoolName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
 
     // Create folder name with required format
-    const folderName = `student@${studentInfo.firstName}@${studentInfo.age}@${studentInfo.grade}@${studentInfo.section}@${studentInfo.bloodGroup}@${studentInfo.admitDate}@${studentInfo.studentId}`;
-
+    const folderName = `student@${studentInfo.firstName}@${studentInfo.age}@${studentInfo.grade}@${studentInfo.section}@${studentInfo.bloodGroup}@${studentInfo.studentId}`;
+console.log(folderName);
     // Build full path
     const baseStoragePath = path.resolve(config.upload_path);
     const schoolPath = path.join(baseStoragePath, cleanSchoolName);

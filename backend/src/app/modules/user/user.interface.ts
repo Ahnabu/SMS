@@ -14,7 +14,7 @@ export interface IUser {
   role: UserRole;
   username: string;
   passwordHash: string;
-  displayPassword?: string; // Plain text password for superadmin viewing
+  displayPassword?: string; 
   firstName: string;
   lastName: string;
   email?: string;
