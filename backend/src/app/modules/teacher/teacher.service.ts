@@ -2066,6 +2066,11 @@ class TeacherService {
           throw new AppError(httpStatus.FORBIDDEN, `You don't have permission for student ${studentId}`);
         }
 
+        // Validate required fields
+        if (!punishmentData.reason || punishmentData.reason.trim() === '') {
+          throw new AppError(httpStatus.BAD_REQUEST, "Reason is required for disciplinary action");
+        }
+
         const action = await DisciplinaryAction.create({
           schoolId: teacher.schoolId._id,
           studentId,
@@ -2075,7 +2080,7 @@ class TeacherService {
           category: punishmentData.category || 'discipline',
           title: `RED WARRANT: ${punishmentData.title}`,
           description: punishmentData.description,
-          reason: punishmentData.reason,
+          reason: punishmentData.reason.trim(),
           incidentDate: punishmentData.incidentDate ? new Date(punishmentData.incidentDate) : new Date(),
           actionTaken: punishmentData.actionTaken,
           followUpRequired: true,
@@ -2204,17 +2209,29 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      // Verify teacher has permission for this grade
-      // For student access, allow teachers to access grades they teach through schedules
+      // For disciplinary actions, allow more flexible access
+      // Check if this is being called for disciplinary purposes (we can add a parameter later)
+      // For now, let's allow teachers to access students if they teach in the same school
       const teacherSchedules = await Schedule.find({
         schoolId: teacher.schoolId,
         'periods.teacherId': teacher._id,
-        grade,
         isActive: true,
       });
 
-      // If teacher doesn't have any schedules for this grade, check the assigned grades
-      if (teacherSchedules.length === 0 && !teacher.grades.includes(grade)) {
+      // Get all grades this teacher teaches
+      const teacherGrades = new Set([
+        ...teacher.grades,
+        ...teacherSchedules.map(s => s.grade)
+      ]);
+
+      // If teacher doesn't have direct access to this grade, but has general teaching access in the school,
+      // allow access for disciplinary purposes (teachers can report incidents about any student in school)
+      const hasGeneralAccess = teacher.designation === 'head_teacher' || 
+                              teacher.designation === 'assistant_head_teacher' ||
+                              teacher.designation === 'discipline_master' ||
+                              teacherGrades.size > 0; // Has at least some teaching responsibilities
+
+      if (!teacherGrades.has(grade) && !hasGeneralAccess) {
         throw new AppError(httpStatus.FORBIDDEN, `You don't have permission to access Grade ${grade}`);
       }
 

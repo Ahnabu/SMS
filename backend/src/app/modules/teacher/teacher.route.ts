@@ -15,6 +15,7 @@ import {
   deletePhotoValidationSchema,
   getTeachersBySubjectSchema,
   getTeachersStatsValidationSchema,
+  issuePunishmentValidationSchema,
 } from "./teacher.validation";
 
 const router = Router();
@@ -223,6 +224,7 @@ router.post(
   "/discipline/punishment",
   authenticate,
   authorize(UserRole.TEACHER),
+  validateRequest(issuePunishmentValidationSchema),
   TeacherController.issuePunishment
 );
 

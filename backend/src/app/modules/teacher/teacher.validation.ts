@@ -544,6 +544,72 @@ const getTeachersStatsValidationSchema = z.object({
   }),
 });
 
+const issuePunishmentValidationSchema = z.object({
+  body: z.object({
+    studentIds: z
+      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid student ID format'))
+      .min(1, 'At least one student ID is required')
+      .max(50, 'Cannot issue punishment to more than 50 students at once'),
+    punishmentType: z
+      .string({
+        required_error: 'Punishment type is required',
+      })
+      .min(1, 'Punishment type cannot be empty'),
+    severity: z
+      .enum(['low', 'medium', 'high', 'critical'], {
+        required_error: 'Severity is required',
+        invalid_type_error: 'Severity must be one of: low, medium, high, critical',
+      }),
+    category: z
+      .enum(['behavior', 'attendance', 'academic', 'discipline', 'uniform', 'other'], {
+        required_error: 'Category is required',
+        invalid_type_error: 'Category must be one of: behavior, attendance, academic, discipline, uniform, other',
+      }),
+    title: z
+      .string({
+        required_error: 'Title is required',
+      })
+      .min(1, 'Title cannot be empty')
+      .max(200, 'Title cannot exceed 200 characters')
+      .trim(),
+    description: z
+      .string({
+        required_error: 'Description is required',
+      })
+      .min(1, 'Description cannot be empty')
+      .max(2000, 'Description cannot exceed 2000 characters')
+      .trim(),
+    reason: z
+      .string({
+        required_error: 'Reason is required',
+      })
+      .min(1, 'Reason cannot be empty')
+      .max(500, 'Reason cannot exceed 500 characters')
+      .trim(),
+    actionTaken: z
+      .string()
+      .max(1000, 'Action taken cannot exceed 1000 characters')
+      .trim()
+      .optional(),
+    incidentDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Incident date must be in YYYY-MM-DD format')
+      .optional(),
+    witnesses: z
+      .array(z.string().min(1, 'Witness name cannot be empty'))
+      .max(10, 'Cannot have more than 10 witnesses')
+      .optional()
+      .default([]),
+    urgentNotification: z.boolean().optional().default(false),
+    followUpRequired: z.boolean().optional().default(true),
+    isAppealable: z.boolean().optional().default(true),
+    appealDeadline: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Appeal deadline must be in YYYY-MM-DD format')
+      .optional(),
+  }),
+});
+
 export {
   createTeacherValidationSchema,
   updateTeacherValidationSchema,
@@ -554,4 +620,5 @@ export {
   deletePhotoValidationSchema,
   getTeachersBySubjectSchema,
   getTeachersStatsValidationSchema,
+  issuePunishmentValidationSchema,
 };
