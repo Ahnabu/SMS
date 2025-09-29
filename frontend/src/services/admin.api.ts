@@ -214,4 +214,18 @@ export const adminApi = {
     subjectId?: string;
     examType?: string;
   }) => api.get<ApiResponse>("/admin/reports/grades", { params }),
+
+  // Disciplinary Actions (using teacher endpoints with admin authorization)
+  getDisciplinaryActions: (filters?: {
+    actionType?: string;
+    severity?: string;
+    status?: string;
+    isRedWarrant?: boolean;
+  }) => api.get<ApiResponse>("/teachers/discipline/my-actions", { params: filters }),
+  
+  resolveDisciplinaryAction: (actionId: string, data: { resolutionNotes: string }) =>
+    api.patch<ApiResponse>(`/teachers/discipline/resolve/${actionId}`, data),
+  
+  addDisciplinaryActionComment: (actionId: string, data: { comment: string }) =>
+    api.post<ApiResponse>(`/teachers/discipline/comment/${actionId}`, data),
 };

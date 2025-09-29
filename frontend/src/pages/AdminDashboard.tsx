@@ -13,6 +13,7 @@ import SubjectManagement from "../components/admin/SubjectManagement";
 import ScheduleManagement from "../components/admin/ScheduleManagement";
 import AcademicCalendar from "../components/admin/AcademicCalendar";
 import TeacherDetailView from "../components/admin/TeacherDetailView";
+import AdminDisciplinaryActionsManager from "../components/admin/AdminDisciplinaryActionsManager";
 
 import MinimalTeacherForm from "../components/admin/teacher/MinimalTeacherForm";
 
@@ -27,6 +28,7 @@ const AdminDashboard: React.FC = () => {
     { href: '/admin/teachers', label: 'Teachers' },
     { href: '/admin/subjects', label: 'Subjects' },
     { href: '/admin/schedules', label: 'Schedules' },
+    { href: '/admin/disciplinary-actions', label: 'Disciplinary Actions' },
     { href: '/admin/calendar', label: 'Calendar' },
   ];
 
@@ -84,6 +86,7 @@ const AdminDashboard: React.FC = () => {
           <Route path="/teachers" element={<TeacherManagement />} />
           <Route path="/subjects" element={<SubjectManagementPage />} />
           <Route path="/schedules" element={<ScheduleManagementPage />} />
+          <Route path="/disciplinary-actions" element={<AdminDisciplinaryActionsManager />} />
           <Route path="/calendar" element={<CalendarManagementPage />} />
         </Routes>
       </main>
@@ -238,7 +241,7 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             Quick Actions
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link 
               to="/admin/students" 
               state={{ openAddForm: true }}
@@ -258,6 +261,11 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
             <Link to="/admin/schedules">
               <button className="bg-yellow-600 hover:bg-yellow-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
                 Create Schedule
+              </button>
+            </Link>
+            <Link to="/admin/disciplinary-actions">
+              <button className="bg-red-600 hover:bg-red-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
+                Disciplinary Actions
               </button>
             </Link>
             <Link to="/admin/calendar">

@@ -9,6 +9,7 @@ import TeacherHomeworkView from '../components/teacher/TeacherHomeworkView';
 import TeacherAttendanceView from '../components/teacher/TeacherAttendanceView';
 import TeacherExamGrading from '../components/teacher/TeacherExamGrading';
 import TeacherPunishmentSystem from '../components/teacher/TeacherPunishmentSystem';
+import DisciplinaryActionsManager from '../components/teacher/DisciplinaryActionsManager';
 import TeacherStudentView from '../components/teacher/TeacherStudentView';
 
 const TeacherDashboard: React.FC = () => {
@@ -23,7 +24,8 @@ const TeacherDashboard: React.FC = () => {
     { href: '/teacher/homework', label: 'Homework' },
     { href: '/teacher/grades', label: 'Grading' },
     { href: '/teacher/students', label: 'Students' },
-    { href: '/teacher/discipline', label: 'Discipline' },
+    { href: '/teacher/discipline', label: 'Issue Discipline' },
+    { href: '/teacher/disciplinary-actions', label: 'Manage Actions' },
     { href: '/teacher/schedule', label: 'Schedule' },
   ];
 
@@ -77,6 +79,7 @@ const TeacherDashboard: React.FC = () => {
           <Route path="/grades" element={<TeacherExamGrading />} />
           <Route path="/students" element={<TeacherStudentView />} />
           <Route path="/discipline" element={<TeacherPunishmentSystem />} />
+          <Route path="/disciplinary-actions" element={<DisciplinaryActionsManager />} />
           <Route path="/schedule" element={<TeacherScheduleView />} />
         </Routes>
       </main>
@@ -167,13 +170,13 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
               href="/teacher/discipline"
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
-              <div className="text-sm sm:text-base">Discipline</div>
+              <div className="text-sm sm:text-base">Issue Action</div>
             </a>
             <a 
-              href="/teacher/schedule"
-              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
+              href="/teacher/disciplinary-actions"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
-              <div className="text-sm sm:text-base">Schedule</div>
+              <div className="text-sm sm:text-base">Manage Actions</div>
             </a>
           </div>
         </div>

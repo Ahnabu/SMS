@@ -358,7 +358,6 @@ disciplinaryActionSchema.methods.getEscalationLevel = function(): string {
 
 disciplinaryActionSchema.methods.notifyParents = async function(): Promise<boolean> {
   // TEMPORARILY SIMPLIFIED - Fix population and type issues later
-  console.log('Parent notification called for disciplinary action:', this._id);
   return true;
   /*
   try {
@@ -414,7 +413,6 @@ disciplinaryActionSchema.methods.notifyParents = async function(): Promise<boole
 
 disciplinaryActionSchema.methods.notifyStudent = async function(): Promise<boolean> {
   // TEMPORARILY SIMPLIFIED - Fix population and type issues later
-  console.log('Student notification called for disciplinary action:', this._id);
   return true;
 };
 
@@ -533,7 +531,6 @@ disciplinaryActionSchema.statics.getClassDisciplinaryStats = async function(
 
 disciplinaryActionSchema.statics.issueRedWarrant = async function(data: any) {
   // TEMPORARILY SIMPLIFIED - Fix interface and type issues later
-  console.log('Red warrant issuance called');
   
   const actions = [];
   
@@ -560,14 +557,19 @@ disciplinaryActionSchema.statics.issueRedWarrant = async function(data: any) {
 
 disciplinaryActionSchema.statics.escalateWarning = async function(actionId: string, escalationReason: string) {
   // TEMPORARILY SIMPLIFIED
-  console.log('Escalate warning called for action:', actionId);
   const action = await this.findById(actionId);
   if (!action) throw new Error('Disciplinary action not found');
   return action;
 };
 
 disciplinaryActionSchema.statics.getDisciplinaryStats = async function(schoolId: string, filters: any = {}): Promise<IDisciplinaryStats> {
-  const matchQuery = { schoolId, ...filters };
+  const mongoose = require('mongoose');
+  
+  // Ensure schoolId is converted to ObjectId
+  const matchQuery = { 
+    schoolId: new mongoose.Types.ObjectId(schoolId), 
+    ...filters 
+  };
   
   const [stats] = await this.aggregate([
     { $match: matchQuery },
@@ -589,9 +591,10 @@ disciplinaryActionSchema.statics.getDisciplinaryStats = async function(schoolId:
     }
   ]);
   
-  // Get overdue follow-ups
+  // Get overdue follow-ups with the same filters
   const overdueFollowUps = await this.countDocuments({
-    schoolId,
+    schoolId: new mongoose.Types.ObjectId(schoolId),
+    ...filters, // Include the same filters (like teacherId)
     followUpRequired: true,
     followUpDate: { $lt: new Date() },
     status: { $ne: 'resolved' }

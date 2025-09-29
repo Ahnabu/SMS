@@ -16,6 +16,8 @@ import {
   getTeachersBySubjectSchema,
   getTeachersStatsValidationSchema,
   issuePunishmentValidationSchema,
+  resolveDisciplinaryActionValidationSchema,
+  addDisciplinaryActionCommentValidationSchema,
 } from "./teacher.validation";
 
 const router = Router();
@@ -240,6 +242,22 @@ router.get(
   authenticate,
   authorize(UserRole.TEACHER),
   TeacherController.getMyDisciplinaryActions
+);
+
+router.patch(
+  "/discipline/resolve/:actionId",
+  authenticate,
+  authorize(UserRole.TEACHER, UserRole.ADMIN),
+  validateRequest(resolveDisciplinaryActionValidationSchema),
+  TeacherController.resolveDisciplinaryAction
+);
+
+router.post(
+  "/discipline/comment/:actionId",
+  authenticate,
+  authorize(UserRole.TEACHER, UserRole.ADMIN),
+  validateRequest(addDisciplinaryActionCommentValidationSchema),
+  TeacherController.addDisciplinaryActionComment
 );
 
 // Student Management Routes

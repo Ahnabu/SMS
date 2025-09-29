@@ -525,6 +525,44 @@ const getMyDisciplinaryActions = catchAsync(async (req: Request, res: Response) 
   });
 });
 
+const resolveDisciplinaryAction = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { actionId } = req.params;
+  const { resolutionNotes } = req.body;
+  
+  if (!teacherUser || (teacherUser.role !== 'teacher' && teacherUser.role !== 'admin')) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher or Admin access required");
+  }
+
+  const result = await teacherService.resolveDisciplinaryAction(teacherUser.id, actionId, resolutionNotes);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Disciplinary action resolved successfully",
+    data: result,
+  });
+});
+
+const addDisciplinaryActionComment = catchAsync(async (req: Request, res: Response) => {
+  const teacherUser = (req as any).user;
+  const { actionId } = req.params;
+  const { comment } = req.body;
+  
+  if (!teacherUser || (teacherUser.role !== 'teacher' && teacherUser.role !== 'admin')) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Teacher or Admin access required");
+  }
+
+  const result = await teacherService.addDisciplinaryActionComment(teacherUser.id, actionId, comment);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Comment added successfully",
+    data: result,
+  });
+});
+
 const getStudentsByGrade = catchAsync(async (req: Request, res: Response) => {
   const teacherUser = (req as any).user;
   const { grade } = req.params;
@@ -658,6 +696,8 @@ export const TeacherController = {
   issuePunishment,
   issueRedWarrant,
   getMyDisciplinaryActions,
+  resolveDisciplinaryAction,
+  addDisciplinaryActionComment,
   // Student Management Methods
   getStudentsByGrade,
   getStudentsByGradeAndSection,

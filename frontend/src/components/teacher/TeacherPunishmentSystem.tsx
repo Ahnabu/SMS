@@ -49,6 +49,12 @@ const TeacherPunishmentSystem: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [stats, setStats] = useState({
+    redWarrants: 0,
+    pendingFollowUps: 0,
+    resolved: 0,
+  });
+  const [recentActions, setRecentActions] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     punishmentType: '',
     severity: 'high' as 'high' | 'critical',
@@ -111,11 +117,49 @@ const TeacherPunishmentSystem: React.FC = () => {
   ];
 
   useEffect(() => {
+    loadDisciplinaryStats();
     if (selectedGrade) {
       loadStudentsByGrade();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGrade, selectedSection]);
+
+  const loadDisciplinaryStats = async () => {
+    try {
+      // Temporarily remove the isRedWarrant filter to get all actions
+      const response = await teacherApi.getMyDisciplinaryActions({});
+      
+      if (response.data.success) {
+        const data = response.data.data;
+        
+        if (data.stats) {
+          const newStats = {
+            redWarrants: data.stats.redWarrants || 0,
+            pendingFollowUps: data.stats.overdueFollowUps || 0,
+            resolved: data.stats.resolvedActions || 0,
+          };
+          setStats(newStats);
+        }
+        
+        // Get recent actions (filter for red warrants in frontend)
+        if (data.actions) {
+          const redWarrantActions = data.actions.filter((action: any) => action.isRedWarrant);
+          setRecentActions(redWarrantActions.slice(0, 5)); // Get latest 5
+        }
+      } else {
+        toast.error('Failed to load stats: API response not successful');
+      }
+    } catch (error: any) {
+      console.error("Failed to load disciplinary stats:", error);
+      
+      // Show different messages based on error type
+      if (error.response?.status === 401) {
+        toast.error('Please log in to view disciplinary statistics');
+      } else {
+        toast.error(`Failed to load stats: ${error.response?.data?.message || error.message}`);
+      }
+    }
+  };
 
   const loadStudentsByGrade = async () => {
     try {
@@ -195,6 +239,9 @@ const TeacherPunishmentSystem: React.FC = () => {
           witnesses: [],
           urgentNotification: true,
         });
+        
+        // Refresh stats after issuing new warrant
+        loadDisciplinaryStats();
       }
     } catch (error: any) {
       console.error("Failed to issue punishment:", error);
@@ -526,7 +573,7 @@ const TeacherPunishmentSystem: React.FC = () => {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm text-gray-500">Red Warrants Issued</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">12</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{stats.redWarrants}</p>
               </div>
             </div>
           </CardContent>
@@ -540,7 +587,7 @@ const TeacherPunishmentSystem: React.FC = () => {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm text-gray-500">Pending Follow-up</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">8</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{stats.pendingFollowUps}</p>
               </div>
             </div>
           </CardContent>
@@ -554,20 +601,50 @@ const TeacherPunishmentSystem: React.FC = () => {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm text-gray-500">Resolved</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">4</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{stats.resolved}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Actions would go here */}
+      {/* Recent Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Red Warrants</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">Recent red warrant history will be displayed here...</p>
+          {recentActions.length > 0 ? (
+            <div className="space-y-3">
+              {recentActions.map((action) => (
+                <div key={action.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">{action.title}</p>
+                    <p className="text-sm text-gray-600">{action.studentName} - {action.studentRoll}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(action.issuedDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      action.status === 'active' ? 'bg-red-100 text-red-800' :
+                      action.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {action.status.toUpperCase()}
+                    </span>
+                    {action.severity === 'critical' && (
+                      <span className="px-2 py-1 bg-red-200 text-red-800 rounded-full text-xs font-medium">
+                        CRITICAL
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">No red warrants issued yet.</p>
+          )}
         </CardContent>
       </Card>
     </div>

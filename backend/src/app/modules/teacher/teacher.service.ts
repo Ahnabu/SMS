@@ -2201,6 +2201,89 @@ class TeacherService {
     }
   }
 
+  async resolveDisciplinaryAction(userId: string, actionId: string, resolutionNotes: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+      
+      const action = await DisciplinaryAction.findById(actionId);
+      
+      if (!action) {
+        throw new AppError(httpStatus.NOT_FOUND, "Disciplinary action not found");
+      }
+
+      // Check if teacher has permission to resolve this action
+      if (action.teacherId.toString() !== teacher._id.toString()) {
+        throw new AppError(httpStatus.FORBIDDEN, "You can only resolve your own disciplinary actions");
+      }
+
+      // Update the action directly
+      action.status = 'resolved';
+      action.resolvedDate = new Date();
+      action.resolvedBy = teacher.userId;
+      action.resolutionNotes = resolutionNotes;
+      const resolvedAction = await action.save();
+
+      return {
+        id: resolvedAction._id,
+        status: resolvedAction.status,
+        resolvedDate: resolvedAction.resolvedDate,
+        resolutionNotes: resolvedAction.resolutionNotes,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to resolve disciplinary action: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async addDisciplinaryActionComment(userId: string, actionId: string, comment: string): Promise<any> {
+    try {
+      const teacher = await Teacher.findOne({ userId });
+
+      if (!teacher) {
+        throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
+      }
+
+      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+      
+      const action = await DisciplinaryAction.findById(actionId);
+      
+      if (!action) {
+        throw new AppError(httpStatus.NOT_FOUND, "Disciplinary action not found");
+      }
+
+      // Check if teacher has permission to comment on this action
+      if (action.teacherId.toString() !== teacher._id.toString()) {
+        throw new AppError(httpStatus.FORBIDDEN, "You can only comment on your own disciplinary actions");
+      }
+
+      // Add follow-up comment
+      action.resolutionNotes = (action.resolutionNotes || '') + '\n\nFollow-up: ' + comment;
+      action.followUpDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
+      const updatedAction = await action.save();
+
+      return {
+        id: updatedAction._id,
+        followUpDate: updatedAction.followUpDate,
+        resolutionNotes: updatedAction.resolutionNotes,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to add comment to disciplinary action: ${(error as Error).message}`
+      );
+    }
+  }
+
   async getStudentsByGrade(userId: string, grade: number, section?: string): Promise<any> {
     try {
       const teacher = await Teacher.findOne({ userId }).populate('schoolId');

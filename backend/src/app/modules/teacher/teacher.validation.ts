@@ -610,6 +610,36 @@ const issuePunishmentValidationSchema = z.object({
   }),
 });
 
+const resolveDisciplinaryActionValidationSchema = z.object({
+  params: z.object({
+    actionId: z.string().min(1, 'Action ID is required'),
+  }),
+  body: z.object({
+    resolutionNotes: z
+      .string({
+        required_error: 'Resolution notes are required',
+      })
+      .min(1, 'Resolution notes cannot be empty')
+      .max(1000, 'Resolution notes cannot exceed 1000 characters')
+      .trim(),
+  }),
+});
+
+const addDisciplinaryActionCommentValidationSchema = z.object({
+  params: z.object({
+    actionId: z.string().min(1, 'Action ID is required'),
+  }),
+  body: z.object({
+    comment: z
+      .string({
+        required_error: 'Comment is required',
+      })
+      .min(1, 'Comment cannot be empty')
+      .max(1000, 'Comment cannot exceed 1000 characters')
+      .trim(),
+  }),
+});
+
 export {
   createTeacherValidationSchema,
   updateTeacherValidationSchema,
@@ -621,4 +651,6 @@ export {
   getTeachersBySubjectSchema,
   getTeachersStatsValidationSchema,
   issuePunishmentValidationSchema,
+  resolveDisciplinaryActionValidationSchema,
+  addDisciplinaryActionCommentValidationSchema,
 };
