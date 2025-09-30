@@ -41,6 +41,22 @@ interface StudentProfileData {
   school?: {
     id: string;
     name: string;
+    schoolId?: string;
+    establishedYear?: number;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+    };
+    contact?: {
+      phone?: string;
+      email?: string;
+      website?: string;
+    };
+    affiliation?: string;
+    logo?: string;
   };
   parent?: {
     id: string;
@@ -307,18 +323,126 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ studentData }) => {
             School Information
           </p>
           <CardContent>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-gray-600" />
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden">
+                {profile.school.logo ? (
+                  <img
+                    src={profile.school.logo}
+                    alt={`${profile.school.name} Logo`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <GraduationCap className="w-8 h-8 text-blue-600" />
+                )}
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {profile.school.name}
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">
+                  {profile.school.name || "Unknown School"}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  School ID: {profile.school.id}
-                </p>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span>Active Institution</span>
+                  </div>
+                  {profile.school.establishedYear && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">•</span>
+                      <span>Est. {profile.school.establishedYear}</span>
+                    </div>
+                  )}
+                  {profile.school.affiliation && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">•</span>
+                      <span>{profile.school.affiliation}</span>
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* School Details Grid */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Contact Information */}
+              {profile.school.contact && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    Contact Information
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {profile.school.contact.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span>{profile.school.contact.phone}</span>
+                      </div>
+                    )}
+                    {profile.school.contact.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span>{profile.school.contact.email}</span>
+                      </div>
+                    )}
+                    {profile.school.contact.website && (
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+                        </svg>
+                        <a 
+                          href={profile.school.contact.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {profile.school.contact.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Address Information */}
+              {profile.school.address && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    School Address
+                  </h4>
+                  <div className="text-sm text-gray-600">
+                    <div className="space-y-1">
+                      {profile.school.address.street && (
+                        <p>{profile.school.address.street}</p>
+                      )}
+                      <p>
+                        {[
+                          profile.school.address.city,
+                          profile.school.address.state,
+                          profile.school.address.postalCode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                      {profile.school.address.country && (
+                        <p className="font-medium">{profile.school.address.country}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800 flex items-start gap-2">
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  You are enrolled at <strong>{profile.school.name}</strong> and have access to all school resources, activities, and academic programs.
+                  {profile.school.affiliation && (
+                    <span> This institution is affiliated with <strong>{profile.school.affiliation}</strong>.</span>
+                  )}
+                </span>
+              </p>
             </div>
           </CardContent>
         </Card>

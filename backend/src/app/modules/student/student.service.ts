@@ -788,7 +788,7 @@ class StudentService {
 
       const student = await Student.findById(id)
         .populate("userId", "firstName lastName username email phone")
-        .populate("schoolId", "_id name")
+        .populate("schoolId", "_id name schoolId establishedYear address contact affiliation logo")
         .populate({
           path: "parentId",
           select: "_id userId occupation address relationship",
@@ -1433,6 +1433,12 @@ class StudentService {
         ? {
             id: extractId(student.schoolId),
             name: student.schoolId.name || "Unknown School",
+            schoolId: student.schoolId.schoolId,
+            establishedYear: student.schoolId.establishedYear,
+            address: student.schoolId.address,
+            contact: student.schoolId.contact,
+            affiliation: student.schoolId.affiliation,
+            logo: student.schoolId.logo,
           }
         : undefined,
       parent: student.parentId
