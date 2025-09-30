@@ -221,6 +221,12 @@ class StudentService {
           newStudent[0].parentId = existingParent._id;
           await newStudent[0].save({ session });
 
+          // Set parentUser to existing parent's user for credential creation
+          const existingParentUser = await User.findById(existingParent.userId).session(session);
+          if (existingParentUser) {
+            parentUser = [existingParentUser];
+          }
+
           console.log(
             `Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`
           );
@@ -524,18 +530,49 @@ class StudentService {
           },
         ];
 
-        // Add parent credentials if parent was created
+        // Handle parent credentials - check if credentials already exist for this parent
         if (parentUser && parentUser.length > 0) {
-          credentialsToStore.push({
+          // Check if parent credentials already exist for this specific student
+          const existingParentCredentialsForStudent = await UserCredentials.findOne({
             userId: parentUser[0]._id,
-            schoolId: studentData.schoolId,
-            initialUsername: credentials.parent.username,
-            initialPassword: credentials.parent.password,
-            hasChangedPassword: false,
             role: "parent",
             associatedStudentId: newStudent[0]._id,
-            issuedBy: new Types.ObjectId(adminUserId),
-          });
+          }).session(session);
+
+          if (!existingParentCredentialsForStudent) {
+            // Check if parent credentials exist for other students (to reuse credentials)
+            const existingParentCredentials = await UserCredentials.findOne({
+              userId: parentUser[0]._id,
+              role: "parent",
+            }).session(session);
+
+            if (existingParentCredentials) {
+              // Parent credentials exist for other children - create a new entry linking this student to existing credentials
+              credentialsToStore.push({
+                userId: parentUser[0]._id,
+                schoolId: studentData.schoolId,
+                initialUsername: existingParentCredentials.initialUsername,
+                initialPassword: existingParentCredentials.initialPassword,
+                hasChangedPassword: existingParentCredentials.hasChangedPassword,
+                role: "parent",
+                associatedStudentId: newStudent[0]._id,
+                issuedBy: new Types.ObjectId(adminUserId),
+              });
+            } else {
+              // New parent - create new credentials
+              credentialsToStore.push({
+                userId: parentUser[0]._id,
+                schoolId: studentData.schoolId,
+                initialUsername: credentials.parent.username,
+                initialPassword: credentials.parent.password,
+                hasChangedPassword: false,
+                role: "parent",
+                associatedStudentId: newStudent[0]._id,
+                issuedBy: new Types.ObjectId(adminUserId),
+              });
+            }
+          }
+          // If credentials already exist for this specific student, don't add anything to avoid duplicates
         }
 
         await UserCredentials.insertMany(credentialsToStore, { session });
@@ -568,15 +605,33 @@ class StudentService {
 
       // Add generated credentials to response
       if (credentials) {
+        // For parent credentials, check if we're using existing credentials
+        let parentCredentials = {
+          username: credentials.parent.username,
+          password: credentials.parent.password,
+        };
+
+        // If we reused an existing parent, get their actual credentials
+        if (parentUser && parentUser.length > 0) {
+          const existingParentCredentials = await UserCredentials.findOne({
+            userId: parentUser[0]._id,
+            role: "parent",
+          });
+
+          if (existingParentCredentials) {
+            parentCredentials = {
+              username: existingParentCredentials.initialUsername,
+              password: existingParentCredentials.initialPassword,
+            };
+          }
+        }
+
         response.credentials = {
           student: {
             username: credentials.student.username,
             password: credentials.student.password,
           },
-          parent: {
-            username: credentials.parent.username,
-            password: credentials.parent.password,
-          },
+          parent: parentCredentials,
         };
       }
 

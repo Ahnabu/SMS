@@ -16,7 +16,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check if user is logged in on app start by calling verify endpoint
     checkExistingAuth();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkExistingAuth = async () => {
     try {
@@ -31,9 +31,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         clearAuthData();
       }
-    } catch (error) {
-      console.error('Error checking existing auth:', error);
-      clearAuthData();
+    } catch (error: any) {
+      // Handle different types of errors
+      if (error.code === 'ERR_NETWORK') {
+        console.warn('Network error during auth check - server may be unavailable');
+      } else if (error.response?.status === 401) {
+        console.log('No valid session found');
+      } else if (error.response?.status === 429) {
+        console.warn('Rate limited during auth check - will retry');
+        // Don't clear auth data for rate limiting, just log
+      } else {
+        console.error('Error checking existing auth:', error);
+      }
+      
+      // Only clear auth data for non-network errors
+      if (error.code !== 'ERR_NETWORK' && error.response?.status !== 429) {
+        clearAuthData();
+      }
     } finally {
       setIsLoading(false);
     }

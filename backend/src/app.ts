@@ -13,37 +13,65 @@ const app: Application = express();
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+// Handle preflight requests before rate limiting
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
+// Rate limiting - more permissive in development
 const limiter = rateLimit({
   windowMs: config.rate_limit_window_ms,
-  max: config.rate_limit_max_requests,
+  max: config.node_env === 'development' ? 1000 : config.rate_limit_max_requests, // 1000 requests in dev, 100 in prod
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and docs in development
+    if (config.node_env === 'development' && (req.url === '/health' || req.url === '/api/docs')) {
+      return true;
+    }
+    return false;
+  }
 });
 app.use('/api/', limiter);
 
-// CORS configuration
+// CORS configuration - more permissive in development
 app.use(cors({
   origin: function (origin, callback) {
+    // In development, allow all localhost origins
+    if (config.node_env === 'development') {
+      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return callback(null, true);
+      }
+    }
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
       config.frontend_url
     ];
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
 
 // Body parsing middleware

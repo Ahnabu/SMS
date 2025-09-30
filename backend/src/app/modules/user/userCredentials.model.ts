@@ -8,7 +8,6 @@ const userCredentialsSchema = new Schema<IUserCredentialsDocument>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User ID is required"],
-      unique: true,
       index: true,
     },
     schoolId: {
@@ -69,6 +68,25 @@ const userCredentialsSchema = new Schema<IUserCredentialsDocument>(
 userCredentialsSchema.index({ schoolId: 1, role: 1 });
 userCredentialsSchema.index({ associatedStudentId: 1 });
 userCredentialsSchema.index({ hasChangedPassword: 1 });
+
+// Compound unique index to prevent duplicate parent credentials for the same student
+// but allow same parent to have credentials for multiple students
+userCredentialsSchema.index(
+  { userId: 1, associatedStudentId: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { associatedStudentId: { $exists: true } }
+  }
+);
+
+// Unique index for student credentials (students should have only one credential record)
+userCredentialsSchema.index(
+  { userId: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { role: "student" }
+  }
+);
 
 // Transform output to exclude sensitive fields
 userCredentialsSchema.set("toJSON", {
