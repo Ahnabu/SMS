@@ -52,6 +52,9 @@ export const parentApi = {
     }
   ) => api.get<ApiResponse>(`/parent/children/${childId}/schedule`, { params }),
 
+  // Child disciplinary actions (red warrants only)
+  getChildDisciplinaryActions: () => api.get<ApiResponse>("/parents/disciplinary/actions"),
+
   // Notices and announcements
   getChildNotices: (
     childId: string,

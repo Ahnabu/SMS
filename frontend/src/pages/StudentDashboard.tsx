@@ -9,6 +9,7 @@ import GradeView from "../components/student/GradeView";
 import HomeworkView from "../components/student/HomeworkView";
 import ScheduleView from "../components/student/ScheduleView";
 import CalendarView from "../components/student/CalendarView";
+import StudentDisciplinaryActions from "../components/student/StudentDisciplinaryActions";
 
 const StudentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -45,6 +46,7 @@ const StudentDashboard: React.FC = () => {
     { label: "Homework", href: "/student/homework" },
     { label: "Class Schedule", href: "/student/schedule" },
     { label: "Calendar", href: "/student/calendar" },
+    { label: "Red Warrants", href: "/student/disciplinary" },
   ];
 
   if (loading) {
@@ -78,6 +80,7 @@ const StudentDashboard: React.FC = () => {
             <Route path="/homework" element={<HomeworkView />} />
             <Route path="/schedule" element={<ScheduleView />} />
             <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/disciplinary" element={<StudentDisciplinaryActions />} />
           </Routes>
         </div>
       </main>

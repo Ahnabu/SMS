@@ -413,6 +413,92 @@ class ParentService {
       } : undefined,
     };
   }
+
+  async getChildDisciplinaryActions(userId: string) {
+    try {
+      // Find the parent by userId
+      const parent = await Parent.findOne({ userId }).populate('children');
+      if (!parent) {
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
+      }
+
+      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+      
+      // Get all red warrants for parent's children
+      const actions = await DisciplinaryAction.find({
+        studentId: { $in: parent.children },
+        isRedWarrant: true
+      })
+        .populate({
+          path: 'studentId',
+          select: 'userId rollNumber grade section',
+          populate: {
+            path: 'userId',
+            select: 'firstName lastName'
+          }
+        })
+        .populate({
+          path: 'teacherId',
+          select: 'userId',
+          populate: {
+            path: 'userId',
+            select: 'firstName lastName'
+          }
+        })
+        .sort({ issuedDate: -1 });
+
+      // Get stats for all children combined (only red warrants)
+      const stats = await DisciplinaryAction.getDisciplinaryStats(parent.schoolId.toString(), { 
+        studentId: { $in: parent.children },
+        isRedWarrant: true 
+      });
+
+      const formattedActions = actions.map((action: any) => {
+        const student = action.studentId as any;
+        const teacher = action.teacherId as any;
+        const studentUser = student?.userId as any;
+        const teacherUser = teacher?.userId as any;
+        
+        return {
+          id: action._id,
+          studentName: studentUser ? `${studentUser.firstName} ${studentUser.lastName}` : 'N/A',
+          studentRoll: student?.rollNumber || 'N/A',
+          grade: student?.grade || 'N/A',
+          section: student?.section || 'N/A',
+          teacherName: teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'N/A',
+          actionType: action.actionType,
+          severity: action.severity,
+          category: action.category,
+          title: action.title,
+          description: action.description,
+          reason: action.reason,
+          status: action.status,
+          issuedDate: action.issuedDate,
+          isRedWarrant: action.isRedWarrant,
+          warrantLevel: action.warrantLevel,
+          parentNotified: action.parentNotified,
+          studentAcknowledged: action.studentAcknowledged,
+          followUpRequired: action.followUpRequired,
+          followUpDate: action.followUpDate,
+          resolutionNotes: action.resolutionNotes,
+          canAppeal: action.canAppeal ? action.canAppeal() : false,
+          isOverdue: action.isOverdue ? action.isOverdue() : false,
+        };
+      });
+
+      return {
+        actions: formattedActions,
+        stats,
+        childrenCount: parent.children.length
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get child disciplinary actions: ${(error as Error).message}`
+      );
+    }
+  }
 }
 
 export const parentService = new ParentService();

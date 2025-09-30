@@ -347,6 +347,22 @@ const getStudentCalendar = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getStudentDisciplinaryActions = catchAsync(async (req: Request, res: Response) => {
+  const studentUserId = (req as any).user?.id;
+  if (!studentUserId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Student user not found");
+  }
+
+  const disciplinaryData = await studentService.getStudentDisciplinaryActions(studentUserId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Student disciplinary actions retrieved successfully",
+    data: disciplinaryData,
+  });
+});
+
 export const StudentController = {
   createStudent,
   getAllStudents,
@@ -366,4 +382,5 @@ export const StudentController = {
   getStudentHomework,
   getStudentSchedule,
   getStudentCalendar,
+  getStudentDisciplinaryActions,
 };

@@ -212,4 +212,27 @@ router.put(
 );
 router.delete("/calendar/:id", deleteCalendarEvent);
 
+// Disciplinary Actions management routes
+import {
+  getAllDisciplinaryActions,
+  resolveDisciplinaryAction,
+  addDisciplinaryActionComment,
+} from "./admin.controller";
+import {
+  resolveDisciplinaryActionValidationSchema,
+  addDisciplinaryActionCommentValidationSchema,
+} from "../teacher/teacher.validation";
+
+router.get("/disciplinary/actions", getAllDisciplinaryActions);
+router.patch(
+  "/disciplinary/actions/resolve/:actionId",
+  validateRequest(resolveDisciplinaryActionValidationSchema),
+  resolveDisciplinaryAction
+);
+router.post(
+  "/disciplinary/actions/comment/:actionId",
+  validateRequest(addDisciplinaryActionCommentValidationSchema),
+  addDisciplinaryActionComment
+);
+
 export const adminRoutes = router;

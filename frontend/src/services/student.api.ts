@@ -85,6 +85,7 @@ export const studentApi = {
   getHomework: () => api.get<ApiResponse>("/students/homework"),
   getSchedule: () => api.get<ApiResponse>("/students/schedule"),
   getCalendar: () => api.get<ApiResponse>("/students/calendar"),
+  getDisciplinaryActions: () => api.get<ApiResponse>("/students/disciplinary/actions"),
 
   // Student profile endpoint
   getProfile: (id: string) => api.get<ApiResponse>(`/students/${id}`),

@@ -14,6 +14,7 @@ import { classRoutes } from "../modules/class/class.route";
 import { homeworkRoutes } from "../modules/homework/homework.route";
 import { examRoutes } from "../modules/exam/exam.route";
 import { adminRoutes } from "../modules/admin/admin.route";
+import { parentRoutes } from "../modules/parent/parent.route";
 import { SubjectRoutes } from "../modules/subject/subject.route";
 import { AcademicCalendarRoutes } from "../modules/academic-calendar/academic-calendar.route";
 import { ScheduleRoutes } from "../modules/schedule/schedule.route";
@@ -51,6 +52,10 @@ const moduleRoutes = [
   {
     path: "/teachers",
     route: TeacherRoutes,
+  },
+  {
+    path: "/parents",
+    route: parentRoutes,
   },
   {
     path: "/classes",

@@ -104,6 +104,13 @@ router.get(
 );
 
 router.get(
+  "/disciplinary/actions",
+  authenticate,
+  authorize(UserRole.STUDENT),
+  StudentController.getStudentDisciplinaryActions
+);
+
+router.get(
   "/:id",
   authenticate,
   authorize(

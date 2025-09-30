@@ -1234,12 +1234,11 @@ class StudentService {
           userId: student.userId,
           role: "student",
         }).lean(),
-        student.parentId
-          ? UserCredentials.findOne({
-              userId: (student.parentId as any).userId,
-              role: "parent",
-            }).lean()
-          : null,
+        // Query parent credentials by associatedStudentId instead of userId
+        UserCredentials.findOne({
+          associatedStudentId: student._id,
+          role: "parent",
+        }).lean(),
       ]);
 
       if (!studentCredentials) {
@@ -2184,6 +2183,77 @@ class StudentService {
 
     console.log("Calendar data prepared:", result);
     return result;
+  }
+
+  async getStudentDisciplinaryActions(userId: string) {
+    try {
+      // Find the student by userId
+      const student = await Student.findOne({ userId });
+      if (!student) {
+        throw new AppError(httpStatus.NOT_FOUND, "Student not found");
+      }
+
+      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+      
+      // Get only red warrants for this student (students/parents can only see red warrants)
+      const actions = await DisciplinaryAction.find({
+        studentId: student._id,
+        isRedWarrant: true
+      })
+        .populate({
+          path: 'teacherId',
+          select: 'userId',
+          populate: {
+            path: 'userId',
+            select: 'firstName lastName'
+          }
+        })
+        .sort({ issuedDate: -1 });
+
+      // Get stats for this student (only red warrants)
+      const stats = await DisciplinaryAction.getDisciplinaryStats(student.schoolId.toString(), { 
+        studentId: student._id,
+        isRedWarrant: true 
+      });
+
+      const formattedActions = actions.map((action: any) => {
+        const teacher = action.teacherId as any;
+        const teacherUser = teacher?.userId as any;
+        
+        return {
+          id: action._id,
+          teacherName: teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'N/A',
+          actionType: action.actionType,
+          severity: action.severity,
+          category: action.category,
+          title: action.title,
+          description: action.description,
+          reason: action.reason,
+          status: action.status,
+          issuedDate: action.issuedDate,
+          isRedWarrant: action.isRedWarrant,
+          warrantLevel: action.warrantLevel,
+          parentNotified: action.parentNotified,
+          studentAcknowledged: action.studentAcknowledged,
+          followUpRequired: action.followUpRequired,
+          followUpDate: action.followUpDate,
+          resolutionNotes: action.resolutionNotes,
+          canAppeal: action.canAppeal ? action.canAppeal() : false,
+          isOverdue: action.isOverdue ? action.isOverdue() : false,
+        };
+      });
+
+      return {
+        actions: formattedActions,
+        stats
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get student disciplinary actions: ${(error as Error).message}`
+      );
+    }
   }
 }
 

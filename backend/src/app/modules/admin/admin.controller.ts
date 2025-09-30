@@ -304,3 +304,188 @@ export const deleteCalendarEvent = catchAsync(async (req: AuthenticatedRequest, 
     data: null
   });
 });
+
+// Disciplinary Actions Controllers
+export const getAllDisciplinaryActions = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const adminSchoolId = req.user?.schoolId;
+  
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  try {
+    const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+    
+    const { actionType, severity, status, isRedWarrant } = req.query;
+    
+    const query: any = { schoolId: new mongoose.Types.ObjectId(adminSchoolId) };
+    
+    // Apply filters
+    if (actionType) query.actionType = actionType;
+    if (severity) query.severity = severity;
+    if (status) query.status = status;
+    if (isRedWarrant !== undefined) query.isRedWarrant = isRedWarrant === 'true';
+    
+    const actions = await DisciplinaryAction.find(query)
+      .populate({
+        path: 'studentId',
+        select: 'userId rollNumber grade section',
+        populate: {
+          path: 'userId',
+          select: 'firstName lastName'
+        }
+      })
+      .populate({
+        path: 'teacherId',
+        select: 'userId',
+        populate: {
+          path: 'userId',
+          select: 'firstName lastName'
+        }
+      })
+      .sort({ issuedDate: -1 });
+
+    // Get stats for all disciplinary actions in the school
+    const stats = await DisciplinaryAction.getDisciplinaryStats(adminSchoolId);
+
+    const formattedActions = actions.map((action: any) => {
+      const student = action.studentId as any;
+      const teacher = action.teacherId as any;
+      const studentUser = student?.userId as any;
+      const teacherUser = teacher?.userId as any;
+      
+      return {
+        id: action._id,
+        studentName: studentUser ? `${studentUser.firstName} ${studentUser.lastName}` : 'N/A',
+        studentRoll: student?.rollNumber || 'N/A',
+        grade: student?.grade || 'N/A',
+        section: student?.section || 'N/A',
+        teacherName: teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'N/A',
+        actionType: action.actionType,
+        severity: action.severity,
+        category: action.category,
+        title: action.title,
+        description: action.description,
+        reason: action.reason,
+        status: action.status,
+        issuedDate: action.issuedDate,
+        isRedWarrant: action.isRedWarrant,
+        warrantLevel: action.warrantLevel,
+        parentNotified: action.parentNotified,
+        studentAcknowledged: action.studentAcknowledged,
+        followUpRequired: action.followUpRequired,
+        followUpDate: action.followUpDate,
+        resolutionNotes: action.resolutionNotes,
+        canAppeal: action.canAppeal ? action.canAppeal() : false,
+        isOverdue: action.isOverdue ? action.isOverdue() : false,
+      };
+    });
+
+    sendResponse(res, {
+      success: true,
+      statusCode: 200,
+      message: 'Disciplinary actions retrieved successfully',
+      data: {
+        actions: formattedActions,
+        stats
+      }
+    });
+  } catch (error) {
+    return next(new AppError(500, `Failed to get disciplinary actions: ${(error as Error).message}`));
+  }
+});
+
+export const resolveDisciplinaryAction = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { actionId } = req.params;
+  const { resolutionNotes } = req.body;
+  const adminSchoolId = req.user?.schoolId;
+
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  try {
+    const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+    
+    // Find the action and verify it belongs to admin's school
+    const action = await DisciplinaryAction.findOne({
+      _id: actionId,
+      schoolId: new mongoose.Types.ObjectId(adminSchoolId)
+    });
+
+    if (!action) {
+      return next(new AppError(404, 'Disciplinary action not found'));
+    }
+
+    if (action.status === 'resolved') {
+      return next(new AppError(400, 'Disciplinary action is already resolved'));
+    }
+
+    // Update the action
+    action.status = 'resolved';
+    action.resolutionNotes = resolutionNotes;
+    action.resolvedDate = new Date();
+    action.resolvedBy = new mongoose.Types.ObjectId(req.user?.id);
+
+    await action.save();
+
+    sendResponse(res, {
+      success: true,
+      statusCode: 200,
+      message: 'Disciplinary action resolved successfully',
+      data: {
+        id: action._id,
+        status: action.status,
+        resolutionNotes: action.resolutionNotes,
+        resolvedDate: action.resolvedDate
+      }
+    });
+  } catch (error) {
+    return next(new AppError(500, `Failed to resolve disciplinary action: ${(error as Error).message}`));
+  }
+});
+
+export const addDisciplinaryActionComment = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { actionId } = req.params;
+  const { comment } = req.body;
+  const adminSchoolId = req.user?.schoolId;
+
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  try {
+    const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
+    
+    // Find the action and verify it belongs to admin's school
+    const action = await DisciplinaryAction.findOne({
+      _id: actionId,
+      schoolId: new mongoose.Types.ObjectId(adminSchoolId)
+    });
+
+    if (!action) {
+      return next(new AppError(404, 'Disciplinary action not found'));
+    }
+
+    // Add comment to follow-up notes
+    const timestamp = new Date().toISOString();
+    const adminName = req.user?.username || 'Admin';
+    const commentText = `\n\n[${timestamp}] Admin Comment by ${adminName}:\n${comment}`;
+    
+    action.resolutionNotes = (action.resolutionNotes || '') + commentText;
+    await action.save();
+
+    sendResponse(res, {
+      success: true,
+      statusCode: 200,
+      message: 'Comment added successfully',
+      data: {
+        id: action._id,
+        comment: commentText,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    return next(new AppError(500, `Failed to add comment: ${(error as Error).message}`));
+  }
+});
