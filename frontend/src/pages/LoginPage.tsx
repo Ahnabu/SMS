@@ -163,18 +163,36 @@ const LoginPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Demo Credentials */}
+        {/* Help & Contact Information */}
         <Card className="mt-6">
           <CardContent className="pt-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Demo Credentials:</h3>
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex justify-between items-center">
-                <span>Superadmin:</span>
-                <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">superadmin / super123</span>
+            <div className="flex items-center mb-4">
+              <svg className="w-5 h-5 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="font-semibold text-gray-900">Need Help with Login?</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200">
+                <p className="font-medium text-blue-900 text-sm mb-2">For Password Recovery:</p>
+                <div className="space-y-1 text-xs text-blue-800">
+                  <div className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                    <span><strong>Admins:</strong> Contact your Superadmin for password reset</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                    <span><strong>Teachers & Students/Parents:</strong> Contact your School Admin</span>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Other user accounts will be created through the admin panel
-              </p>
+              
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-center">
+                <p className="text-amber-800 font-medium text-sm">
+                  Login credentials are provided by your school administration
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

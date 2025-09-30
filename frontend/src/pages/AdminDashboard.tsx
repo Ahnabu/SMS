@@ -98,6 +98,31 @@ const AdminDashboard: React.FC = () => {
 const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Welcome Header with Role Guidance */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 sm:p-8 text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <div className="mb-4 lg:mb-0">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">School Management Center</h1>
+            <p className="text-blue-100 text-sm sm:text-base mb-3">
+              Manage your school's students, teachers, schedules, and academic activities
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="bg-white/20 px-2 py-1 rounded-full">👥 Manage Students</span>
+              <span className="bg-white/20 px-2 py-1 rounded-full">👨‍🏫 Manage Teachers</span>
+              <span className="bg-white/20 px-2 py-1 rounded-full">📚 Academic Planning</span>
+            </div>
+          </div>
+          <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+            <div className="flex items-center text-sm">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span>School Administrator</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
           School Overview
@@ -236,41 +261,150 @@ const AdminHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Quick Actions
+        {/* Data Flow Visualization for Admin */}
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-8">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            School Setup Workflow
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+            
+            {/* Step 1: Teachers */}
+            <div className="flex-1 bg-white rounded-lg p-4 shadow-sm border-2 border-green-200 hover:border-green-300 transition-colors">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-white font-bold">1</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 text-sm">Add Teachers</h4>
+                <p className="text-xs text-gray-600 mt-1">Teaching staff first</p>
+                <div className="mt-2 text-xs text-green-600 font-medium">Foundation Setup</div>
+              </div>
+            </div>
+
+            <div className="text-gray-400">
+              <svg className="w-6 h-6 rotate-90 lg:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+
+            {/* Step 2: Subjects */}
+            <div className="flex-1 bg-white rounded-lg p-4 shadow-sm border-2 border-yellow-200 hover:border-yellow-300 transition-colors">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-white font-bold">2</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 text-sm">Create Subjects</h4>
+                <p className="text-xs text-gray-600 mt-1">Curriculum structure</p>
+                <div className="mt-2 text-xs text-yellow-600 font-medium">Academic Framework</div>
+              </div>
+            </div>
+
+            <div className="text-gray-400">
+              <svg className="w-6 h-6 rotate-90 lg:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+
+            {/* Step 3: Students */}
+            <div className="flex-1 bg-white rounded-lg p-4 shadow-sm border-2 border-blue-200 hover:border-blue-300 transition-colors">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-white font-bold">3</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 text-sm">Enroll Students</h4>
+                <p className="text-xs text-gray-600 mt-1">Student admissions</p>
+                <div className="mt-2 text-xs text-blue-600 font-medium">Student Body</div>
+              </div>
+            </div>
+
+            <div className="text-gray-400">
+              <svg className="w-6 h-6 rotate-90 lg:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+
+            {/* Step 4: Schedules */}
+            <div className="flex-1 bg-white rounded-lg p-4 shadow-sm border-2 border-purple-200 hover:border-purple-300 transition-colors">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-white font-bold">4</span>
+                </div>
+                <h4 className="font-semibold text-gray-900 text-sm">Create Schedules</h4>
+                <p className="text-xs text-gray-600 mt-1">Class timetables</p>
+                <div className="mt-2 text-xs text-purple-600 font-medium">Operations Ready</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800 text-center">
+              <strong>Tip:</strong> Follow this order for smooth school setup. Teachers can start managing once schedules are created!
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Primary Actions
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <Link 
               to="/admin/students" 
               state={{ openAddForm: true }}
             >
-              <button className="bg-blue-600 hover:bg-blue-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                Add Student
+              <button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 w-full text-white p-4 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
+                <div className="flex flex-col items-center">
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Add Student
+                </div>
               </button>
             </Link>
             <Link 
               to="/admin/teachers" 
               state={{ openAddForm: true }}
             >
-              <button className="bg-green-600 hover:bg-green-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                Add Teacher
+              <button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 w-full text-white p-4 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
+                <div className="flex flex-col items-center">
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Add Teacher
+                </div>
               </button>
             </Link>
             <Link to="/admin/schedules">
-              <button className="bg-yellow-600 hover:bg-yellow-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                Create Schedule
+              <button className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 w-full text-white p-4 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
+                <div className="flex flex-col items-center">
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a4 4 0 118 0v4m-4 12v-4m0 0a7 7 0 01-7-7V8a1 1 0 011-1h12a1 1 0 011 1v1a7 7 0 01-7 7z" />
+                  </svg>
+                  Schedules
+                </div>
               </button>
             </Link>
             <Link to="/admin/disciplinary-actions">
-              <button className="bg-red-600 hover:bg-red-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                Disciplinary Actions
+              <button className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 w-full text-white p-4 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
+                <div className="flex flex-col items-center">
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  Discipline
+                </div>
               </button>
             </Link>
             <Link to="/admin/calendar">
-              <button className="bg-purple-600 hover:bg-purple-700 w-full text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-                View Calendar
+              <button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 w-full text-white p-4 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
+                <div className="flex flex-col items-center">
+                  <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Calendar
+                </div>
               </button>
             </Link>
           </div>
