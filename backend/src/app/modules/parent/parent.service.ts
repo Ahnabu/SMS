@@ -1,24 +1,31 @@
-import httpStatus from 'http-status';
-import { Types } from 'mongoose';
-import { AppError } from '../../errors/AppError';
-import { School } from '../school/school.model';
-import { Student } from '../student/student.model';
-import { User } from '../user/user.model';
-import { Parent } from './parent.model';
+import httpStatus from "http-status";
+import { Types } from "mongoose";
+import { AppError } from "../../errors/AppError";
+import { School } from "../school/school.model";
+import { Student } from "../student/student.model";
+import { User } from "../user/user.model";
+import { Parent } from "./parent.model";
 import {
   ICreateParentRequest,
   IUpdateParentRequest,
   IParentResponse,
   IParentStats,
-} from './parent.interface';
+} from "./parent.interface";
+import { Attendance } from "../attendance/attendance.model";
+import { Homework } from "../homework/homework.model";
+import { AcademicCalendar } from "../academic-calendar/academic-calendar.model";
+import { Notification } from "../notification/notification.model";
+import { Schedule } from "../schedule/schedule.model";
 
 class ParentService {
-  async createParent(parentData: ICreateParentRequest): Promise<IParentResponse> {
+  async createParent(
+    parentData: ICreateParentRequest
+  ): Promise<IParentResponse> {
     try {
       // Verify school exists and is active
       const school = await School.findById(parentData.schoolId);
       if (!school) {
-        throw new AppError(httpStatus.NOT_FOUND, 'School not found');
+        throw new AppError(httpStatus.NOT_FOUND, "School not found");
       }
 
       // Verify children exist and belong to the same school
@@ -28,19 +35,22 @@ class ParentService {
       });
 
       if (children.length !== parentData.children.length) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'One or more students not found in the specified school');
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          "One or more students not found in the specified school"
+        );
       }
 
       // Generate parent ID
       const parentId = await Parent.generateNextParentId(parentData.schoolId);
-      
+
       // Generate username from parent ID
-      const username = parentId.replace(/-/g, '').toLowerCase();
+      const username = parentId.replace(/-/g, "").toLowerCase();
 
       // Create user account for parent
       const newUser = await User.create({
         schoolId: parentData.schoolId,
-        role: 'parent',
+        role: "parent",
         username,
         passwordHash: parentId, // Temporary password, same as parent ID
         firstName: parentData.firstName,
@@ -58,21 +68,28 @@ class ParentService {
         relationship: parentData.relationship,
         occupation: parentData.occupation,
         qualification: parentData.qualification,
-        monthlyIncome: parentData.monthlyIncome ? {
-          ...parentData.monthlyIncome,
-          currency: parentData.monthlyIncome.currency || 'INR',
-        } : undefined,
+        monthlyIncome: parentData.monthlyIncome
+          ? {
+              ...parentData.monthlyIncome,
+              currency: parentData.monthlyIncome.currency || "INR",
+            }
+          : undefined,
         address: {
           ...parentData.address,
-          country: parentData.address.country 
+          country: parentData.address.country,
         },
         emergencyContact: parentData.emergencyContact,
         preferences: {
-          communicationMethod: parentData.preferences?.communicationMethod || 'All',
-          receiveNewsletters: parentData.preferences?.receiveNewsletters ?? true,
-          receiveAttendanceAlerts: parentData.preferences?.receiveAttendanceAlerts ?? true,
-          receiveExamResults: parentData.preferences?.receiveExamResults ?? true,
-          receiveEventNotifications: parentData.preferences?.receiveEventNotifications ?? true,
+          communicationMethod:
+            parentData.preferences?.communicationMethod || "All",
+          receiveNewsletters:
+            parentData.preferences?.receiveNewsletters ?? true,
+          receiveAttendanceAlerts:
+            parentData.preferences?.receiveAttendanceAlerts ?? true,
+          receiveExamResults:
+            parentData.preferences?.receiveExamResults ?? true,
+          receiveEventNotifications:
+            parentData.preferences?.receiveEventNotifications ?? true,
         },
       });
 
@@ -84,9 +101,13 @@ class ParentService {
 
       // Populate and return
       await newParent.populate([
-        { path: 'userId', select: 'firstName lastName username email phone' },
-        { path: 'schoolId', select: 'name' },
-        { path: 'children', select: 'studentId grade section rollNumber', populate: { path: 'userId', select: 'firstName lastName' } },
+        { path: "userId", select: "firstName lastName username email phone" },
+        { path: "schoolId", select: "name" },
+        {
+          path: "children",
+          select: "studentId grade section rollNumber",
+          populate: { path: "userId", select: "firstName lastName" },
+        },
       ]);
 
       return this.formatParentResponse(newParent);
@@ -119,7 +140,16 @@ class ParentService {
     hasPrevPage: boolean;
   }> {
     try {
-      const { page, limit, schoolId, relationship, isActive, search, sortBy, sortOrder } = queryParams;
+      const {
+        page,
+        limit,
+        schoolId,
+        relationship,
+        isActive,
+        search,
+        sortBy,
+        sortOrder,
+      } = queryParams;
       const skip = (page - 1) * limit;
 
       // Build query
@@ -133,50 +163,48 @@ class ParentService {
         query.relationship = relationship;
       }
 
-      if (isActive && isActive !== 'all') {
-        query.isActive = isActive === 'true';
+      if (isActive && isActive !== "all") {
+        query.isActive = isActive === "true";
       }
 
       // Build search query for user fields
       let userQuery: any = {};
       if (search) {
         userQuery.$or = [
-          { firstName: { $regex: new RegExp(search, 'i') } },
-          { lastName: { $regex: new RegExp(search, 'i') } },
-          { username: { $regex: new RegExp(search, 'i') } },
+          { firstName: { $regex: new RegExp(search, "i") } },
+          { lastName: { $regex: new RegExp(search, "i") } },
+          { username: { $regex: new RegExp(search, "i") } },
         ];
       }
 
       // If we have user search criteria, find matching users first
       let userIds: Types.ObjectId[] = [];
       if (Object.keys(userQuery).length > 0) {
-        const matchingUsers = await User.find(userQuery).select('_id');
-        userIds = matchingUsers.map(user => user._id);
+        const matchingUsers = await User.find(userQuery).select("_id");
+        userIds = matchingUsers.map((user) => user._id);
         query.userId = { $in: userIds };
       }
 
       // Handle parent ID search separately
       if (search && !userQuery.$or) {
-        query.$or = [
-          { parentId: { $regex: new RegExp(search, 'i') } },
-        ];
+        query.$or = [{ parentId: { $regex: new RegExp(search, "i") } }];
       }
 
       // Build sort
       const sort: any = {};
-      if (sortBy === 'firstName' || sortBy === 'lastName') {
+      if (sortBy === "firstName" || sortBy === "lastName") {
         sort.relationship = 1;
         sort.createdAt = -1;
       } else {
-        sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        sort[sortBy] = sortOrder === "desc" ? -1 : 1;
       }
 
       // Execute queries
       const [parents, totalCount] = await Promise.all([
         Parent.find(query)
-          .populate('userId', 'firstName lastName username email phone')
-          .populate('schoolId', 'name')
-          .populate('children', 'studentId grade section rollNumber userId')
+          .populate("userId", "firstName lastName username email phone")
+          .populate("schoolId", "name")
+          .populate("children", "studentId grade section rollNumber userId")
           .sort(sort)
           .skip(skip)
           .limit(limit)
@@ -187,7 +215,7 @@ class ParentService {
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        parents: parents.map(parent => this.formatParentResponse(parent)),
+        parents: parents.map((parent) => this.formatParentResponse(parent)),
         totalCount,
         currentPage: page,
         totalPages,
@@ -205,17 +233,17 @@ class ParentService {
   async getParentById(id: string): Promise<IParentResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid parent ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid parent ID format");
       }
 
       const parent = await Parent.findById(id)
-        .populate('userId', 'firstName lastName username email phone')
-        .populate('schoolId', 'name')
-        .populate('children', 'studentId grade section rollNumber userId')
+        .populate("userId", "firstName lastName username email phone")
+        .populate("schoolId", "name")
+        .populate("children", "studentId grade section rollNumber userId")
         .lean();
 
       if (!parent) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Parent not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
       }
 
       return this.formatParentResponse(parent);
@@ -230,15 +258,18 @@ class ParentService {
     }
   }
 
-  async updateParent(id: string, updateData: IUpdateParentRequest): Promise<IParentResponse> {
+  async updateParent(
+    id: string,
+    updateData: IUpdateParentRequest
+  ): Promise<IParentResponse> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid parent ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid parent ID format");
       }
 
       const parent = await Parent.findById(id);
       if (!parent) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Parent not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
       }
 
       // If children are being updated, verify they exist and belong to the same school
@@ -249,7 +280,10 @@ class ParentService {
         });
 
         if (children.length !== updateData.children.length) {
-          throw new AppError(httpStatus.BAD_REQUEST, 'One or more students not found in the school');
+          throw new AppError(
+            httpStatus.BAD_REQUEST,
+            "One or more students not found in the school"
+          );
         }
 
         // Update old children to remove parent reference
@@ -270,9 +304,9 @@ class ParentService {
         { $set: updateData },
         { new: true, runValidators: true }
       )
-        .populate('userId', 'firstName lastName username email phone')
-        .populate('schoolId', 'name')
-        .populate('children', 'studentId grade section rollNumber userId')
+        .populate("userId", "firstName lastName username email phone")
+        .populate("schoolId", "name")
+        .populate("children", "studentId grade section rollNumber userId")
         .lean();
 
       return this.formatParentResponse(updatedParent!);
@@ -290,12 +324,12 @@ class ParentService {
   async deleteParent(id: string): Promise<void> {
     try {
       if (!Types.ObjectId.isValid(id)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid parent ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid parent ID format");
       }
 
       const parent = await Parent.findById(id);
       if (!parent) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Parent not found');
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
       }
 
       // Remove parent reference from students
@@ -324,25 +358,37 @@ class ParentService {
   async getParentStats(schoolId: string): Promise<IParentStats> {
     try {
       if (!Types.ObjectId.isValid(schoolId)) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Invalid school ID format');
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid school ID format");
       }
 
-      const [totalParents, activeParents, relationshipStats, communicationStats, childrenCountStats, recentRegistrations] = await Promise.all([
+      const [
+        totalParents,
+        activeParents,
+        relationshipStats,
+        communicationStats,
+        childrenCountStats,
+        recentRegistrations,
+      ] = await Promise.all([
         Parent.countDocuments({ schoolId }),
         Parent.countDocuments({ schoolId, isActive: true }),
         Parent.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
-          { $group: { _id: '$relationship', count: { $sum: 1 } } },
+          { $group: { _id: "$relationship", count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ]),
         Parent.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
-          { $group: { _id: '$preferences.communicationMethod', count: { $sum: 1 } } },
+          {
+            $group: {
+              _id: "$preferences.communicationMethod",
+              count: { $sum: 1 },
+            },
+          },
           { $sort: { _id: 1 } },
         ]),
         Parent.aggregate([
           { $match: { schoolId: new Types.ObjectId(schoolId) } },
-          { $group: { _id: { $size: '$children' }, count: { $sum: 1 } } },
+          { $group: { _id: { $size: "$children" }, count: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ]),
         Parent.countDocuments({
@@ -354,9 +400,18 @@ class ParentService {
       return {
         totalParents,
         activeParents,
-        byRelationship: relationshipStats.map(stat => ({ relationship: stat._id, count: stat.count })),
-        byCommunicationPreference: communicationStats.map(stat => ({ method: stat._id, count: stat.count })),
-        byChildrenCount: childrenCountStats.map(stat => ({ childrenCount: stat._id, parentCount: stat.count })),
+        byRelationship: relationshipStats.map((stat) => ({
+          relationship: stat._id,
+          count: stat.count,
+        })),
+        byCommunicationPreference: communicationStats.map((stat) => ({
+          method: stat._id,
+          count: stat.count,
+        })),
+        byChildrenCount: childrenCountStats.map((stat) => ({
+          childrenCount: stat._id,
+          parentCount: stat.count,
+        })),
         recentRegistrations,
       };
     } catch (error) {
@@ -373,14 +428,24 @@ class ParentService {
       userId: parent.userId?._id?.toString() || parent.userId?.toString(),
       schoolId: parent.schoolId?._id?.toString() || parent.schoolId?.toString(),
       parentId: parent.parentId,
-      children: parent.children?.map((child: any) => ({
-        id: child._id?.toString() || child.id,
-        studentId: child.studentId,
-        fullName: child.userId ? `${child.userId.firstName} ${child.userId.lastName}`.trim() : '',
-        grade: child.grade,
-        section: child.section,
-        rollNumber: child.rollNumber,
-      })) || [],
+      children:
+        parent.children?.map((child: any) => ({
+          id: child._id?.toString() || child.id,
+          studentId: child.studentId,
+          fullName:
+            child.userId &&
+            typeof child.userId === "object" &&
+            child.userId !== null &&
+            "firstName" in child.userId &&
+            "lastName" in child.userId
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : "",
+          grade: child.grade,
+          section: child.section,
+          rollNumber: child.rollNumber,
+        })) || [],
       childrenCount: parent.children?.length || 0,
       relationship: parent.relationship,
       occupation: parent.occupation,
@@ -389,7 +454,7 @@ class ParentService {
       address: parent.address,
       emergencyContact: parent.emergencyContact,
       preferences: parent.preferences || {
-        communicationMethod: 'All',
+        communicationMethod: "All",
         receiveNewsletters: true,
         receiveAttendanceAlerts: true,
         receiveExamResults: true,
@@ -398,74 +463,88 @@ class ParentService {
       isActive: parent.isActive !== false,
       createdAt: parent.createdAt,
       updatedAt: parent.updatedAt,
-      user: parent.userId ? {
-        id: parent.userId._id?.toString() || parent.userId.id,
-        username: parent.userId.username,
-        firstName: parent.userId.firstName,
-        lastName: parent.userId.lastName,
-        fullName: `${parent.userId.firstName} ${parent.userId.lastName}`.trim(),
-        email: parent.userId.email,
-        phone: parent.userId.phone,
-      } : undefined,
-      school: parent.schoolId?.name ? {
-        id: parent.schoolId._id?.toString() || parent.schoolId.id,
-        name: parent.schoolId.name,
-      } : undefined,
+      user: parent.userId
+        ? {
+            id: parent.userId._id?.toString() || parent.userId.id,
+            username: parent.userId.username,
+            firstName: parent.userId.firstName,
+            lastName: parent.userId.lastName,
+            fullName:
+              `${parent.userId.firstName} ${parent.userId.lastName}`.trim(),
+            email: parent.userId.email,
+            phone: parent.userId.phone,
+          }
+        : undefined,
+      school: parent.schoolId?.name
+        ? {
+            id: parent.schoolId._id?.toString() || parent.schoolId.id,
+            name: parent.schoolId.name,
+          }
+        : undefined,
     };
   }
 
   async getChildDisciplinaryActions(userId: string) {
     try {
       // Find the parent by userId
-      const parent = await Parent.findOne({ userId }).populate('children');
+      const parent = await Parent.findOne({ userId }).populate("children");
       if (!parent) {
         throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
       }
 
-      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
-      
+      const { DisciplinaryAction } = await import(
+        "../disciplinary/disciplinary.model"
+      );
+
       // Get all red warrants for parent's children
       const actions = await DisciplinaryAction.find({
         studentId: { $in: parent.children },
-        isRedWarrant: true
+        isRedWarrant: true,
       })
         .populate({
-          path: 'studentId',
-          select: 'userId rollNumber grade section',
+          path: "studentId",
+          select: "userId rollNumber grade section",
           populate: {
-            path: 'userId',
-            select: 'firstName lastName'
-          }
+            path: "userId",
+            select: "firstName lastName",
+          },
         })
         .populate({
-          path: 'teacherId',
-          select: 'userId',
+          path: "teacherId",
+          select: "userId",
           populate: {
-            path: 'userId',
-            select: 'firstName lastName'
-          }
+            path: "userId",
+            select: "firstName lastName",
+          },
         })
         .sort({ issuedDate: -1 });
 
       // Get stats for all children combined (only red warrants)
-      const stats = await DisciplinaryAction.getDisciplinaryStats(parent.schoolId.toString(), { 
-        studentId: { $in: parent.children },
-        isRedWarrant: true 
-      });
+      const stats = await DisciplinaryAction.getDisciplinaryStats(
+        parent.schoolId.toString(),
+        {
+          studentId: { $in: parent.children },
+          isRedWarrant: true,
+        }
+      );
 
       const formattedActions = actions.map((action: any) => {
         const student = action.studentId as any;
         const teacher = action.teacherId as any;
         const studentUser = student?.userId as any;
         const teacherUser = teacher?.userId as any;
-        
+
         return {
           id: action._id,
-          studentName: studentUser ? `${studentUser.firstName} ${studentUser.lastName}` : 'N/A',
-          studentRoll: student?.rollNumber || 'N/A',
-          grade: student?.grade || 'N/A',
-          section: student?.section || 'N/A',
-          teacherName: teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'N/A',
+          studentName: studentUser
+            ? `${studentUser.firstName} ${studentUser.lastName}`
+            : "N/A",
+          studentRoll: student?.rollNumber || "N/A",
+          grade: student?.grade || "N/A",
+          section: student?.section || "N/A",
+          teacherName: teacherUser
+            ? `${teacherUser.firstName} ${teacherUser.lastName}`
+            : "N/A",
           actionType: action.actionType,
           severity: action.severity,
           category: action.category,
@@ -489,13 +568,611 @@ class ParentService {
       return {
         actions: formattedActions,
         stats,
-        childrenCount: parent.children.length
+        childrenCount: parent.children.length,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
         `Failed to get child disciplinary actions: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getParentDashboard(parentUserId: string) {
+    try {
+      // Find the parent by userId
+      const parent = await Parent.findOne({ userId: parentUserId })
+        .populate("children", "studentId grade section rollNumber userId")
+        .populate({
+          path: "children",
+          populate: {
+            path: "userId",
+            select: "firstName lastName",
+          },
+        });
+
+      if (!parent) {
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
+      }
+
+      const children = parent.children || [];
+
+      // Get dashboard stats for all children
+      const dashboardStats = {
+        totalChildren: children.length,
+        totalAttendanceAlerts: 0,
+        totalPendingHomework: 0,
+        totalUpcomingEvents: 0,
+        totalNotices: 0,
+      };
+
+      // Calculate attendance alerts (children with < 75% attendance this month)
+      const currentMonth = new Date();
+      currentMonth.setDate(1);
+      const nextMonth = new Date(currentMonth);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      for (const child of children) {
+        // Attendance calculation
+        const attendanceRecords = await Attendance.aggregate([
+          {
+            $match: {
+              "students.studentId": child._id,
+              date: { $gte: currentMonth, $lt: nextMonth },
+            },
+          },
+          { $unwind: "$students" },
+          { $match: { "students.studentId": child._id } },
+        ]);
+
+        const totalDays = attendanceRecords.length;
+        const presentDays = attendanceRecords.filter(
+          (record) => record.students.status === "present"
+        ).length;
+        const attendancePercentage =
+          totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+
+        if (attendancePercentage < 75) {
+          dashboardStats.totalAttendanceAlerts++;
+        }
+
+        // Pending homework count
+        const pendingHomework = await Homework.countDocuments({
+          "assignments.studentId": child._id,
+          "assignments.status": { $in: ["pending", "overdue"] },
+        });
+        dashboardStats.totalPendingHomework += pendingHomework;
+
+        // Upcoming events count
+        const upcomingEvents = await AcademicCalendar.countDocuments({
+          startDate: { $gte: new Date() },
+          isActive: true,
+        });
+        dashboardStats.totalUpcomingEvents += upcomingEvents;
+
+        // Notices count
+        const notices = await Notification.countDocuments({
+          targetAudience: { $in: ["parents", "all"] },
+          isActive: true,
+          createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
+        });
+        dashboardStats.totalNotices += notices;
+      }
+
+      return {
+        parent: {
+          id: parent._id,
+          parentId: parent.parentId,
+          fullName:
+            parent.userId &&
+            typeof parent.userId === "object" &&
+            "firstName" in parent.userId &&
+            "lastName" in parent.userId
+              ? `${parent.userId.firstName} ${parent.userId.lastName}`.trim()
+              : "",
+          relationship: parent.relationship,
+        },
+        children: children.map((child: any) => ({
+          id: child._id,
+          studentId: child.studentId,
+          fullName:
+            child.userId &&
+            typeof child.userId === "object" &&
+            child.userId.firstName &&
+            child.userId.lastName
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : "",
+          grade: child.grade,
+          section: child.section,
+          rollNumber: child.rollNumber,
+        })),
+        stats: dashboardStats,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get parent dashboard: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getParentChildren(parentUserId: string) {
+    try {
+      const parent = await Parent.findOne({ userId: parentUserId })
+        .populate(
+          "children",
+          "studentId grade section rollNumber userId schoolId"
+        )
+        .populate({
+          path: "children",
+          populate: {
+            path: "userId",
+            select: "firstName lastName email phone",
+          },
+        })
+        .populate({
+          path: "children",
+          populate: {
+            path: "schoolId",
+            select: "name",
+          },
+        });
+
+      if (!parent) {
+        throw new AppError(httpStatus.NOT_FOUND, "Parent not found");
+      }
+
+      return {
+        children: parent.children.map((child: any) => ({
+          id: child._id,
+          studentId: child.studentId,
+          fullName:
+            child.userId &&
+            typeof child.userId === "object" &&
+            "firstName" in child.userId &&
+            "lastName" in child.userId
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : "",
+          firstName: child.userId?.firstName || "",
+          lastName: child.userId?.lastName || "",
+          email: child.userId?.email || "",
+          phone: child.userId?.phone || "",
+          grade: child.grade,
+          section: child.section,
+          rollNumber: child.rollNumber,
+          school: child.schoolId?.name || "",
+        })),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get parent children: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getChildAttendance(
+    parentUserId: string,
+    childId: string,
+    filters?: { month?: number; year?: number }
+  ) {
+    try {
+      // Verify parent has access to this child
+      const parent = await Parent.findOne({
+        userId: parentUserId,
+        children: childId,
+      });
+      if (!parent) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          "Access denied to this child's data"
+        );
+      }
+
+      const child = await Student.findById(childId).populate(
+        "userId",
+        "firstName lastName"
+      );
+      if (!child) {
+        throw new AppError(httpStatus.NOT_FOUND, "Child not found");
+      }
+
+      // Default to current month/year if not provided
+      const month = filters?.month || new Date().getMonth() + 1;
+      const year = filters?.year || new Date().getFullYear();
+
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 1);
+
+      const attendanceRecords = await Attendance.aggregate([
+        {
+          $match: {
+            "students.studentId": child._id,
+            date: { $gte: startDate, $lt: endDate },
+          },
+        },
+        { $unwind: "$students" },
+        { $match: { "students.studentId": child._id } },
+        {
+          $lookup: {
+            from: "subjects",
+            localField: "subjectId",
+            foreignField: "_id",
+            as: "subject",
+          },
+        },
+        { $unwind: "$subject" },
+        {
+          $project: {
+            date: 1,
+            status: "$students.status",
+            subject: "$subject.name",
+            period: 1,
+            markedAt: "$students.markedAt",
+          },
+        },
+        { $sort: { date: -1, period: 1 } },
+      ]);
+
+      // Calculate monthly statistics
+      const totalRecords = attendanceRecords.length;
+      const presentCount = attendanceRecords.filter(
+        (r) => r.status === "present"
+      ).length;
+      const absentCount = attendanceRecords.filter(
+        (r) => r.status === "absent"
+      ).length;
+      const lateCount = attendanceRecords.filter(
+        (r) => r.status === "late"
+      ).length;
+
+      return {
+        child: {
+          id: child._id,
+          studentId: child.studentId,
+          fullName: child.userId
+            ? typeof child.userId === "object" &&
+              "firstName" in child.userId &&
+              "lastName" in child.userId
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : ""
+            : "",
+          grade: child.grade,
+          section: child.section,
+        },
+        month,
+        year,
+        summary: {
+          totalDays: totalRecords,
+          presentDays: presentCount,
+          absentDays: absentCount,
+          lateDays: lateCount,
+          attendancePercentage:
+            totalRecords > 0
+              ? Math.round((presentCount / totalRecords) * 100)
+              : 0,
+        },
+        records: attendanceRecords,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get child attendance: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getChildHomework(parentUserId: string, childId: string) {
+    try {
+      // Verify parent has access to this child
+      const parent = await Parent.findOne({
+        userId: parentUserId,
+        children: childId,
+      });
+      if (!parent) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          "Access denied to this child's data"
+        );
+      }
+
+      const child = await Student.findById(childId).populate(
+        "userId",
+        "firstName lastName"
+      );
+      if (!child) {
+        throw new AppError(httpStatus.NOT_FOUND, "Child not found");
+      }
+
+      const homework = await Homework.aggregate([
+        {
+          $match: {
+            "assignments.studentId": child._id,
+          },
+        },
+        { $unwind: "$assignments" },
+        { $match: { "assignments.studentId": child._id } },
+        {
+          $lookup: {
+            from: "subjects",
+            localField: "subjectId",
+            foreignField: "_id",
+            as: "subject",
+          },
+        },
+        { $unwind: "$subject" },
+        {
+          $lookup: {
+            from: "teachers",
+            localField: "teacherId",
+            foreignField: "_id",
+            as: "teacher",
+          },
+        },
+        { $unwind: "$teacher" },
+        {
+          $lookup: {
+            from: "users",
+            localField: "teacher.userId",
+            foreignField: "_id",
+            as: "teacherUser",
+          },
+        },
+        { $unwind: "$teacherUser" },
+        {
+          $project: {
+            homeworkId: "$_id",
+            title: 1,
+            description: 1,
+            subject: "$subject.name",
+            teacherName: "$teacherUser.fullName",
+            assignedDate: 1,
+            dueDate: 1,
+            status: "$assignments.status",
+            submittedAt: "$assignments.submittedAt",
+            grade: "$assignments.grade",
+            feedback: "$assignments.feedback",
+            attachments: 1,
+          },
+        },
+        { $sort: { dueDate: 1, assignedDate: -1 } },
+      ]);
+
+      // Calculate statistics
+      const totalHomework = homework.length;
+      const completedHomework = homework.filter(
+        (h) => h.status === "submitted" || h.status === "graded"
+      ).length;
+      const pendingHomework = homework.filter(
+        (h) => h.status === "pending" || h.status === "assigned"
+      ).length;
+      const overdueHomework = homework.filter((h) => {
+        return (
+          (h.status === "pending" || h.status === "assigned") &&
+          new Date(h.dueDate) < new Date()
+        );
+      }).length;
+
+      return {
+        child: {
+          id: child._id,
+          studentId: child.studentId,
+          fullName: child.userId
+            ? typeof child.userId === "object" &&
+              "firstName" in child.userId &&
+              "lastName" in child.userId
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : ""
+            : "",
+          grade: child.grade,
+          section: child.section,
+        },
+        summary: {
+          totalHomework,
+          completedHomework,
+          pendingHomework,
+          overdueHomework,
+          completionRate:
+            totalHomework > 0
+              ? Math.round((completedHomework / totalHomework) * 100)
+              : 0,
+        },
+        homework,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get child homework: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getChildSchedule(parentUserId: string, childId: string) {
+    try {
+      // Verify parent has access to this child
+      const parent = await Parent.findOne({
+        userId: parentUserId,
+        children: childId,
+      });
+      if (!parent) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          "Access denied to this child's data"
+        );
+      }
+
+      const child = await Student.findById(childId).populate(
+        "userId",
+        "firstName lastName"
+      );
+      if (!child) {
+        throw new AppError(httpStatus.NOT_FOUND, "Child not found");
+      }
+
+      const schedule = await Schedule.aggregate([
+        {
+          $match: {
+            grade: child.grade,
+            section: child.section,
+            isActive: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "subjects",
+            localField: "subjectId",
+            foreignField: "_id",
+            as: "subject",
+          },
+        },
+        { $unwind: "$subject" },
+        {
+          $lookup: {
+            from: "teachers",
+            localField: "teacherId",
+            foreignField: "_id",
+            as: "teacher",
+          },
+        },
+        { $unwind: "$teacher" },
+        {
+          $lookup: {
+            from: "users",
+            localField: "teacher.userId",
+            foreignField: "_id",
+            as: "teacherUser",
+          },
+        },
+        { $unwind: "$teacherUser" },
+        {
+          $lookup: {
+            from: "classes",
+            localField: "classId",
+            foreignField: "_id",
+            as: "class",
+          },
+        },
+        { $unwind: "$class" },
+        {
+          $project: {
+            dayOfWeek: 1,
+            period: 1,
+            startTime: 1,
+            endTime: 1,
+            subject: "$subject.name",
+            subjectId: "$subject._id",
+            teacherName: "$teacherUser.fullName",
+            teacherId: "$teacher._id",
+            className: "$class.name",
+            room: 1,
+            isActive: 1,
+          },
+        },
+        { $sort: { dayOfWeek: 1, period: 1 } },
+      ]);
+
+      // Group by day of week
+      const daysOfWeek = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+      const scheduleByDay = daysOfWeek.map((day) => ({
+        day,
+        periods: schedule
+          .filter((s) => s.dayOfWeek === day)
+          .sort((a, b) => a.period - b.period),
+      }));
+
+      return {
+        child: {
+          id: child._id,
+          studentId: child.studentId,
+          fullName:
+            child.userId &&
+            typeof child.userId === "object" &&
+            "firstName" in child.userId &&
+            "lastName" in child.userId
+              ? `${(child.userId as any).firstName} ${
+                  (child.userId as any).lastName
+                }`.trim()
+              : "",
+          grade: child.grade,
+          section: child.section,
+        },
+        scheduleByDay,
+        totalPeriods: schedule.length,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get child schedule: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getChildNotices(parentUserId: string, childId: string) {
+    try {
+      // Verify parent has access to this child
+      const parent = await Parent.findOne({
+        userId: parentUserId,
+        children: childId,
+      });
+      if (!parent) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          "Access denied to this child's data"
+        );
+      }
+
+      const notices = await Notification.find({
+        $or: [{ recipientType: "parent" }, { recipientType: "all" }],
+      })
+        .populate("senderId", "firstName lastName")
+        .sort({ createdAt: -1 })
+        .limit(50);
+
+      return {
+        notices: notices.map((notice) => ({
+          id: notice._id,
+          title: notice.title,
+          content: notice.message,
+          type: notice.type,
+          priority: notice.priority,
+          targetAudience: notice.recipientType,
+          createdAt: notice.createdAt,
+          createdBy:
+            notice.senderId &&
+            typeof notice.senderId === "object" &&
+            "firstName" in notice.senderId &&
+            "lastName" in notice.senderId
+              ? `${(notice.senderId as any).firstName} ${(notice.senderId as any).lastName}`.trim()
+              : "System",
+        })),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to get child notices: ${(error as Error).message}`
       );
     }
   }

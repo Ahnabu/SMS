@@ -3,13 +3,13 @@ import { api, ApiResponse } from "./api-base";
 // Parent API service
 export const parentApi = {
   // Dashboard
-  getDashboard: () => api.get<ApiResponse>("/parent/dashboard"),
+  getDashboard: () => api.get<ApiResponse>("/parents/dashboard"),
 
   // Children management
-  getChildren: () => api.get<ApiResponse>("/parent/children"),
+  getChildren: () => api.get<ApiResponse>("/parents/children"),
 
   getChildProfile: (childId: string) =>
-    api.get<ApiResponse>(`/parent/children/${childId}`),
+    api.get<ApiResponse>(`/parents/children/${childId}`),
 
   // Child attendance
   getChildAttendance: (
@@ -21,7 +21,7 @@ export const parentApi = {
       endDate?: string;
     }
   ) =>
-    api.get<ApiResponse>(`/parent/children/${childId}/attendance`, { params }),
+    api.get<ApiResponse>(`/parents/children/${childId}/attendance`, { params }),
 
   // Child grades
   getChildGrades: (
@@ -41,7 +41,7 @@ export const parentApi = {
       subject?: string;
       dueDate?: string;
     }
-  ) => api.get<ApiResponse>(`/parent/children/${childId}/homework`, { params }),
+  ) => api.get<ApiResponse>(`/parents/children/${childId}/homework`, { params }),
 
   // Child schedule
   getChildSchedule: (
@@ -50,7 +50,7 @@ export const parentApi = {
       dayOfWeek?: number;
       date?: string;
     }
-  ) => api.get<ApiResponse>(`/parent/children/${childId}/schedule`, { params }),
+  ) => api.get<ApiResponse>(`/parents/children/${childId}/schedule`, { params }),
 
   // Child disciplinary actions (red warrants only)
   getChildDisciplinaryActions: () => api.get<ApiResponse>("/parents/disciplinary/actions"),
@@ -62,10 +62,10 @@ export const parentApi = {
       type?: "announcement" | "notice" | "alert";
       status?: "read" | "unread";
     }
-  ) => api.get<ApiResponse>(`/parent/children/${childId}/notices`, { params }),
+  ) => api.get<ApiResponse>(`/parents/children/${childId}/notices`, { params }),
 
   markNoticeAsRead: (noticeId: string) =>
-    api.put<ApiResponse>(`/parent/notices/${noticeId}/read`),
+    api.put<ApiResponse>(`/parents/notices/${noticeId}/read`),
 
   // Fees and payments
   getChildFees: (
@@ -74,7 +74,7 @@ export const parentApi = {
       term?: string;
       status?: "paid" | "pending" | "overdue";
     }
-  ) => api.get<ApiResponse>(`/parent/children/${childId}/fees`, { params }),
+  ) => api.get<ApiResponse>(`/parents/children/${childId}/fees`, { params }),
 
   // Communication
   sendMessage: (data: {
@@ -83,21 +83,21 @@ export const parentApi = {
     subject: string;
     message: string;
     childId?: string;
-  }) => api.post<ApiResponse>("/parent/messages", data),
+  }) => api.post<ApiResponse>("/parents/messages", data),
 
   getMessages: (params?: {
     type?: "sent" | "received";
     status?: "read" | "unread";
-  }) => api.get<ApiResponse>("/parent/messages", { params }),
+  }) => api.get<ApiResponse>("/parents/messages", { params }),
 
   markMessageAsRead: (messageId: string) =>
-    api.put<ApiResponse>(`/parent/messages/${messageId}/read`),
+    api.put<ApiResponse>(`/parents/messages/${messageId}/read`),
 
   // Parent meetings
   getParentMeetings: (params?: {
     status?: "scheduled" | "completed" | "cancelled";
     childId?: string;
-  }) => api.get<ApiResponse>("/parent/meetings", { params }),
+  }) => api.get<ApiResponse>("/parents/meetings", { params }),
 
   requestMeeting: (data: {
     teacherId: string;
@@ -106,7 +106,7 @@ export const parentApi = {
     preferredTime: string;
     purpose: string;
     message?: string;
-  }) => api.post<ApiResponse>("/parent/meetings/request", data),
+  }) => api.post<ApiResponse>("/parents/meetings/request", data),
 
   // Emergency contacts
   updateEmergencyContacts: (data: {
@@ -122,7 +122,7 @@ export const parentApi = {
       phone: string;
       email?: string;
     };
-  }) => api.put<ApiResponse>("/parent/emergency-contacts", data),
+  }) => api.put<ApiResponse>("/parents/emergency-contacts", data),
 
   // Profile management
   updateProfile: (data: {
@@ -138,7 +138,7 @@ export const parentApi = {
       postalCode?: string;
     };
     occupation?: string;
-  }) => api.put<ApiResponse>("/parent/profile", data),
+  }) => api.put<ApiResponse>("/parents/profile", data),
 
   // Reports
   getChildProgressReport: (
@@ -148,12 +148,12 @@ export const parentApi = {
       year?: number;
     }
   ) =>
-    api.get<ApiResponse>(`/parent/children/${childId}/progress-report`, {
+    api.get<ApiResponse>(`/parents/children/${childId}/progress-report`, {
       params,
     }),
 
   downloadChildReportCard: (childId: string, termId: string) =>
-    api.get(`/parent/children/${childId}/report-card/${termId}`, {
+    api.get(`/parents/children/${childId}/report-card/${termId}`, {
       responseType: "blob",
     }),
 };
