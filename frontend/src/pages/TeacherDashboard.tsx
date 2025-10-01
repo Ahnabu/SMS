@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
 import MobileNavigation from '../components/layout/MobileNavigation';
@@ -241,8 +241,8 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <a 
-              href="/teacher/attendance"
+            <Link 
+              to="/teacher/attendance"
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
               <div className="flex flex-col items-center">
@@ -251,9 +251,9 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 </svg>
                 <div className="text-sm sm:text-base">Attendance</div>
               </div>
-            </a>
-            <a 
-              href="/teacher/grades"
+            </Link>
+            <Link 
+              to="/teacher/grades"
               className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
               <div className="flex flex-col items-center">
@@ -262,9 +262,9 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 </svg>
                 <div className="text-sm sm:text-base">Grading</div>
               </div>
-            </a>
-            <a 
-              href="/teacher/homework"
+            </Link>
+            <Link 
+              to="/teacher/homework"
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
               <div className="flex flex-col items-center">
@@ -273,9 +273,9 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 </svg>
                 <div className="text-sm sm:text-base">Homework</div>
               </div>
-            </a>
-            <a 
-              href="/teacher/discipline"
+            </Link>
+            <Link 
+              to="/teacher/discipline"
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 sm:p-4 rounded-lg text-center font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
             >
               <div className="flex flex-col items-center">
@@ -284,7 +284,7 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 </svg>
                 <div className="text-sm sm:text-base">Discipline</div>
               </div>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

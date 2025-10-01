@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
 
@@ -197,21 +197,56 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 shadow-lg">
+          <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Record Payment
-            </button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              View Transactions
-            </button>
-            <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Check Defaulters
-            </button>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-md text-sm font-medium transition duration-200">
-              Generate Report
-            </button>
+            <Link 
+              to="/accountant/payments" 
+              className="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-4 rounded-xl text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-xl active:scale-95 hover:scale-105 text-center block"
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Record Payment
+              </div>
+            </Link>
+            
+            <Link 
+              to="/accountant/transactions" 
+              className="group bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-4 py-4 rounded-xl text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-xl active:scale-95 hover:scale-105 text-center block"
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                View Transactions
+              </div>
+            </Link>
+            
+            <Link 
+              to="/accountant/defaulters" 
+              className="group bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-4 py-4 rounded-xl text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-xl active:scale-95 hover:scale-105 text-center block"
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Check Defaulters
+              </div>
+            </Link>
+            
+            <Link 
+              to="/accountant/reports" 
+              className="group bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white px-4 py-4 rounded-xl text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-xl active:scale-95 hover:scale-105 text-center block"
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Generate Report
+              </div>
+            </Link>
           </div>
         </div>
       </div>
