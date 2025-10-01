@@ -217,7 +217,7 @@ export const teacherApi = {
 
   // Homework APIs
   assignHomework: (formData: FormData) => {
-    return api.post<ApiResponse>("/teachers/homework/assign", formData, {
+    return api.post<ApiResponse>("/homework/create", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
@@ -231,7 +231,7 @@ export const teacherApi = {
     homeworkType?: string;
     startDate?: string;
     endDate?: string;
-  }) => api.get<ApiResponse>("/teachers/homework/my-assignments", { params }),
+  }) => api.get<ApiResponse>("/homework/teacher/my-homework", { params }),
 
   assignNewHomework: (homeworkData: {
     title: string;

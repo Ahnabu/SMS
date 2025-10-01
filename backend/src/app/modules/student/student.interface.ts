@@ -159,6 +159,22 @@ export interface IStudentResponse {
   school?: {
     id: string;
     name: string;
+    schoolId?: string;
+    establishedYear?: number;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+    };
+    contact?: {
+      phone?: string;
+      email?: string;
+      website?: string;
+    };
+    affiliation?: string;
+    logo?: string;
   };
   parent?: {
     id: string;

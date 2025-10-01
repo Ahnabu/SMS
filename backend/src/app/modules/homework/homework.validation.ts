@@ -85,10 +85,13 @@ const createHomeworkValidation = z.object({
       .min(0, 'Late penalty cannot be negative')
       .max(100, 'Late penalty cannot exceed 100%')
       .optional(),
-    maxLateDays: z.number()
-      .min(1, 'Max late days must be at least 1')
-      .max(30, 'Max late days cannot exceed 30')
-      .optional(),
+    maxLateDays: z.preprocess(
+      (val) => val === '' || val === null || val === undefined ? undefined : Number(val),
+      z.number()
+        .min(1, 'Max late days must be at least 1')
+        .max(30, 'Max late days cannot exceed 30')
+        .optional()
+    ),
     isGroupWork: z.boolean().default(false),
     maxGroupSize: z.number()
       .min(2, 'Max group size must be at least 2')
@@ -183,10 +186,13 @@ const updateHomeworkValidation = z.object({
       .min(0, 'Late penalty cannot be negative')
       .max(100, 'Late penalty cannot exceed 100%')
       .optional(),
-    maxLateDays: z.number()
-      .min(1, 'Max late days must be at least 1')
-      .max(30, 'Max late days cannot exceed 30')
-      .optional(),
+    maxLateDays: z.preprocess(
+      (val) => val === '' || val === null || val === undefined ? undefined : Number(val),
+      z.number()
+        .min(1, 'Max late days must be at least 1')
+        .max(30, 'Max late days cannot exceed 30')
+        .optional()
+    ),
     isGroupWork: z.boolean().optional(),
     maxGroupSize: z.number()
       .min(2, 'Max group size must be at least 2')

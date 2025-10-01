@@ -8,6 +8,7 @@ import { CredentialGenerator } from "../../utils/credentialGenerator"; // Update
 import { School } from "../school/school.model";
 import { User } from "../user/user.model";
 import { Teacher, TeacherPhoto } from "./teacher.model";
+import { Subject } from "../subject/subject.model";
 import { Schedule } from "../schedule/schedule.model";
 import { Attendance } from "../attendance/attendance.model";
 import { Student } from "../student/student.model";
@@ -235,7 +236,7 @@ class TeacherService {
         { path: "schoolId", select: "name" },
       ]);
 
-      const response = this.formatTeacherResponse(newTeacher[0]);
+      const response = await this.formatTeacherResponse(newTeacher[0]);
       if (photoResponses.length > 0) {
         response.photos = photoResponses;
         response.photoCount = photoResponses.length;
@@ -422,10 +423,12 @@ class TeacherService {
 
       const totalPages = Math.ceil(totalCount / limit);
 
+      const formattedTeachers = await Promise.all(
+        teachers.map((teacher) => this.formatTeacherResponse(teacher))
+      );
+
       return {
-        teachers: teachers.map((teacher) =>
-          this.formatTeacherResponse(teacher)
-        ),
+        teachers: formattedTeachers,
         totalCount,
         currentPage: page,
         totalPages,
@@ -457,7 +460,30 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
-      return this.formatTeacherResponse(teacher);
+      // Handle subject conversion if they are ObjectIds
+      if (teacher.subjects && teacher.subjects.length > 0) {
+        const subjectObjectIds = teacher.subjects.filter(subject => 
+          typeof subject === 'string' && /^[0-9a-fA-F]{24}$/.test(subject)
+        );
+        
+        if (subjectObjectIds.length > 0) {
+          const { Subject } = await import('../subject/subject.model');
+          const subjectDocs = await Subject.find({ 
+            _id: { $in: subjectObjectIds.map(id => new Types.ObjectId(id)) } 
+          }).select('name');
+          
+          const subjectMap = new Map(subjectDocs.map(doc => [doc._id.toString(), doc.name]));
+          
+          teacher.subjects = teacher.subjects.map(subject => {
+            if (typeof subject === 'string' && /^[0-9a-fA-F]{24}$/.test(subject)) {
+              return subjectMap.get(subject) || subject;
+            }
+            return subject;
+          });
+        }
+      }
+
+      return await this.formatTeacherResponse(teacher);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -504,7 +530,7 @@ class TeacherService {
         .populate("photoCount")
         .lean();
 
-      return this.formatTeacherResponse(updatedTeacher!);
+      return await this.formatTeacherResponse(updatedTeacher!);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -725,7 +751,7 @@ class TeacherService {
       }
 
       const teachers = await Teacher.findBySubject(schoolId, subject);
-      return teachers.map((teacher) => this.formatTeacherResponse(teacher));
+      return await Promise.all(teachers.map((teacher) => this.formatTeacherResponse(teacher)));
     } catch (error) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
@@ -892,11 +918,39 @@ class TeacherService {
     }
   }
 
-  private formatTeacherResponse(teacher: any): ITeacherResponse {
+  private async formatTeacherResponse(teacher: any): Promise<ITeacherResponse> {
     const age = teacher.dob
       ? new Date().getFullYear() - new Date(teacher.dob).getFullYear()
       : 0;
     const totalExperience = teacher.experience?.totalYears || 0;
+
+    // Handle subject conversion if they are ObjectIds
+    let subjects = teacher.subjects || [];
+    if (subjects.length > 0) {
+      const subjectObjectIds = subjects.filter((subject: any) => 
+        typeof subject === 'string' && /^[0-9a-fA-F]{24}$/.test(subject)
+      );
+      
+      if (subjectObjectIds.length > 0) {
+        try {
+          const subjectDocs = await Subject.find({ 
+            _id: { $in: subjectObjectIds.map((id: string) => new Types.ObjectId(id)) } 
+          }).select('name');
+          
+          const subjectMap = new Map(subjectDocs.map(doc => [doc._id.toString(), doc.name]));
+          
+          subjects = subjects.map((subject: any) => {
+            if (typeof subject === 'string' && /^[0-9a-fA-F]{24}$/.test(subject)) {
+              return subjectMap.get(subject) || subject;
+            }
+            return subject;
+          });
+        } catch (error) {
+          console.warn('Failed to convert subject ObjectIds to names:', error);
+          // If conversion fails, keep the original subjects
+        }
+      }
+    }
 
     return {
       id: teacher._id?.toString() || teacher.id,
@@ -905,7 +959,7 @@ class TeacherService {
         teacher.schoolId?._id?.toString() || teacher.schoolId?.toString(),
       teacherId: teacher.teacherId,
       employeeId: teacher.employeeId,
-      subjects: teacher.subjects || [],
+      subjects: subjects,
       grades: teacher.grades || [],
       sections: teacher.sections || [],
       designation: teacher.designation,

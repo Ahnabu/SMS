@@ -4,6 +4,8 @@ import { authenticate, authorize } from '../../middlewares/auth';
 import { validateRequest } from '../../middlewares/validateRequest';
 import { HomeworkValidation } from './homework.validation';
 import { uploadHomeworkAttachments } from '../../middlewares/fileUpload';
+import { parseHomeworkFormData } from '../../middlewares/parseFormData';
+import { addTeacherContext } from '../../middlewares/addTeacherContext';
 
 const router = express.Router();
 
@@ -13,6 +15,8 @@ router.post(
   authenticate,
   authorize('teacher'),
   uploadHomeworkAttachments, // Allow up to 5 attachments
+  parseHomeworkFormData, // Parse FormData to proper types
+  addTeacherContext, // Add teacher and school context before validation
   validateRequest(HomeworkValidation.createHomeworkValidation),
   HomeworkController.createHomework
 );
@@ -22,6 +26,8 @@ router.patch(
   authenticate,
   authorize('teacher'),
   uploadHomeworkAttachments, // Allow up to 5 attachments for updates
+  parseHomeworkFormData, // Parse FormData to proper types
+  addTeacherContext, // Add teacher and school context before validation
   validateRequest(HomeworkValidation.homeworkIdParamValidation),
   validateRequest(HomeworkValidation.updateHomeworkValidation),
   HomeworkController.updateHomework

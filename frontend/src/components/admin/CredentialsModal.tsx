@@ -101,8 +101,8 @@ Generated on: ${new Date().toLocaleString()}
 console.log(credentials);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
             Account Credentials Generated
@@ -113,7 +113,7 @@ console.log(credentials);
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
           {/* Student Credentials */}
           <Card className="p-0">
             <CardHeader className="p-0 pt-0">
@@ -338,15 +338,16 @@ console.log(credentials);
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button onClick={downloadCredentials} className="flex-1">
-              Download Credentials
-            </Button>
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Close
-            </Button>
-          </div>
+        </div>
+
+        {/* Action Buttons - Fixed at bottom */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t bg-white flex-shrink-0">
+          <Button onClick={downloadCredentials} className="flex-1">
+            Download Credentials
+          </Button>
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

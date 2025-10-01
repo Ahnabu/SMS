@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { teacherApi } from '../../services/teacher.api';
 import { subjectApi } from '../../services/subject.api';
+import { toast } from 'sonner';
 import { Plus, Upload, X, Calendar, Clock, BookOpen, Users, AlertCircle, CheckCircle, Eye, EyeOff, FileText, Image } from 'lucide-react';
 
 interface Subject {
@@ -69,6 +70,7 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
+  const [editingHomework, setEditingHomework] = useState<HomeworkAssignment | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -103,11 +105,22 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
       setLoading(true);
       const response = await teacherApi.getMyHomeworkAssignments();
       if (response.data.success) {
-        setAssignments(response.data.data.assignments || []);
-        setStatistics(response.data.data.summary || null);
+        const homeworkData = response.data.data || [];
+        setAssignments(homeworkData);
+        
+        // Calculate statistics dynamically
+        const stats = {
+          total: homeworkData.length,
+          published: homeworkData.filter((h: any) => h.isPublished).length,
+          drafts: homeworkData.filter((h: any) => !h.isPublished).length,
+          dueToday: homeworkData.filter((h: any) => h.isDueToday).length,
+          overdue: homeworkData.filter((h: any) => h.isOverdue).length,
+        };
+        setStatistics(stats);
       }
     } catch (error) {
       console.error('Failed to load homework assignments:', error);
+      toast.error('Failed to load homework assignments');
     } finally {
       setLoading(false);
     }
@@ -121,13 +134,14 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
       }
     } catch (error) {
       console.error('Failed to load subjects:', error);
+      toast.error('Failed to load subjects');
     }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length + selectedFiles.length > 5) {
-      alert('You can only upload up to 5 files');
+      toast.error('You can only upload up to 5 files');
       return;
     }
     setSelectedFiles(prev => [...prev, ...files]);
@@ -157,16 +171,35 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
     e.preventDefault();
     
     if (!formData.title || !formData.description || !formData.dueDate) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
     const formPayload = new FormData();
     
-    // Add form data
-    Object.keys(formData).forEach(key => {
-      formPayload.append(key, formData[key as keyof typeof formData].toString());
-    });
+    // Add individual fields to FormData with correct types
+    formPayload.append('title', formData.title);
+    formPayload.append('description', formData.description);
+    formPayload.append('instructions', formData.instructions || '');
+    formPayload.append('subjectId', formData.subjectId);
+    formPayload.append('grade', formData.grade);
+    formPayload.append('section', formData.section || '');
+    formPayload.append('homeworkType', formData.homeworkType);
+    formPayload.append('priority', formData.priority);
+    formPayload.append('assignedDate', new Date().toISOString());
+    formPayload.append('dueDate', new Date(formData.dueDate).toISOString());
+    formPayload.append('estimatedDuration', formData.estimatedDuration);
+    formPayload.append('totalMarks', formData.totalMarks);
+    formPayload.append('passingMarks', formData.passingMarks);
+    formPayload.append('submissionType', formData.submissionType);
+    formPayload.append('allowLateSubmission', formData.allowLateSubmission.toString());
+    formPayload.append('latePenalty', formData.allowLateSubmission ? formData.latePenalty : '0');
+    formPayload.append('maxLateDays', formData.allowLateSubmission ? formData.maxLateDays : '0');
+    formPayload.append('isGroupWork', formData.isGroupWork.toString());
+    if (formData.isGroupWork) {
+      formPayload.append('maxGroupSize', formData.maxGroupSize);
+    }
+    formPayload.append('isPublished', formData.isPublished.toString());
 
     // Add files
     selectedFiles.forEach(file => {
@@ -174,38 +207,149 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
     });
 
     try {
-      const response = await teacherApi.assignHomework(formPayload);
+      let response;
+      if (editingHomework) {
+        response = await teacherApi.updateHomework(editingHomework.id, formPayload);
+        toast.success('Homework updated successfully!');
+      } else {
+        response = await teacherApi.assignHomework(formPayload);
+        toast.success('Homework assigned successfully!');
+      }
+      
       if (response.data.success) {
-        alert('Homework assigned successfully!');
-        setShowAssignForm(false);
-        setFormData({
-          title: '',
-          description: '',
-          instructions: '',
-          subjectId: '',
-          grade: '',
-          section: '',
-          homeworkType: 'assignment',
-          priority: 'medium',
-          dueDate: '',
-          estimatedDuration: '60',
-          totalMarks: '100',
-          passingMarks: '40',
-          submissionType: 'both',
-          allowLateSubmission: true,
-          latePenalty: '10',
-          maxLateDays: '3',
-          isGroupWork: false,
-          maxGroupSize: '4',
-          isPublished: false
-        });
-        setSelectedFiles([]);
+        resetForm();
         loadHomeworkAssignments();
       }
     } catch (error) {
-      console.error('Failed to assign homework:', error);
-      alert('Failed to assign homework. Please try again.');
+      console.error('Failed to save homework:', error);
+      toast.error('Failed to save homework. Please try again.');
     }
+  };
+
+  const handleSaveAsDraft = async () => {
+    if (!formData.title || !formData.description) {
+      toast.error('Please fill in title and description');
+      return;
+    }
+
+    const formPayload = new FormData();
+    
+    // Add individual fields to FormData for draft
+    formPayload.append('title', formData.title);
+    formPayload.append('description', formData.description);
+    formPayload.append('instructions', formData.instructions || '');
+    if (formData.subjectId) {
+      formPayload.append('subjectId', formData.subjectId);
+    }
+    if (formData.grade) {
+      formPayload.append('grade', formData.grade);
+    }
+    formPayload.append('section', formData.section || '');
+    formPayload.append('homeworkType', formData.homeworkType);
+    formPayload.append('priority', formData.priority);
+    formPayload.append('assignedDate', new Date().toISOString());
+    if (formData.dueDate) {
+      formPayload.append('dueDate', new Date(formData.dueDate).toISOString());
+    }
+    formPayload.append('estimatedDuration', formData.estimatedDuration || '60');
+    formPayload.append('totalMarks', formData.totalMarks || '100');
+    formPayload.append('passingMarks', formData.passingMarks || '40');
+    formPayload.append('submissionType', formData.submissionType);
+    formPayload.append('allowLateSubmission', formData.allowLateSubmission.toString());
+    formPayload.append('latePenalty', formData.allowLateSubmission ? formData.latePenalty : '0');
+    formPayload.append('maxLateDays', formData.allowLateSubmission ? formData.maxLateDays : '0');
+    formPayload.append('isGroupWork', formData.isGroupWork.toString());
+    if (formData.isGroupWork) {
+      formPayload.append('maxGroupSize', formData.maxGroupSize);
+    }
+    formPayload.append('isPublished', 'false'); // Always false for drafts
+
+    selectedFiles.forEach(file => {
+      formPayload.append('attachments', file);
+    });
+
+    try {
+      let response;
+      if (editingHomework) {
+        response = await teacherApi.updateHomework(editingHomework.id, formPayload);
+        toast.success('Draft updated successfully!');
+      } else {
+        response = await teacherApi.assignHomework(formPayload);
+        toast.success('Draft saved successfully!');
+      }
+      
+      if (response.data.success) {
+        resetForm();
+        loadHomeworkAssignments();
+      }
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      toast.error('Failed to save draft. Please try again.');
+    }
+  };
+
+  const handleEditHomework = (homework: HomeworkAssignment) => {
+    setEditingHomework(homework);
+    setFormData({
+      title: homework.title,
+      description: homework.description,
+      instructions: homework.instructions || '',
+      subjectId: homework.subject?.id || '',
+      grade: homework.grade.toString(),
+      section: homework.section || '',
+      homeworkType: homework.homeworkType,
+      priority: homework.priority,
+      dueDate: new Date(homework.dueDate).toISOString().slice(0, 16),
+      estimatedDuration: homework.estimatedDuration.toString(),
+      totalMarks: homework.totalMarks.toString(),
+      passingMarks: homework.passingMarks.toString(),
+      submissionType: homework.submissionType,
+      allowLateSubmission: homework.allowLateSubmission,
+      latePenalty: homework.latePenalty?.toString() || '10',
+      maxLateDays: homework.maxLateDays?.toString() || '3',
+      isGroupWork: homework.isGroupWork,
+      maxGroupSize: homework.maxGroupSize?.toString() || '4',
+      isPublished: homework.isPublished
+    });
+    setShowAssignForm(true);
+  };
+
+  const handlePublishHomework = async (homeworkId: string) => {
+    try {
+      await teacherApi.publishHomework(homeworkId);
+      toast.success('Homework published successfully!');
+      loadHomeworkAssignments();
+    } catch (error) {
+      console.error('Failed to publish homework:', error);
+      toast.error('Failed to publish homework. Please try again.');
+    }
+  };
+
+  const resetForm = () => {
+    setShowAssignForm(false);
+    setEditingHomework(null);
+    setFormData({
+      title: '',
+      description: '',
+      instructions: '',
+      subjectId: '',
+      grade: '',
+      section: '',
+      homeworkType: 'assignment',
+      priority: 'medium',
+      dueDate: '',
+      estimatedDuration: '60',
+      totalMarks: '100',
+      passingMarks: '40',
+      submissionType: 'both',
+      allowLateSubmission: true,
+      latePenalty: '10',
+      maxLateDays: '3',
+      isGroupWork: false,
+      maxGroupSize: '4',
+      isPublished: false
+    });
+    setSelectedFiles([]);
   };
 
   const formatDate = (dateString: string) => {
@@ -240,12 +384,12 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
     if (!statistics) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total Assignments</p>
-              <p className="text-2xl font-bold text-blue-600">{statistics.total}</p>
+              <p className="text-2xl font-bold text-blue-600">{statistics.total || 0}</p>
             </div>
             <BookOpen className="h-8 w-8 text-blue-600" />
           </div>
@@ -255,7 +399,7 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Published</p>
-              <p className="text-2xl font-bold text-green-600">{statistics.published}</p>
+              <p className="text-2xl font-bold text-green-600">{statistics.published || 0}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
@@ -264,8 +408,18 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm text-gray-500">Drafts</p>
+              <p className="text-2xl font-bold text-gray-600">{statistics.drafts || 0}</p>
+            </div>
+            <EyeOff className="h-8 w-8 text-gray-600" />
+          </div>
+        </Card>
+        
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm text-gray-500">Due Today</p>
-              <p className="text-2xl font-bold text-orange-600">{statistics.dueToday}</p>
+              <p className="text-2xl font-bold text-orange-600">{statistics.dueToday || 0}</p>
             </div>
             <Clock className="h-8 w-8 text-orange-600" />
           </div>
@@ -275,7 +429,7 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{statistics.overdue}</p>
+              <p className="text-2xl font-bold text-red-600">{statistics.overdue || 0}</p>
             </div>
             <AlertCircle className="h-8 w-8 text-red-600" />
           </div>
@@ -323,9 +477,11 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
           <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold">Assign New Homework</h3>
+                <h3 className="text-xl font-bold">
+                  {editingHomework ? 'Edit Homework Assignment' : 'Assign New Homework'}
+                </h3>
                 <Button
-                  onClick={() => setShowAssignForm(false)}
+                  onClick={resetForm}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
@@ -728,12 +884,26 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowAssignForm(false)}
+                    onClick={resetForm}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    Assign Homework
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSaveAsDraft}
+                    className="flex items-center gap-2"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    Save as Draft
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="flex items-center gap-2"
+                    onClick={() => setFormData(prev => ({ ...prev, isPublished: true }))}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {editingHomework ? 'Update & Publish' : 'Assign & Publish'}
                   </Button>
                 </div>
               </form>
@@ -876,9 +1046,25 @@ const TeacherHomeworkView: React.FC<TeacherHomeworkViewProps> = ({ className = '
                   <Button size="sm" variant="outline">
                     View Submissions
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleEditHomework(assignment)}
+                    className="flex items-center gap-1"
+                  >
                     Edit
                   </Button>
+                  {!assignment.isPublished && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handlePublishHomework(assignment.id)}
+                      className="flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-50"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Publish
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>

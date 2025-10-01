@@ -83,8 +83,8 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     dob: "",
     joinDate: "",
     subjects: [],
-    grades: [1],
-    sections: ["A"],
+    grades: [],
+    sections: [],
     experience: {
       totalYears: 0,
       previousSchools: [],
@@ -164,6 +164,9 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.dob) newErrors.dob = "Date of birth is required";
+    if (formData.subjects.length === 0) newErrors.subjects = "At least one subject must be selected";
+    if (formData.grades.length === 0) newErrors.grades = "At least one grade must be selected";
+    if (formData.sections.length === 0) newErrors.sections = "At least one section must be selected";
     if (!formData.address.city.trim()) newErrors['address.city'] = "City is required";
     if (!formData.address.state.trim()) newErrors['address.state'] = "State is required";
     if (!formData.address.zipCode.trim()) newErrors['address.zipCode'] = "Zip code is required";
@@ -431,12 +434,12 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
                     <label key={subject._id} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
                       <input
                         type="checkbox"
-                        checked={formData.subjects.includes(subject._id)}
+                        checked={formData.subjects.includes(subject.name)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            handleChange("subjects", [...formData.subjects, subject._id]);
+                            handleChange("subjects", [...formData.subjects, subject.name]);
                           } else {
-                            handleChange("subjects", formData.subjects.filter(s => s !== subject._id));
+                            handleChange("subjects", formData.subjects.filter(s => s !== subject.name));
                           }
                         }}
                         className="mr-2 flex-shrink-0"
@@ -446,6 +449,55 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
                   ))
                 )}
               </div>
+              {errors.subjects && <p className="text-red-500 text-sm mt-1">{errors.subjects}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Grades *</label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+                  <label key={grade} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={formData.grades.includes(grade)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleChange("grades", [...formData.grades, grade]);
+                        } else {
+                          handleChange("grades", formData.grades.filter(g => g !== grade));
+                        }
+                      }}
+                      className="mr-2 flex-shrink-0"
+                    />
+                    <span className="text-sm font-medium">Grade {grade}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.grades && <p className="text-red-500 text-sm mt-1">{errors.grades}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Sections</label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((section) => (
+                  <label key={section} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={formData.sections.includes(section)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleChange("sections", [...formData.sections, section]);
+                        } else {
+                          handleChange("sections", formData.sections.filter(s => s !== section));
+                        }
+                      }}
+                      className="mr-2 flex-shrink-0"
+                    />
+                    <span className="text-sm font-medium">Section {section}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.sections && <p className="text-red-500 text-sm mt-1">{errors.sections}</p>}
             </div>
 
             <div>

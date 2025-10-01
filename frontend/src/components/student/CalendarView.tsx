@@ -4,7 +4,6 @@ import {
   Calendar,
   BookOpen,
   AlertTriangle,
-  CheckCircle,
   Clock,
   GraduationCap,
 } from "lucide-react";

@@ -1922,15 +1922,15 @@ class StudentService {
       throw new AppError(httpStatus.NOT_FOUND, "Student not found");
     }
 
-    // Get homework assignments for the student
+    // Get homework assignments for the student's grade and section
     const homework = await Homework.aggregate([
       {
         $match: {
-          "assignments.studentId": student._id,
+          grade: student.grade,
+          section: student.section || { $exists: true },
+          isPublished: true,
         },
       },
-      { $unwind: "$assignments" },
-      { $match: { "assignments.studentId": student._id } },
       {
         $lookup: {
           from: "subjects",
@@ -1959,6 +1959,25 @@ class StudentService {
       },
       { $unwind: "$teacherUser" },
       {
+        $lookup: {
+          from: "homeworksubmissions",
+          let: { homeworkId: "$_id", studentId: student._id },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$homeworkId", "$$homeworkId"] },
+                    { $eq: ["$studentId", "$$studentId"] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "submission",
+        },
+      },
+      {
         $project: {
           homeworkId: "$_id",
           title: 1,
@@ -1967,10 +1986,15 @@ class StudentService {
           teacherName: "$teacherUser.fullName",
           assignedDate: 1,
           dueDate: 1,
-          status: "$assignments.status",
-          submittedAt: "$assignments.submittedAt",
-          grade: "$assignments.grade",
-          feedback: "$assignments.feedback",
+          status: {
+            $ifNull: [
+              { $arrayElemAt: ["$submission.status", 0] },
+              { $cond: [{ $lt: ["$dueDate", new Date()] }, "overdue", "pending"] },
+            ],
+          },
+          submittedAt: { $arrayElemAt: ["$submission.submittedAt", 0] },
+          grade: { $arrayElemAt: ["$submission.grade", 0] },
+          feedback: { $arrayElemAt: ["$submission.feedback", 0] },
           attachments: 1,
         },
       },
@@ -1983,13 +2007,10 @@ class StudentService {
       (h) => h.status === "submitted" || h.status === "graded"
     ).length;
     const pendingHomework = homework.filter(
-      (h) => h.status === "pending" || h.status === "assigned"
+      (h) => h.status === "pending"
     ).length;
     const overdueHomework = homework.filter((h) => {
-      return (
-        (h.status === "pending" || h.status === "assigned") &&
-        new Date(h.dueDate) < new Date()
-      );
+      return h.status === "overdue";
     }).length;
 
     return {
@@ -2022,10 +2043,12 @@ class StudentService {
           isActive: true,
         },
       },
+      { $unwind: "$periods" },
+      { $match: { "periods.isBreak": { $ne: true } } },
       {
         $lookup: {
           from: "subjects",
-          localField: "subjectId",
+          localField: "periods.subjectId",
           foreignField: "_id",
           as: "subject",
         },
@@ -2034,7 +2057,7 @@ class StudentService {
       {
         $lookup: {
           from: "teachers",
-          localField: "teacherId",
+          localField: "periods.teacherId",
           foreignField: "_id",
           as: "teacher",
         },
@@ -2050,26 +2073,17 @@ class StudentService {
       },
       { $unwind: "$teacherUser" },
       {
-        $lookup: {
-          from: "classes",
-          localField: "classId",
-          foreignField: "_id",
-          as: "class",
-        },
-      },
-      { $unwind: "$class" },
-      {
         $project: {
           dayOfWeek: 1,
-          period: 1,
-          startTime: 1,
-          endTime: 1,
+          period: "$periods.periodNumber",
+          startTime: "$periods.startTime",
+          endTime: "$periods.endTime",
           subject: "$subject.name",
           subjectId: "$subject._id",
           teacherName: "$teacherUser.fullName",
           teacherId: "$teacher._id",
-          className: "$class.name",
-          room: 1,
+          className: { $concat: ["Grade ", { $toString: "$grade" }, " - Section ", "$section"] },
+          room: "$periods.roomNumber",
           isActive: 1,
         },
       },

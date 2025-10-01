@@ -15,6 +15,7 @@ export interface AuthenticatedRequest extends Request {
     schoolId?: string;
     isActive: boolean;
   };
+  teacher?: any; // Teacher document for teacher-specific routes
 }
 
 /**

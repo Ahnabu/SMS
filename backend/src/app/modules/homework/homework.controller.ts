@@ -9,17 +9,14 @@ import { Student } from '../student/student.model';
 
 // Create homework
 const createHomework = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { user } = req;
+  const { user, teacher } = req;
   
-  if (!user || user.role !== 'teacher') {
+  if (!user || user.role !== 'teacher' || !teacher) {
     throw new AppError(403, 'Only teachers can create homework');
   }
 
-  // Get teacher info from user id
-  const teacher = await Teacher.findOne({ userId: user.id });
-  if (!teacher) {
-    throw new AppError(404, 'Teacher not found');
-  }
+  // Teacher info is already available from addTeacherContext middleware
+  // and teacherId/schoolId are already added to req.body
 
   // Handle file uploads if any
   const files = req.files as Express.Multer.File[] | undefined;
@@ -56,11 +53,14 @@ const getHomeworkById = catchAsync(async (req: AuthenticatedRequest, res: Respon
 // Update homework
 const updateHomework = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { user } = req;
+  const { user, teacher } = req;
 
-  if (!user || user.role !== 'teacher') {
+  if (!user || user.role !== 'teacher' || !teacher) {
     throw new AppError(403, 'Only teachers can update homework');
   }
+
+  // Teacher info is already available from addTeacherContext middleware
+  // and teacherId/schoolId are already added to req.body if needed
 
   // Handle file uploads if any
   const files = req.files as Express.Multer.File[] | undefined;

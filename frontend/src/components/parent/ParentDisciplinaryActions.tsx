@@ -8,7 +8,6 @@ import {
   User,
   AlertOctagon,
   FileText,
-  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parentApi } from "../../services/parent.api";
@@ -94,17 +93,6 @@ const ParentDisciplinaryActions: React.FC = () => {
       case 'resolved': return 'bg-green-100 text-green-800 border-green-200';
       case 'appealed': return 'bg-purple-100 text-purple-800 border-purple-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getActionIcon = (actionType: string, isRedWarrant: boolean) => {
-    if (isRedWarrant) return <AlertOctagon className="h-4 w-4" />;
-    switch (actionType) {
-      case 'warning': return <AlertTriangle className="h-4 w-4" />;
-      case 'punishment': return <Shield className="h-4 w-4" />;
-      case 'detention': return <Clock className="h-4 w-4" />;
-      case 'suspension': return <FileText className="h-4 w-4" />;
-      default: return <AlertTriangle className="h-4 w-4" />;
     }
   };
 
