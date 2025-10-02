@@ -20,7 +20,6 @@ const createSchedule = async (
   scheduleData: ICreateScheduleRequest
 ): Promise<IScheduleDocument> => {
   const session = await startSession();
-  console.log("scheduleData:", scheduleData);
   try {
     session.startTransaction();
     // Validate schoolId format and convert to ObjectId if needed
@@ -37,9 +36,6 @@ const createSchedule = async (
 
     // Validate school exists
     const school = await School.findById(schoolObjectId).session(session);
-
-    console.log("Looking for school with ID:", scheduleData.schoolId);
-    console.log("School found:", school);
 
     if (!school) {
       throw new AppError(

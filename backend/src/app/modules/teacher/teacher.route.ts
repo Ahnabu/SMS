@@ -111,6 +111,15 @@ router.patch(
   TeacherController.updateTeacher
 );
 
+// Also support PUT method for compatibility
+router.put(
+  "/:id",
+  authenticate,
+  authorize(UserRole.SUPERADMIN, UserRole.ADMIN),
+  validateRequest(updateTeacherValidationSchema),
+  TeacherController.updateTeacher
+);
+
 router.delete(
   "/:id",
   authenticate,

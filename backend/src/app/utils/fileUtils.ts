@@ -49,7 +49,7 @@ export class FileUtils {
 
     // Create folder name with required format
     const folderName = `student@${studentInfo.firstName}@${studentInfo.age}@${studentInfo.grade}@${studentInfo.section}@${studentInfo.bloodGroup}@${studentInfo.studentId}`;
-console.log(folderName);
+    
     // Build full path
     const baseStoragePath = path.resolve(config.upload_path);
     const schoolPath = path.join(baseStoragePath, cleanSchoolName);

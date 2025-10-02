@@ -4,6 +4,7 @@ import { Save, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../../../context/AuthContext";
 import { adminApi } from "../../../services/admin.api";
+import { teacherApi } from "../../../services/teacher.api";
 
 interface MinimalTeacherFormData {
   firstName: string;
@@ -262,94 +263,81 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave,
     setIsSubmitting(true);
 
     try {
-      const submitData = new FormData();
-
-      // Add schoolId from authenticated user
-      submitData.append("schoolId", user.schoolId);
-      
-      // Basic fields
-      submitData.append("firstName", formData.firstName);
-      submitData.append("lastName", formData.lastName);
-      submitData.append("designation", formData.designation);
-      submitData.append("bloodGroup", formData.bloodGroup);
-      submitData.append("dob", formData.dob);
-      
-      if (formData.email) submitData.append("email", formData.email);
-      if (formData.phone) submitData.append("phone", formData.phone);
-      if (formData.joinDate && formData.joinDate.trim()) {
-        submitData.append("joinDate", formData.joinDate);
-      }
-
-      // Required arrays and objects
-      submitData.append("subjects", JSON.stringify(formData.subjects));
-      submitData.append("grades", JSON.stringify(formData.grades));
-      submitData.append("sections", JSON.stringify(formData.sections));
-      submitData.append("experience", JSON.stringify(formData.experience));
-      submitData.append("qualifications", JSON.stringify(formData.qualifications));
-      submitData.append("address", JSON.stringify(formData.address));
-      submitData.append("emergencyContact", JSON.stringify(formData.emergencyContact));
-      submitData.append("salary", JSON.stringify(formData.salary));
-      submitData.append("isClassTeacher", JSON.stringify(formData.isClassTeacher));
-      submitData.append("isActive", JSON.stringify(formData.isActive));
-      
-      // Add class teacher assignment if applicable
-      if (formData.isClassTeacher && formData.classTeacherFor) {
-        submitData.append("classTeacherFor", JSON.stringify(formData.classTeacherFor));
-      }
-
-      // Determine if we're editing or creating
       const isEditing = !!teacher;
-      const url = isEditing ? `/api/teachers/${teacher.id}` : "/api/teachers";
-      const method = isEditing ? "PUT" : "POST";
       
-      const response = await fetch(url, {
-        method,
-        body: submitData,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
-        try {
-          const errorData = await response.json();
-          console.error("Teacher creation error:", errorData);
-          errorMessage = errorData.message || errorMessage;
-        } catch (jsonError) {
-          console.error("Failed to parse error response as JSON:", jsonError);
-          // Use the HTTP status text as fallback
-        }
-        
-        throw new Error(errorMessage);
-      }
+      // Prepare teacher data for API call
+      const teacherData = {
+        schoolId: user.schoolId,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        designation: formData.designation,
+        bloodGroup: formData.bloodGroup,
+        dob: formData.dob,
+        joinDate: formData.joinDate || undefined,
+        subjects: formData.subjects,
+        grades: formData.grades,
+        sections: formData.sections,
+        experience: formData.experience,
+        qualifications: formData.qualifications,
+        address: {
+          ...formData.address,
+          country: formData.address.country || "Bangladesh", // Ensure country is always a string
+        },
+        emergencyContact: formData.emergencyContact,
+        salary: formData.salary,
+        isClassTeacher: formData.isClassTeacher,
+        classTeacherFor: formData.isClassTeacher ? formData.classTeacherFor : undefined,
+        isActive: formData.isActive,
+      };
 
       let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error("Failed to parse success response as JSON:", jsonError);
-        throw new Error("Server returned invalid JSON response");
+      
+      if (isEditing) {
+        // Update existing teacher
+        result = await teacherApi.update(teacher.id, teacherData);
+      } else {
+        // Create new teacher
+        result = await teacherApi.create(teacherData);
       }
 
-      if (result.success) {
+      if (result.data.success) {
         // Only set credentials for new teachers
-        if (!isEditing && result.data.credentials) {
-          setCredentials(result.data.credentials);
+        if (!isEditing && result.data.data.credentials) {
+          setCredentials(result.data.data.credentials);
         }
         
         const successMessage = isEditing ? "Teacher updated successfully!" : "Teacher created successfully!";
         toast.success(successMessage);
         
         if (onSave) {
-          onSave(result.data);
+          onSave(result.data.data);
         }
       } else {
         const errorMessage = isEditing ? "Failed to update teacher" : "Failed to create teacher";
-        throw new Error(result.message || errorMessage);
+        throw new Error(result.data.message || errorMessage);
       }
     } catch (error: any) {
       console.error("Failed to save teacher:", error);
-      toast.error(error.message || "Failed to save teacher. Please check the console for details.");
+      
+      let errorMessage = "Failed to save teacher. Please try again.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Handle validation errors
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        console.log("Validation errors:", validationErrors);
+        errorMessage = "Please check the form for validation errors.";
+      }
+
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -873,9 +861,12 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave,
 
         {/* Submit Button */}
         <div className="flex justify-end pt-6 border-t">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
             <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Creating Teacher..." : "Create Teacher"}
+            {isSubmitting 
+              ? (teacher ? "Updating..." : "Creating...") 
+              : (teacher ? "Update Teacher" : "Create Teacher")
+            }
           </Button>
         </div>
       </form>

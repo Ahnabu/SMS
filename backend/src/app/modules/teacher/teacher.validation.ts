@@ -257,6 +257,35 @@ const updateTeacherValidationSchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid teacher ID format'),
   }),
   body: z.object({
+    firstName: z
+      .string()
+      .min(1, 'First name is required')
+      .max(50, 'First name cannot exceed 50 characters')
+      .trim()
+      .optional(),
+    lastName: z
+      .string()
+      .min(1, 'Last name is required')
+      .max(50, 'Last name cannot exceed 50 characters')
+      .trim()
+      .optional(),
+    email: z
+      .string()
+      .email('Invalid email format')
+      .toLowerCase()
+      .optional(),
+    phone: z
+      .string()
+      .regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone format')
+      .optional(),
+    dob: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+      .optional(),
+    joinDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+      .optional(),
     employeeId: z
       .string()
       .max(50, 'Employee ID cannot exceed 50 characters')
@@ -320,6 +349,38 @@ const updateTeacherValidationSchema = z.object({
       }))
       .max(10, 'Cannot have more than 10 qualifications')
       .optional(),
+    experience: z.object({
+      totalYears: z
+        .number()
+        .int('Total years must be an integer')
+        .min(0, 'Total years cannot be negative')
+        .max(50, 'Total years cannot exceed 50'),
+      previousSchools: z
+        .array(z.object({
+          schoolName: z
+            .string()
+            .min(1, 'School name is required')
+            .max(200, 'School name cannot exceed 200 characters')
+            .trim(),
+          position: z
+            .string()
+            .min(1, 'Position is required')
+            .max(100, 'Position cannot exceed 100 characters')
+            .trim(),
+          duration: z
+            .string()
+            .min(1, 'Duration is required')
+            .max(50, 'Duration cannot exceed 50 characters')
+            .trim(),
+          fromDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+          toDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+        }))
+        .optional(),
+    }).optional(),
     address: z.object({
       street: z
         .string()

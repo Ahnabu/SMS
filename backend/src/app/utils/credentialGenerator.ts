@@ -392,7 +392,6 @@ export class CredentialGenerator {
     while (attempts < maxAttempts) {
       try {
         attempts++;
-        console.log(`Credential generation attempt ${attempts}/${maxAttempts}`);
 
         // Generate unique student ID - each attempt gets a fresh ID
         const { studentId, rollNumber } = await this.generateUniqueStudentId(
@@ -400,8 +399,6 @@ export class CredentialGenerator {
           grade,
           schoolId
         );
-
-        console.log(`Generated student ID: ${studentId}, roll: ${rollNumber}`);
 
         // Generate credentials based on student ID (no modifications)
         const credentials = await this.generateBothCredentials(studentId);
@@ -412,19 +409,15 @@ export class CredentialGenerator {
           credentials.parent.username,
         ];
         
-        console.log(`Checking availability for usernames:`, usernames);
         const available = await this.checkUsernameAvailability(usernames);
 
         if (available) {
-          console.log(`Success! Generated credentials on attempt ${attempts}`);
           return {
             studentId,
             rollNumber,
             credentials,
           };
         }
-
-        console.log(`Attempt ${attempts}: Usernames not available, retrying...`);
         
         // If not available, wait before retry with exponential backoff
         const waitTime = Math.min(1000, 100 * Math.pow(2, attempts - 1)) + Math.random() * 100;
