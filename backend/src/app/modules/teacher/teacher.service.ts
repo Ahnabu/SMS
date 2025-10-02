@@ -509,20 +509,53 @@ class TeacherService {
         throw new AppError(httpStatus.NOT_FOUND, "Teacher not found");
       }
 
+      // Prepare User data updates (if any user-related fields are provided)
+      const userUpdateData: any = {};
+      if (updateData.firstName) userUpdateData.firstName = updateData.firstName;
+      if (updateData.lastName) userUpdateData.lastName = updateData.lastName;
+      if (updateData.email) userUpdateData.email = updateData.email;
+      if (updateData.phone) userUpdateData.phone = updateData.phone;
+
+      // Update User document if there are user-related changes
+      if (Object.keys(userUpdateData).length > 0) {
+        await User.findByIdAndUpdate(
+          teacher.userId,
+          { $set: userUpdateData },
+          { new: true, runValidators: true }
+        );
+      }
+
+      // Prepare Teacher-specific data updates
+      const teacherUpdateData: any = { ...updateData };
+      // Remove user-related fields from teacher update data
+      delete teacherUpdateData.firstName;
+      delete teacherUpdateData.lastName;
+      delete teacherUpdateData.email;
+      delete teacherUpdateData.phone;
+
+      // Convert date strings to Date objects if provided
+      if (teacherUpdateData.dob) {
+        teacherUpdateData.dob = new Date(teacherUpdateData.dob);
+      }
+      if (teacherUpdateData.joinDate) {
+        teacherUpdateData.joinDate = new Date(teacherUpdateData.joinDate);
+      }
+
       // Process salary if provided
-      if (updateData.salary) {
-        const basic = updateData.salary.basic || 0;
-        const allowances = updateData.salary.allowances || 0;
-        const deductions = updateData.salary.deductions || 0;
-        updateData.salary = {
-          ...updateData.salary,
+      if (teacherUpdateData.salary) {
+        const basic = teacherUpdateData.salary.basic || 0;
+        const allowances = teacherUpdateData.salary.allowances || 0;
+        const deductions = teacherUpdateData.salary.deductions || 0;
+        teacherUpdateData.salary = {
+          ...teacherUpdateData.salary,
           netSalary: basic + allowances - deductions,
         };
       }
 
+      // Update Teacher document
       const updatedTeacher = await Teacher.findByIdAndUpdate(
         id,
-        { $set: updateData },
+        { $set: teacherUpdateData },
         { new: true, runValidators: true }
       )
         .populate("userId", "firstName lastName username email phone")
@@ -1444,18 +1477,6 @@ class TeacherService {
       const now = new Date();
       const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const attendanceDate = new Date(attendanceData.date);
-
-      console.log('🔍 Debugging attendance marking:');
-      console.log('📅 Current Day:', currentDay);
-      console.log('� Attendance Date:', attendanceData.date);
-      console.log('�👨‍🏫 Teacher ID:', teacher._id);
-      console.log('📚 Looking for:', {
-        grade: attendanceData.grade,
-        section: attendanceData.section,
-        period: attendanceData.period,
-        subjectId: attendanceData.subjectId,
-        classId: attendanceData.classId,
-      });
       
       // Verify teacher has permission for this subject/grade/section
       const schedule = await Schedule.findOne({
@@ -1552,7 +1573,6 @@ class TeacherService {
               period: attendanceData.period,
             });
           }
-          console.log(`Sent absence notifications to parents of ${absentStudents.length} students`);
         } catch (notificationError) {
           console.error('Failed to send notifications:', notificationError);
           // Don't fail the attendance marking if notification fails
@@ -1875,8 +1895,6 @@ class TeacherService {
               dueDate: homework.dueDate,
               subjectName: (populatedHomework?.subjectId as any)?.name || 'Unknown Subject',
             });
-            
-            console.log(`Sent homework notifications to parents of ${students.length} students`);
           }
         } catch (notificationError) {
           console.error('Failed to send homework notifications:', notificationError);
@@ -2864,7 +2882,6 @@ class TeacherService {
           throw new AppError(httpStatus.FORBIDDEN, "You are not assigned to grade this exam");
         }
         */
-        console.log('Academic calendar exam grading - temporarily simplified');
       } else {
         // This is from regular exam - verify assignment
         const { Exam } = await import('../exam/exam.model');

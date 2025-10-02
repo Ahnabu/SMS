@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { Event } from './event.model';
 import { IEvent, IEventFilters } from './event.interface';
 import { AppError } from '../../errors/AppError';
+// Fixed grade/section filtering for students
 
 const createEvent = async (eventData: IEvent, userId: Types.ObjectId): Promise<any> => {
   const event = new Event({
@@ -59,11 +60,36 @@ const getEvents = async (
 
   // Filter by grade/section for specific user context
   if (userRole === 'student' || userRole === 'parent') {
+    // Build grade/section filter - empty arrays mean "all grades/sections"
+    const gradeConditions = [];
+    const sectionConditions = [];
+    
     if (userGrade) {
-      query['targetAudience.grades'] = { $in: [userGrade] };
+      gradeConditions.push(
+        { 'targetAudience.grades': { $size: 0 } }, // Empty array = all grades
+        { 'targetAudience.grades': { $in: [userGrade] } } // Specific grade included
+      );
     }
+    
     if (userSection) {
-      query['targetAudience.sections'] = { $in: [userSection] };
+      sectionConditions.push(
+        { 'targetAudience.sections': { $size: 0 } }, // Empty array = all sections
+        { 'targetAudience.sections': { $in: [userSection] } } // Specific section included
+      );
+    }
+    
+    // Apply conditions using type assertion for MongoDB operators
+    const mongoQuery = query as any;
+    if (gradeConditions.length > 0 && sectionConditions.length > 0) {
+      mongoQuery.$and = mongoQuery.$and || [];
+      mongoQuery.$and.push(
+        { $or: gradeConditions },
+        { $or: sectionConditions }
+      );
+    } else if (gradeConditions.length > 0) {
+      mongoQuery.$or = gradeConditions;
+    } else if (sectionConditions.length > 0) {
+      mongoQuery.$or = sectionConditions;
     }
   }
 
@@ -124,11 +150,36 @@ const getTodaysEvents = async (
 
   // Filter by user context
   if (userRole === 'student' || userRole === 'parent') {
+    // Build grade/section filter - empty arrays mean "all grades/sections"
+    const gradeConditions = [];
+    const sectionConditions = [];
+    
     if (userGrade) {
-      query['targetAudience.grades'] = { $in: [userGrade] };
+      gradeConditions.push(
+        { 'targetAudience.grades': { $size: 0 } }, // Empty array = all grades
+        { 'targetAudience.grades': { $in: [userGrade] } } // Specific grade included
+      );
     }
+    
     if (userSection) {
-      query['targetAudience.sections'] = { $in: [userSection] };
+      sectionConditions.push(
+        { 'targetAudience.sections': { $size: 0 } }, // Empty array = all sections
+        { 'targetAudience.sections': { $in: [userSection] } } // Specific section included
+      );
+    }
+    
+    // Apply conditions using type assertion for MongoDB operators
+    const mongoQuery = query as any;
+    if (gradeConditions.length > 0 && sectionConditions.length > 0) {
+      mongoQuery.$and = mongoQuery.$and || [];
+      mongoQuery.$and.push(
+        { $or: gradeConditions },
+        { $or: sectionConditions }
+      );
+    } else if (gradeConditions.length > 0) {
+      mongoQuery.$or = gradeConditions;
+    } else if (sectionConditions.length > 0) {
+      mongoQuery.$or = sectionConditions;
     }
   }
 

@@ -96,13 +96,69 @@ export const teacherApi = {
   update: (
     id: string,
     data: {
-      qualifications?: string[];
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      employeeId?: string;
       subjects?: string[];
-      experience?: number;
-      salary?: number;
+      grades?: number[];
+      sections?: string[];
+      designation?: string;
+      bloodGroup?: string;
+      dob?: string;
+      joinDate?: string;
+      qualifications?: Array<{
+        degree: string;
+        institution: string;
+        year: number;
+        specialization?: string;
+      }>;
+      experience?: {
+        totalYears: number;
+        previousSchools?: Array<{
+          schoolName: string;
+          position: string;
+          duration: string;
+          fromDate: string;
+          toDate: string;
+        }>;
+      };
+      address?: {
+        street?: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+      };
+      emergencyContact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+        email?: string;
+      };
+      salary?: {
+        basic: number;
+        allowances?: number;
+        deductions?: number;
+      };
+      isClassTeacher?: boolean;
+      classTeacherFor?: {
+        grade: number;
+        section: string;
+      };
       isActive?: boolean;
     }
-  ) => api.put<ApiResponse>(`/teachers/${id}`, data),
+  ) => api.patch<ApiResponse>(`/teachers/${id}`, data),
+
+  // Full update with form data (for photo updates)
+  updateWithFormData: (id: string, formData: FormData) => {
+    return api.patch<ApiResponse>(`/teachers/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
 
   delete: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
 

@@ -166,10 +166,44 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
 
   useEffect(() => {
     if (teacher) {
+      // Properly populate form data for editing
       setFormData({
         ...teacher,
         dob: teacher.dob?.split("T")[0] || "",
         joinDate: teacher.joinDate?.split("T")[0] || "",
+        subjects: teacher.subjects && teacher.subjects.length > 0 ? teacher.subjects : [""],
+        grades: teacher.grades || [],
+        sections: teacher.sections || [],
+        qualifications: teacher.qualifications && teacher.qualifications.length > 0 
+          ? teacher.qualifications 
+          : [{
+              degree: "",
+              institution: "",
+              year: new Date().getFullYear(),
+              specialization: "",
+            }],
+        experience: teacher.experience || {
+          totalYears: 0,
+          previousSchools: [],
+        },
+        address: teacher.address || {
+          street: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "Bangladesh",
+        },
+        emergencyContact: teacher.emergencyContact || {
+          name: "",
+          relationship: "",
+          phone: "",
+          email: "",
+        },
+        salary: teacher.salary || {
+          basic: 0,
+          allowances: 0,
+          deductions: 0,
+        },
         photos: [],
       });
     } else {
@@ -298,9 +332,35 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
       };
 
       if (teacher?.id) {
-        // Update existing teacher (for now, just call create since update might not handle photos)
-        // TODO: Implement proper update with photo support
-        toast.info("Teacher update functionality coming soon!");
+        // Update existing teacher
+        const updateData = {
+          firstName: cleanedFormData.firstName,
+          lastName: cleanedFormData.lastName,
+          email: cleanedFormData.email,
+          phone: cleanedFormData.phone,
+          employeeId: cleanedFormData.employeeId,
+          subjects: cleanedFormData.subjects,
+          grades: cleanedFormData.grades,
+          sections: cleanedFormData.sections,
+          designation: cleanedFormData.designation,
+          bloodGroup: cleanedFormData.bloodGroup,
+          dob: cleanedFormData.dob,
+          joinDate: cleanedFormData.joinDate,
+          qualifications: cleanedFormData.qualifications,
+          experience: cleanedFormData.experience,
+          address: cleanedFormData.address,
+          emergencyContact: cleanedFormData.emergencyContact,
+          salary: cleanedFormData.salary,
+          isClassTeacher: cleanedFormData.isClassTeacher,
+          classTeacherFor: cleanedFormData.classTeacherFor,
+        };
+
+        const response = await teacherApi.update(teacher.id, updateData);
+        if (response.data.success) {
+          toast.success("Teacher updated successfully!");
+          onSave({ ...cleanedFormData, id: teacher.id, ...response.data.data });
+          onClose();
+        }
       } else {
         // Create new teacher
         const response = await teacherApi.create(cleanedFormData);
@@ -316,6 +376,17 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
       let errorMessage = "Failed to save teacher. Please try again.";
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Handle validation errors
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        console.log("Validation errors:", validationErrors);
+        errorMessage = "Please check the form for validation errors.";
       }
 
       toast.error(errorMessage);
@@ -432,8 +503,13 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">
             {teacher ? "Edit Teacher" : "Add New Teacher"}
+            {loading && (
+              <span className="ml-2 text-sm text-blue-600">
+                {teacher ? "Updating..." : "Creating..."}
+              </span>
+            )}
           </h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -933,6 +1009,7 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
             variant="outline"
             onClick={onClose}
             disabled={loading}
+            className="px-6"
           >
             Cancel
           </Button>
@@ -940,11 +1017,11 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 px-6 bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Save className="h-4 w-4" />
             {loading
-              ? "Saving..."
+              ? (teacher ? "Updating..." : "Creating...")
               : teacher
               ? "Update Teacher"
               : "Create Teacher"}

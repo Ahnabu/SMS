@@ -186,7 +186,6 @@ export const createSchoolFolderStructure = async (
     });
 
     await Promise.all(createFolderPromises);
-    console.log(`Folder structure created for school: ${schoolName}`);
   } catch (error) {
     console.error("Failed to create school folder structure:", error);
     // Don't throw error as this is not critical for the main operation
@@ -251,7 +250,6 @@ export const uploadToCloudinary = async (
 export const deleteFromCloudinary = async (publicId: string): Promise<void> => {
   try {
     await cloudinary.uploader.destroy(publicId);
-    console.log(`Successfully deleted ${publicId} from Cloudinary`);
   } catch (error) {
     console.error(`Failed to delete ${publicId} from Cloudinary:`, error);
     throw new Error(`Failed to delete file from cloud storage: ${publicId}`);

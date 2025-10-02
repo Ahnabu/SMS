@@ -154,6 +154,12 @@ export interface ICreateTeacherRequest {
 }
 
 export interface IUpdateTeacherRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  dob?: string;
+  joinDate?: string;
   employeeId?: string;
   subjects?: string[];
   grades?: number[];
@@ -166,6 +172,16 @@ export interface IUpdateTeacherRequest {
     year: number;
     specialization?: string;
   }[];
+  experience?: {
+    totalYears: number;
+    previousSchools?: {
+      schoolName: string;
+      position: string;
+      duration: string;
+      fromDate: string;
+      toDate: string;
+    }[];
+  };
   address?: {
     street?: string;
     city: string;

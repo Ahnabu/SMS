@@ -429,11 +429,7 @@ class SchoolService {
 
       const newSchool = new School(schoolCreateData);
 
-      // Log the data being created for debugging
-      console.log(
-        "Creating school with data:",
-        JSON.stringify(schoolCreateData, null, 2)
-      );
+
 
       await newSchool.save();
 
@@ -543,7 +539,6 @@ class SchoolService {
           .lean(),
         School.countDocuments(query),
       ]);
-      console.log(schools);
       const totalPages = Math.ceil(totalCount / limit);
 
       return {

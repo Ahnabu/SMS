@@ -98,7 +98,6 @@ class AcademicCalendarService {
       };
 
       // Create calendar event
-      console.log("About to create calendar event with mapped data:", JSON.stringify(mappedEventData, null, 2));
       const newEvent = await AcademicCalendar.create([mappedEventData], { session });
 
       await session.commitTransaction();

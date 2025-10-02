@@ -151,9 +151,6 @@ class StudentService {
             userCreationAttempts < maxUserCreationAttempts
           ) {
             // Duplicate key error, retry with new credentials
-            console.log(
-              `Duplicate username detected, retrying... (Attempt ${userCreationAttempts}/${maxUserCreationAttempts})`
-            );
             await new Promise((resolve) =>
               setTimeout(resolve, Math.random() * 200 + 100)
             );
@@ -242,9 +239,7 @@ class StudentService {
             parentUser = [existingParentUser];
           }
 
-          console.log(
-            `Reused existing parent ${existingParent.parentId} for student ${newStudent[0].studentId}`
-          );
+
         } else {
           // Ensure credentials are available
           if (!credentials) {
@@ -394,9 +389,7 @@ class StudentService {
           newStudent[0].parentId = newParent[0]._id;
           await newStudent[0].save({ session });
 
-          console.log(
-            `Created new parent ${parentId} for student ${newStudent[0].studentId}`
-          );
+
         }
       }
 
@@ -454,9 +447,7 @@ class StudentService {
         studentId!
       );
 
-      console.log(
-        `Uploading photos to Cloudinary folder: ${cloudinaryFolderPath}`
-      );
+
 
       // Upload photos to Cloudinary
       const cloudinaryResults = await uploadPhotosToCloudinary(
@@ -465,9 +456,7 @@ class StudentService {
         studentId!
       );
 
-      console.log(
-        `Successfully uploaded ${cloudinaryResults.length} photos to Cloudinary`
-      );
+
 
       // Create photo records with Cloudinary data
       const photoPromises = cloudinaryResults.map((result) =>
@@ -491,9 +480,7 @@ class StudentService {
       const photoResults = await Promise.all(photoPromises);
       uploadedPhotos = photoResults.flat();
 
-      console.log(
-        `Successfully created ${uploadedPhotos.length} photo records for student ${studentId}`
-      );
+
 
       // Create photo folder structure for future uploads
       const age =
@@ -1073,9 +1060,7 @@ class StudentService {
         student.studentId
       );
 
-      console.log(
-        `Uploading additional photos to Cloudinary folder: ${cloudinaryFolderPath}`
-      );
+
 
       // Upload photos to Cloudinary
       const cloudinaryResults = await uploadPhotosToCloudinary(
@@ -1084,9 +1069,7 @@ class StudentService {
         student.studentId
       );
 
-      console.log(
-        `Successfully uploaded ${cloudinaryResults.length} additional photos to Cloudinary`
-      );
+
 
       // Create photo records with Cloudinary data
       const uploadedPhotos: IStudentPhotoResponse[] = [];
@@ -1499,7 +1482,6 @@ class StudentService {
   }
 
   async getStudentDashboard(studentId: string) {
-    console.log(studentId);
     // Get student details
     const student = await Student.findOne({ userId: studentId })
       .populate("schoolId", "name")
@@ -2131,20 +2113,10 @@ class StudentService {
   }
 
   async getStudentCalendar(studentId: string) {
-    console.log("getStudentCalendar service called with studentId:", studentId);
     const student = await Student.findOne({ userId: studentId });
     if (!student) {
-      console.log("Student not found for userId:", studentId);
       throw new AppError(httpStatus.NOT_FOUND, "Student not found");
     }
-    console.log(
-      "Student found:",
-      student._id,
-      "grade:",
-      student.grade,
-      "section:",
-      student.section
-    );
 
     // Use the new event service instead of AcademicCalendar
     const { eventService } = await import('../event/event.service');
@@ -2176,8 +2148,6 @@ class StudentService {
       color: this.getEventColor(event.type),
       targetAudience: event.targetAudience
     }));
-
-    console.log(`Found ${calendarEvents.length} calendar events for student`);
 
     // Get upcoming exams
     const upcomingExams = await Exam.aggregate([
@@ -2267,7 +2237,6 @@ class StudentService {
       },
     };
 
-    console.log("Calendar data prepared:", result);
     return result;
   }
 
