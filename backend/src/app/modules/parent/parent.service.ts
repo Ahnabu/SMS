@@ -12,7 +12,7 @@ import {
   IParentStats,
 } from "./parent.interface";
 import { Attendance } from "../attendance/attendance.model";
-import { Homework } from "../homework/homework.model";
+import { Homework, HomeworkSubmission } from "../homework/homework.model";
 import { AcademicCalendar } from "../academic-calendar/academic-calendar.model";
 import { Notification } from "../notification/notification.model";
 import { Schedule } from "../schedule/schedule.model";
@@ -894,88 +894,105 @@ class ParentService {
         throw new AppError(httpStatus.NOT_FOUND, "Child not found");
       }
 
-      const homework = await Homework.aggregate([
-        {
-          $match: {
-            "assignments.studentId": child._id,
+      // Get homework for the child's grade and section
+      const homework = await Homework.find({
+        grade: child.grade,
+        section: child.section,
+        isPublished: true,
+      })
+        .populate("teacherId", "userId teacherId")
+        .populate({
+          path: "teacherId",
+          populate: {
+            path: "userId",
+            select: "firstName lastName",
           },
-        },
-        { $unwind: "$assignments" },
-        { $match: { "assignments.studentId": child._id } },
-        {
-          $lookup: {
-            from: "subjects",
-            localField: "subjectId",
-            foreignField: "_id",
-            as: "subject",
-          },
-        },
-        { $unwind: "$subject" },
-        {
-          $lookup: {
-            from: "teachers",
-            localField: "teacherId",
-            foreignField: "_id",
-            as: "teacher",
-          },
-        },
-        { $unwind: "$teacher" },
-        {
-          $lookup: {
-            from: "users",
-            localField: "teacher.userId",
-            foreignField: "_id",
-            as: "teacherUser",
-          },
-        },
-        { $unwind: "$teacherUser" },
-        {
-          $project: {
-            homeworkId: "$_id",
-            title: 1,
-            description: 1,
-            subject: "$subject.name",
-            teacherName: "$teacherUser.fullName",
-            assignedDate: 1,
-            dueDate: 1,
-            status: "$assignments.status",
-            submittedAt: "$assignments.submittedAt",
-            grade: "$assignments.grade",
-            feedback: "$assignments.feedback",
-            attachments: 1,
-          },
-        },
-        { $sort: { dueDate: 1, assignedDate: -1 } },
-      ]);
+        })
+        .populate("subjectId", "name code")
+        .sort({ dueDate: 1, assignedDate: -1 })
+        .lean();
+
+      // Get submissions for this student
+      const submissions = await HomeworkSubmission.find({
+        studentId: child._id,
+      }).lean();
+
+      // Create a map of submissions by homework ID
+      const submissionMap = new Map(
+        submissions.map((sub: any) => [sub.homeworkId.toString(), sub])
+      );
+
+      // Combine homework with submission status
+      const homeworkWithStatus = homework.map((hw: any) => {
+        const submission = submissionMap.get(hw._id.toString());
+        const teacherUser = hw.teacherId?.userId as any;
+
+        return {
+          homeworkId: hw._id,
+          title: hw.title,
+          description: hw.description,
+          instructions: hw.instructions,
+          subject: hw.subjectId?.name || "Unknown",
+          subjectCode: hw.subjectId?.code || "",
+          teacherName: teacherUser
+            ? `${teacherUser.firstName} ${teacherUser.lastName}`.trim()
+            : "Unknown",
+          teacherId: hw.teacherId?._id,
+          homeworkType: hw.homeworkType,
+          priority: hw.priority,
+          assignedDate: hw.assignedDate,
+          dueDate: hw.dueDate,
+          estimatedDuration: hw.estimatedDuration,
+          totalMarks: hw.totalMarks,
+          passingMarks: hw.passingMarks,
+          submissionType: hw.submissionType,
+          allowLateSubmission: hw.allowLateSubmission,
+          latePenalty: hw.latePenalty,
+          maxLateDays: hw.maxLateDays,
+          isGroupWork: hw.isGroupWork,
+          maxGroupSize: hw.maxGroupSize,
+          rubric: hw.rubric || [],
+          tags: hw.tags || [],
+          status: submission?.status || "pending",
+          submittedAt: submission?.submittedAt,
+          marksObtained: submission?.marksObtained,
+          grade: submission?.grade,
+          feedback: submission?.feedback,
+          attachments: hw.attachments || [],
+          isLate: submission?.isLate || false,
+          isOverdue: !submission && new Date(hw.dueDate) < new Date(),
+          daysUntilDue: Math.ceil(
+            (new Date(hw.dueDate).getTime() - new Date().getTime()) /
+              (1000 * 60 * 60 * 24)
+          ),
+        };
+      });
 
       // Calculate statistics
-      const totalHomework = homework.length;
-      const completedHomework = homework.filter(
+      const totalHomework = homeworkWithStatus.length;
+      const completedHomework = homeworkWithStatus.filter(
         (h) => h.status === "submitted" || h.status === "graded"
       ).length;
-      const pendingHomework = homework.filter(
-        (h) => h.status === "pending" || h.status === "assigned"
+      const pendingHomework = homeworkWithStatus.filter(
+        (h) => h.status === "pending"
       ).length;
-      const overdueHomework = homework.filter((h) => {
-        return (
-          (h.status === "pending" || h.status === "assigned") &&
-          new Date(h.dueDate) < new Date()
-        );
-      }).length;
+      const overdueHomework = homeworkWithStatus.filter(
+        (h) => h.isOverdue
+      ).length;
 
       return {
         child: {
           id: child._id,
           studentId: child.studentId,
-          fullName: child.userId
-            ? typeof child.userId === "object" &&
-              "firstName" in child.userId &&
-              "lastName" in child.userId
+          fullName:
+            child.userId &&
+            typeof child.userId === "object" &&
+            "firstName" in child.userId &&
+            "lastName" in child.userId
               ? `${(child.userId as any).firstName} ${
                   (child.userId as any).lastName
                 }`.trim()
-              : ""
-            : "",
+              : "",
           grade: child.grade,
           section: child.section,
         },
@@ -989,7 +1006,7 @@ class ParentService {
               ? Math.round((completedHomework / totalHomework) * 100)
               : 0,
         },
-        homework,
+        homework: homeworkWithStatus,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -1143,12 +1160,25 @@ class ParentService {
         );
       }
 
+      // The recipientId in Notification is the USER ID, not parent ID
+      // So we should query using parentUserId (which is the user's ObjectId)
       const notices = await Notification.find({
-        $or: [{ recipientType: "parent" }, { recipientType: "all" }],
+        $and: [
+          {
+            $or: [
+              { recipientId: parentUserId }, // Notifications sent to this specific parent
+              { recipientType: "parent" }, // General parent notifications
+              { recipientType: "all" }, // General all-user notifications
+            ],
+          },
+          { schoolId: parent.schoolId },
+        ],
       })
         .populate("senderId", "firstName lastName")
         .sort({ createdAt: -1 })
         .limit(50);
+
+      console.log("Found notices:", notices.length);
 
       return {
         notices: notices.map((notice) => ({
@@ -1159,12 +1189,15 @@ class ParentService {
           priority: notice.priority,
           targetAudience: notice.recipientType,
           createdAt: notice.createdAt,
+          isRead: notice.isRead,
           createdBy:
             notice.senderId &&
             typeof notice.senderId === "object" &&
             "firstName" in notice.senderId &&
             "lastName" in notice.senderId
-              ? `${(notice.senderId as any).firstName} ${(notice.senderId as any).lastName}`.trim()
+              ? `${(notice.senderId as any).firstName} ${
+                  (notice.senderId as any).lastName
+                }`.trim()
               : "System",
         })),
       };
