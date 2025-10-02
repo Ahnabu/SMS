@@ -11,6 +11,7 @@ import TeacherExamGrading from '../components/teacher/TeacherExamGrading';
 import TeacherPunishmentSystem from '../components/teacher/TeacherPunishmentSystem';
 import DisciplinaryActionsManager from '../components/teacher/DisciplinaryActionsManager';
 import TeacherStudentView from '../components/teacher/TeacherStudentView';
+import EventCalendar from '../components/ui/EventCalendar';
 
 const TeacherDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -27,6 +28,7 @@ const TeacherDashboard: React.FC = () => {
     { href: '/teacher/discipline', label: 'Issue Discipline' },
     { href: '/teacher/disciplinary-actions', label: 'Manage Actions' },
     { href: '/teacher/schedule', label: 'Schedule' },
+    { href: '/teacher/calendar', label: 'Calendar' },
   ];
 
   useEffect(() => {
@@ -81,6 +83,17 @@ const TeacherDashboard: React.FC = () => {
           <Route path="/discipline" element={<TeacherPunishmentSystem />} />
           <Route path="/disciplinary-actions" element={<DisciplinaryActionsManager />} />
           <Route path="/schedule" element={<TeacherScheduleView />} />
+          <Route path="/calendar" element={
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">School Calendar</h1>
+              <EventCalendar
+                onEventClick={(event) => {
+                  console.log('Event clicked:', event);
+                  // Handle event click - could show a modal with event details
+                }}
+              />
+            </div>
+          } />
         </Routes>
       </main>
     </div>
@@ -286,6 +299,16 @@ const TeacherHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
               </div>
             </Link>
           </div>
+        </div>
+
+        {/* Events Calendar */}
+        <div className="mt-6">
+          <EventCalendar
+            onEventClick={(event) => {
+              console.log('Event clicked:', event);
+              // Handle event click - could show a modal with event details
+            }}
+          />
         </div>
       </div>
     </div>

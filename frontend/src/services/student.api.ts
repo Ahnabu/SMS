@@ -84,7 +84,7 @@ export const studentApi = {
   getGrades: () => api.get<ApiResponse>("/students/grades"),
   getHomework: () => api.get<ApiResponse>("/students/homework"),
   getSchedule: () => api.get<ApiResponse>("/students/schedule"),
-  getCalendar: () => api.get<ApiResponse>("/students/calendar"),
+  getCalendar: () => api.get<ApiResponse>("/events"),
   getDisciplinaryActions: () => api.get<ApiResponse>("/students/disciplinary/actions"),
 
   // Student profile endpoint
@@ -113,4 +113,7 @@ export const studentApi = {
 
   getCredentials: (id: string) =>
     api.get<ApiResponse>(`/admin/students/${id}/credentials`),
+
+  // Events
+  getEvents: () => api.get<ApiResponse>("/students/events"),
 };

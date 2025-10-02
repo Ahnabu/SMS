@@ -8,8 +8,8 @@ import AttendanceView from "../components/student/AttendanceView";
 import GradeView from "../components/student/GradeView";
 import HomeworkView from "../components/student/HomeworkView";
 import ScheduleView from "../components/student/ScheduleView";
-import CalendarView from "../components/student/CalendarView";
 import StudentDisciplinaryActions from "../components/student/StudentDisciplinaryActions";
+import EventCalendar from '../components/ui/EventCalendar';
 
 const StudentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -79,7 +79,17 @@ const StudentDashboard: React.FC = () => {
             <Route path="/grades" element={<GradeView />} />
             <Route path="/homework" element={<HomeworkView />} />
             <Route path="/schedule" element={<ScheduleView />} />
-            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/calendar" element={
+              <div className="p-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-6">School Calendar</h1>
+                <EventCalendar
+                  onEventClick={(event) => {
+                    console.log('Event clicked:', event);
+                    // Handle event click - could show a modal with event details  
+                  }}
+                />
+              </div>
+            } />
             <Route path="/disciplinary" element={<StudentDisciplinaryActions />} />
           </Routes>
         </div>
@@ -391,6 +401,31 @@ const StudentHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Quick Calendar Preview */}
+        <div className="mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a4 4 0 118 0v4m-4 12v-4m0 0a7 7 0 01-7-7V8a1 1 0 011-1h12a1 1 0 011 1v1a7 7 0 01-7 7z" />
+                </svg>
+                Today's Events
+              </h3>
+              <a 
+                href="/student/calendar" 
+                className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+              >
+                View Full Calendar →
+              </a>
+            </div>
+            <EventCalendar
+              onEventClick={(event) => {
+                console.log('Event clicked:', event);
+              }}
+            />
           </div>
         </div>
       </div>

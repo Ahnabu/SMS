@@ -25,20 +25,107 @@ interface AcademicEvent {
   _id: string;
   title: string;
   description?: string;
-  type: "exam" | "holiday" | "event" | "meeting" | "activity";
-  startDate: string;
-  endDate: string;
-  isAllDay: boolean;
-  startTime?: string;
-  endTime?: string;
-  venue?: string;
-  targetAudience: "all" | "specific";
-  priority: "low" | "medium" | "high";
-  color: string;
+  type: "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other";
+  eventType?: string; // alias for type
+  date: string;
+  endDate?: string; // for multi-day events
+  time?: string;
+  location?: string;
+  targetAudience: {
+    roles: ("admin" | "teacher" | "student" | "parent")[];
+    grades?: number[];
+    sections?: string[];
+    allSchool?: boolean;
+    classes?: string[];
+    teachers?: string[];
+    students?: string[];
+    parents?: string[];
+  };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Form handling properties
+  startDate?: string;
+  isAllDay?: boolean;
+  startTime?: string;
+  endTime?: string;
+  priority?: "low" | "medium" | "high";
+  color?: string;
+  venue?: string;
+  isRecurring?: boolean;
+  status?: string;
 }
+
+// Helper function to map old event types to new event types
+const mapEventType = (oldType: string): "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other" => {
+  switch (oldType) {
+    case "holiday": return "holiday";
+    case "exam": return "exam";
+    case "meeting": return "meeting";
+    case "parent-teacher": return "meeting";
+    case "event": return "academic";
+    case "sports": return "extracurricular";
+    case "cultural": return "extracurricular";
+    case "activity": return "extracurricular";
+    default: return "other";
+  }
+};
+
+// Helper function to generate all dates for multi-day events
+const generateEventDates = (startDate: string, endDate?: string): string[] => {
+  const dates: string[] = [];
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : new Date(startDate);
+  
+  const current = new Date(start);
+  while (current <= end) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return dates;
+};
+
+// Helper function to expand events for multi-day rendering
+const expandMultiDayEvents = (events: AcademicEvent[]): AcademicEvent[] => {
+  const expandedEvents: AcademicEvent[] = [];
+  
+  events.forEach(event => {
+    const eventDates = generateEventDates(event.date, event.endDate);
+    
+    if (eventDates.length === 1) {
+      // Single day event
+      expandedEvents.push(event);
+    } else {
+      // Multi-day event - create an instance for each day
+      eventDates.forEach((date, index) => {
+        expandedEvents.push({
+          ...event,
+          _id: `${event._id}_day_${index}`,
+          date: date,
+          title: eventDates.length > 1 ? `${event.title} (Day ${index + 1}/${eventDates.length})` : event.title,
+        });
+      });
+    }
+  });
+  
+  return expandedEvents;
+};
+
+// Helper function to get unique events for statistics (avoid counting multi-day events multiple times)
+const getUniqueEvents = (events: AcademicEvent[]): AcademicEvent[] => {
+  const uniqueMap = new Map<string, AcademicEvent>();
+  
+  events.forEach(event => {
+    // Extract original ID from expanded events
+    const originalId = event._id.includes('_day_') ? event._id.split('_day_')[0] : event._id;
+    if (!uniqueMap.has(originalId)) {
+      uniqueMap.set(originalId, event);
+    }
+  });
+  
+  return Array.from(uniqueMap.values());
+};
 
 const AcademicCalendar: React.FC = () => {
   const { user } = useAuth();
@@ -46,6 +133,7 @@ const AcademicCalendar: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
@@ -77,9 +165,14 @@ const AcademicCalendar: React.FC = () => {
     setLoading(true);
     try {
       const response = await adminApi.getCalendarEvents();
-      setEvents(response.data.data || []);
+      const eventsData = response.data.data;
+      const rawEvents = 'events' in eventsData ? eventsData.events : eventsData || [];
+      
+      // Expand multi-day events for proper calendar rendering
+      const expandedEvents = expandMultiDayEvents(rawEvents);
+      setEvents(expandedEvents);
     } catch (error) {
-      toast.error("Error fetching events");
+      toast.error("Failed to load events");
     } finally {
       setLoading(false);
     }
@@ -105,38 +198,21 @@ const AcademicCalendar: React.FC = () => {
         return;
       }
 
-      // Prepare the data according to backend validation schema
+      // Prepare the data for the new event system
       const eventData = {
         title: formData.title,
         description: formData.description || undefined,
-        eventType: formData.eventType as
-          | "holiday"
-          | "exam" 
-          | "meeting"
-          | "event"
-          | "sports"
-          | "cultural"
-          | "parent-teacher"
-          | "other",
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        isAllDay: formData.isAllDay,
-        startTime: !formData.isAllDay ? formData.startTime : undefined,
-        endTime: !formData.isAllDay ? formData.endTime : undefined,
+        type: mapEventType(formData.eventType),
+        date: formData.startDate,
+        endDate: formData.endDate && formData.endDate !== formData.startDate ? formData.endDate : undefined,
+        time: !formData.isAllDay ? formData.startTime : undefined,
         location: formData.location || undefined,
-        organizerId: user.id,
-        schoolId: user.schoolId,
-        targetAudience: formData.targetAudience,
-        priority: formData.priority as "low" | "medium" | "high",
-        status: formData.status as "draft" | "published" | "cancelled",
-        isRecurring: formData.isRecurring,
-        ...(formData.isRecurring && {
-          recurrence: {
-            frequency: "weekly" as const,
-            interval: 1,
-          }
-        }),
-        color: formData.color,
+        targetAudience: {
+          roles: ["admin", "teacher", "student", "parent"] as ("admin" | "teacher" | "student" | "parent")[],
+          grades: formData.targetAudience.grades?.map(g => parseInt(g)) || [],
+          sections: formData.targetAudience.classes || []
+        },
+        isActive: formData.status === "published"
       };
 
       if (editingEvent) {
@@ -152,30 +228,38 @@ const AcademicCalendar: React.FC = () => {
       resetForm();
       fetchEvents();
     } catch (error: any) {
-      console.error("Error saving event:", error);
       if (error.response?.data?.message) {
         toast.error(`Error: ${error.response.data.message}`);
       } else {
-        toast.error("Error saving event");
+        toast.error("Failed to save event");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (eventId: string) => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+  const handleDelete = (eventId: string) => {
+    setDeletingEventId(eventId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingEventId) return;
 
     setLoading(true);
     try {
-      await adminApi.deleteCalendarEvent(eventId);
+      await adminApi.deleteCalendarEvent(deletingEventId);
       toast.success("Event deleted successfully");
       fetchEvents();
     } catch (error) {
-      toast.error("Error deleting event");
+      toast.error("Failed to delete event");
     } finally {
       setLoading(false);
+      setDeletingEventId(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeletingEventId(null);
   };
 
   const resetForm = () => {
@@ -210,24 +294,24 @@ const AcademicCalendar: React.FC = () => {
       title: event.title,
       description: event.description || "",
       eventType: event.type,
-      startDate: event.startDate.split("T")[0],
-      endDate: event.endDate.split("T")[0],
-      isAllDay: event.isAllDay,
-      startTime: event.startTime || "",
+      startDate: event.date.split("T")[0],
+      endDate: event.endDate || event.date.split("T")[0],
+      isAllDay: !event.time,
+      startTime: event.time || "",
       endTime: event.endTime || "",
-      location: (event as any).venue || (event as any).location || "",
+      location: event.location || "",
       targetAudience: {
-        allSchool: event.targetAudience === "all",
-        grades: [],
-        classes: [],
-        teachers: [],
-        students: [],
-        parents: [],
+        allSchool: event.targetAudience.allSchool ?? true,
+        grades: event.targetAudience.grades?.map(g => g.toString()) || [],
+        classes: event.targetAudience.sections || [],
+        teachers: event.targetAudience.teachers || [],
+        students: event.targetAudience.students || [],
+        parents: event.targetAudience.parents || [],
       },
-      priority: event.priority,
-      status: "published", // Default status if not available
-      isRecurring: false, // Default if not available
-      color: event.color,
+      priority: event.priority || "medium",
+      status: event.isActive ? "published" : "draft",
+      isRecurring: event.isRecurring || false,
+      color: event.color || "#3b82f6",
     });
     setIsFormOpen(true);
   };
@@ -266,19 +350,14 @@ const AcademicCalendar: React.FC = () => {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+
 
   // Filter events based on search and filters
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === "all" || event.type === filterType;
-    const matchesPriority = filterPriority === "all" || event.priority === filterPriority;
+    const matchesPriority = filterPriority === "all" || (event.priority && event.priority === filterPriority);
     
     return matchesSearch && matchesType && matchesPriority;
   });
@@ -321,7 +400,7 @@ const AcademicCalendar: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-600 text-sm font-medium">Total Events</p>
-                <p className="text-3xl font-bold text-green-700">{events.length}</p>
+                <p className="text-3xl font-bold text-green-700">{getUniqueEvents(events).length}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-xl">
                 <Calendar className="w-6 h-6 text-green-600" />
@@ -348,7 +427,7 @@ const AcademicCalendar: React.FC = () => {
               <div>
                 <p className="text-blue-600 text-sm font-medium">This Month</p>
                 <p className="text-3xl font-bold text-blue-700">
-                  {events.filter(e => new Date(e.startDate).getMonth() === new Date().getMonth()).length}
+                  {getUniqueEvents(events).filter(e => new Date(e.date).getMonth() === new Date().getMonth()).length}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">
@@ -362,7 +441,7 @@ const AcademicCalendar: React.FC = () => {
               <div>
                 <p className="text-purple-600 text-sm font-medium">Upcoming</p>
                 <p className="text-3xl font-bold text-purple-700">
-                  {events.filter(e => new Date(e.startDate) > new Date()).length}
+                  {getUniqueEvents(events).filter(e => new Date(e.date) > new Date()).length}
                 </p>
               </div>
               <div className="p-3 bg-purple-100 rounded-xl">
@@ -572,12 +651,13 @@ const AcademicCalendar: React.FC = () => {
                           htmlFor="endDate"
                           className="block text-sm font-semibold text-gray-700"
                         >
-                          End Date *
+                          End Date <span className="text-gray-400">(optional, for multi-day events)</span>
                         </label>
                         <Input
                           id="endDate"
                           type="date"
                           value={formData.endDate}
+                          min={formData.startDate}
                           onChange={(e) =>
                             setFormData({ ...formData, endDate: e.target.value })
                           }
@@ -847,6 +927,53 @@ const AcademicCalendar: React.FC = () => {
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {deletingEventId && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Event</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete this event? All associated data will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={cancelDelete}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl transition-all duration-200"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-xl transition-all duration-200 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Deleting...
+                    </div>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Events List */}
       <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 text-white">
@@ -858,7 +985,7 @@ const AcademicCalendar: React.FC = () => {
               <div>
                 <h2 className="text-3xl font-bold">All Events</h2>
                 <p className="text-indigo-100 mt-1">
-                  {filteredEvents.length} of {events.length} events {searchTerm || filterType !== "all" || filterPriority !== "all" ? "matching filters" : "total"}
+                  {filteredEvents.length} event instances displayed ({getUniqueEvents(events).length} unique events)
                 </p>
               </div>
             </div>
@@ -908,9 +1035,11 @@ const AcademicCalendar: React.FC = () => {
                           <span className={`${getEventTypeColor(event.type)} font-semibold shadow-sm`}>
                             {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                           </span>
-                          <span className={`${getPriorityColor(event.priority)} font-semibold shadow-sm`}>
-                            {event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}
-                          </span>
+                          {event.priority && (
+                            <span className={`${getPriorityColor(event.priority)} font-semibold shadow-sm`}>
+                              {event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}
+                            </span>
+                          )}
                         </div>
                       </div>
                       
@@ -921,14 +1050,14 @@ const AcademicCalendar: React.FC = () => {
                             <Calendar className="w-4 h-4 text-blue-600" />
                           </div>
                           <div className="text-sm">
-                            <p className="font-medium">Duration</p>
+                            <p className="font-medium">Date</p>
                             <p className="text-xs">
-                              {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                              {formatDate(event.date)}
                             </p>
                           </div>
                         </div>
                         
-                        {!event.isAllDay && event.startTime && (
+                        {event.time && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <div className="p-2 bg-green-100 rounded-lg">
                               <Clock className="w-4 h-4 text-green-600" />
@@ -936,20 +1065,20 @@ const AcademicCalendar: React.FC = () => {
                             <div className="text-sm">
                               <p className="font-medium">Time</p>
                               <p className="text-xs">
-                                {formatTime(event.startTime)} - {formatTime(event.endTime || "")}
+                                {event.time}
                               </p>
                             </div>
                           </div>
                         )}
                         
-                        {event.venue && (
+                        {event.location && (
                           <div className="flex items-center gap-2 text-gray-600">
                             <div className="p-2 bg-purple-100 rounded-lg">
                               <MapPin className="w-4 h-4 text-purple-600" />
                             </div>
                             <div className="text-sm">
                               <p className="font-medium">Location</p>
-                              <p className="text-xs">{event.venue}</p>
+                              <p className="text-xs">{event.location}</p>
                             </div>
                           </div>
                         )}
@@ -961,7 +1090,7 @@ const AcademicCalendar: React.FC = () => {
                           <div className="text-sm">
                             <p className="font-medium">Audience</p>
                             <p className="text-xs">
-                              {event.targetAudience === "all" ? "All Students" : "Specific Groups"}
+                              {event.targetAudience.allSchool ? "All School" : "Specific Groups"}
                             </p>
                           </div>
                         </div>
@@ -1034,27 +1163,5 @@ const AcademicCalendar: React.FC = () => {
     </div>
   );
 };
-//               Calendar grid view will be implemented with a calendar library
-//             </p>
-//           </CardHeader>
-//           <CardContent>
-//             <div className="grid grid-cols-7 gap-2 mb-4">
-//               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-//                 <div key={day} className="p-2 text-center font-semibold text-gray-600">
-//                   {day}
-//                 </div>
-//               ))}
-//             </div>
-//             <div className="text-center py-8 text-gray-500">
-//               <Calendar className="w-12 h-12 mx-auto mb-2" />
-//               <p>Full calendar grid view coming soon</p>
-//               <p className="text-sm">Use List View to manage events</p>
-//             </div>
-//           </CardContent>
-//         </Card>
-//       )}
-//     </div>
-//   );
-// };
 
 export default AcademicCalendar;

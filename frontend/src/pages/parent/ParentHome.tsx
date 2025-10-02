@@ -1,6 +1,7 @@
 import React from "react";
 
 import { useNavigate } from "react-router-dom";
+import EventCalendar from "../../components/ui/EventCalendar";
 
 interface ParentHomeProps {
   dashboardData: any;
@@ -385,6 +386,16 @@ export const ParentHome: React.FC<ParentHomeProps> = ({
             })}
           </div>
         </div>
+      </div>
+
+      {/* Events Calendar */}
+      <div className="mt-8">
+        <EventCalendar
+          onEventClick={(event) => {
+            console.log('Event clicked:', event);
+            // Handle event click - could show a modal with event details
+          }}
+        />
       </div>
     </div>
   );

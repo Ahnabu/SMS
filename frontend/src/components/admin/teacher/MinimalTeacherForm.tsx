@@ -64,14 +64,16 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 interface MinimalTeacherFormProps {
   onBack?: () => void;
   onSave?: (teacher: any) => void;
+  teacher?: any; // For editing existing teacher
 }
 
-const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave }) => {
+const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave, teacher }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [availableSubjects, setAvailableSubjects] = useState<Array<{_id: string, name: string}>>([]);
+  const [schoolData, setSchoolData] = useState<any>(null);
 
   const [formData, setFormData] = useState<MinimalTeacherFormData>({
     firstName: "",
@@ -117,6 +119,55 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     isActive: true,
   });
 
+  // Populate form data when editing a teacher
+  useEffect(() => {
+    if (teacher) {
+      setFormData({
+        firstName: teacher.userId?.firstName || "",
+        lastName: teacher.userId?.lastName || "",
+        email: teacher.userId?.email || "",
+        phone: teacher.userId?.phone || "",
+        designation: teacher.designation || "Teacher",
+        bloodGroup: teacher.bloodGroup || "O+",
+        dob: teacher.dob || "",
+        joinDate: teacher.joinDate || "",
+        subjects: teacher.subjects || [],
+        grades: teacher.grades || [],
+        sections: teacher.sections || [],
+        experience: {
+          totalYears: teacher.experience?.totalYears || 0,
+          previousSchools: teacher.experience?.previousSchools || [],
+        },
+        qualifications: teacher.qualifications || [{
+          degree: "",
+          institution: "",
+          year: new Date().getFullYear(),
+          specialization: "",
+        }],
+        address: {
+          street: teacher.address?.street || "",
+          city: teacher.address?.city || "",
+          state: teacher.address?.state || "",
+          zipCode: teacher.address?.zipCode || "",
+          country: teacher.address?.country || "Bangladesh",
+        },
+        emergencyContact: {
+          name: teacher.emergencyContact?.name || "",
+          relationship: teacher.emergencyContact?.relationship || "",
+          phone: teacher.emergencyContact?.phone || "",
+          email: teacher.emergencyContact?.email || "",
+        },
+        salary: {
+          basic: teacher.salary?.basic || 0,
+          allowances: teacher.salary?.allowances || 0,
+          deductions: teacher.salary?.deductions || 0,
+        },
+        isClassTeacher: teacher.isClassTeacher || false,
+        isActive: teacher.isActive !== undefined ? teacher.isActive : true,
+      });
+    }
+  }, [teacher]);
+
   // Fetch available subjects on component mount
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -131,7 +182,22 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
       }
     };
 
+    const fetchSchoolData = async () => {
+      try {
+        console.log('Loading school data in MinimalTeacherForm');
+        const response = await adminApi.getSchoolSettings();
+        console.log('School settings response:', response.data);
+        if (response.data.success) {
+          setSchoolData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch school data:', error);
+        toast.error('Failed to load school settings');
+      }
+    };
+
     fetchSubjects();
+    fetchSchoolData();
   }, []);
 
   const handleChange = (field: string, value: any) => {
@@ -231,8 +297,13 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
         submitData.append("classTeacherFor", JSON.stringify(formData.classTeacherFor));
       }
 
-      const response = await fetch("/api/teachers", {
-        method: "POST",
+      // Determine if we're editing or creating
+      const isEditing = !!teacher;
+      const url = isEditing ? `/api/teachers/${teacher.id}` : "/api/teachers";
+      const method = isEditing ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         body: submitData,
         credentials: "include",
       });
@@ -261,14 +332,20 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
       }
 
       if (result.success) {
-        setCredentials(result.data.credentials);
-        toast.success("Teacher created successfully!");
+        // Only set credentials for new teachers
+        if (!isEditing && result.data.credentials) {
+          setCredentials(result.data.credentials);
+        }
+        
+        const successMessage = isEditing ? "Teacher updated successfully!" : "Teacher created successfully!";
+        toast.success(successMessage);
         
         if (onSave) {
           onSave(result.data);
         }
       } else {
-        throw new Error(result.message || "Failed to create teacher");
+        const errorMessage = isEditing ? "Failed to update teacher" : "Failed to create teacher";
+        throw new Error(result.message || errorMessage);
       }
     } catch (error: any) {
       console.error("Failed to save teacher:", error);
@@ -309,7 +386,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
     <div className="w-full max-w-none p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">Add New Teacher</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{teacher ? "Edit Teacher" : "Add New Teacher"}</h1>
           <p className="text-gray-600 truncate">Fill out the required information to create a new teacher account</p>
         </div>
         {onBack && (
@@ -455,7 +532,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Grades *</label>
               <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+                {(schoolData?.settings?.grades || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).map((grade: number) => (
                   <label key={grade} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
                     <input
                       type="checkbox"
@@ -479,7 +556,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Sections</label>
               <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
-                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((section) => (
+                {(schoolData?.settings?.sections || ['A', 'B', 'C', 'D']).map((section: string) => (
                   <label key={section} className="flex items-center p-2 bg-white rounded border hover:bg-gray-50">
                     <input
                       type="checkbox"
@@ -771,7 +848,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Grade</option>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(grade => (
+                    {(schoolData?.settings?.grades || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).map((grade: number) => (
                       <option key={grade} value={grade}>{grade}</option>
                     ))}
                   </select>
@@ -784,7 +861,7 @@ const MinimalTeacherForm: React.FC<MinimalTeacherFormProps> = ({ onBack, onSave 
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Section</option>
-                    {['A', 'B', 'C', 'D', 'E'].map(section => (
+                    {(schoolData?.settings?.sections || ['A', 'B', 'C', 'D']).map((section: string) => (
                       <option key={section} value={section}>{section}</option>
                     ))}
                   </select>

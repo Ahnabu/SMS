@@ -5,6 +5,7 @@ import { teacherApi } from "./teacher.api";
 import { adminApi } from "./admin.api";
 import { superadminApi } from "./superadmin.api";
 import { parentApi } from "./parent.api";
+import { eventAPI } from "./event.api";
 import { api } from "./api-base";
 
 export {
@@ -14,6 +15,7 @@ export {
   adminApi,
   superadminApi,
   parentApi,
+  eventAPI,
   api,
 };
 export type { ApiResponse } from "./api-base";

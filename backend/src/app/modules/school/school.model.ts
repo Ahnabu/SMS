@@ -106,8 +106,7 @@ const settingsSchema = new Schema<ISchoolSettings>({
   maxStudentsPerSection: {
     type: Number,
     default: config.max_students_per_section,
-    min: [10, 'Maximum students per section must be at least 10'],
-    max: [60, 'Maximum students per section cannot exceed 60']
+    min: [0, 'Maximum students per section cannot be negative']
   },
   grades: {
     type: [Number],
@@ -178,6 +177,10 @@ const settingsSchema = new Schema<ISchoolSettings>({
     default: config.max_attendance_edit_hours,
     min: [1, 'Attendance edit window must be at least 1 hour'],
     max: [72, 'Attendance edit window cannot exceed 72 hours']
+  },
+  sectionCapacity: {
+    type: Object,
+    default: {}
   }
 }, { _id: false });
 
@@ -449,12 +452,100 @@ schoolSchema.methods.canEnrollStudents = function (this: ISchoolDocument): boole
 
 schoolSchema.methods.getMaxStudentsForGrade = function (this: ISchoolDocument, grade: number): number {
   const sections = this.getSectionsForGrade(grade);
-  return sections.length * (this.settings?.maxStudentsPerSection || 40);
+  return sections.length * (this.settings?.maxStudentsPerSection || 0);
 };
 
 schoolSchema.methods.createGoogleDriveFolder = async function (this: ISchoolDocument): Promise<string> {
   // This will be implemented when Google Drive integration is added
   return `folder_id_${this.schoolId}`;
+};
+
+schoolSchema.methods.getSectionCapacity = function (this: ISchoolDocument, grade: number, section: string): { maxStudents: number; currentStudents: number } {
+  const key = `${grade}-${section}`;
+  const sectionCapacity = this.settings?.sectionCapacity;
+  
+  if (sectionCapacity && sectionCapacity[key]) {
+    return sectionCapacity[key];
+  }
+  
+  // Return default capacity if not found
+  return {
+    maxStudents: this.settings?.maxStudentsPerSection || 0,
+    currentStudents: 0
+  };
+};
+
+schoolSchema.methods.setSectionCapacity = async function (this: ISchoolDocument, grade: number, section: string, maxStudents: number): Promise<ISchoolDocument> {
+  const key = `${grade}-${section}`;
+  
+  if (!this.settings?.sectionCapacity) {
+    this.settings!.sectionCapacity = {};
+  }
+  
+  const currentData = this.getSectionCapacity(grade, section);
+  this.settings!.sectionCapacity![key] = {
+    maxStudents: Math.max(10, Math.min(60, maxStudents)), // Clamp between 10-60
+    currentStudents: currentData.currentStudents
+  };
+  
+  return await this.save();
+};
+
+schoolSchema.methods.updateCurrentStudentCount = async function (this: ISchoolDocument, grade: number, section: string, increment: number = 1): Promise<ISchoolDocument> {
+  const key = `${grade}-${section}`;
+  
+  if (!this.settings?.sectionCapacity) {
+    this.settings!.sectionCapacity = {};
+  }
+  
+  const currentData = this.getSectionCapacity(grade, section);
+  const newCount = Math.max(0, currentData.currentStudents + increment);
+  
+  this.settings!.sectionCapacity![key] = {
+    maxStudents: currentData.maxStudents,
+    currentStudents: newCount
+  };
+  
+  return await this.save();
+};
+
+schoolSchema.methods.canEnrollInSection = function (this: ISchoolDocument, grade: number, section: string): boolean {
+  const capacity = this.getSectionCapacity(grade, section);
+  return capacity.currentStudents < capacity.maxStudents;
+};
+
+schoolSchema.methods.getAvailableSectionsForGrade = function (this: ISchoolDocument, grade: number): string[] {
+  if (!this.getGradesOffered().includes(grade)) {
+    return [];
+  }
+  
+  return this.settings?.sections?.filter(section => 
+    this.canEnrollInSection(grade, section)
+  ) || [];
+};
+
+schoolSchema.methods.initializeSectionCapacity = async function (this: ISchoolDocument): Promise<ISchoolDocument> {
+  if (!this.settings?.sectionCapacity) {
+    this.settings!.sectionCapacity = {};
+  }
+  
+  const grades = this.settings?.grades || [];
+  const sections = this.settings?.sections || [];
+  const defaultCapacity = this.settings?.maxStudentsPerSection || 0;
+  
+  grades.forEach(grade => {
+    sections.forEach(section => {
+      const key = `${grade}-${section}`;
+      if (!this.settings!.sectionCapacity![key]) {
+        this.settings!.sectionCapacity![key] = {
+          maxStudents: defaultCapacity,
+          currentStudents: 0
+        };
+      }
+    });
+  });
+  
+  return await this.save();
 };
 
 // Static methods
@@ -605,6 +696,29 @@ schoolSchema.pre('save', async function (next) {
   // Update API endpoint if slug changed
   if (this.isModified('slug')) {
     this.apiEndpoint = this.generateApiEndpoint();
+  }
+
+  // Initialize section capacity when grades or sections change
+  if (this.isModified('settings.grades') || this.isModified('settings.sections') || this.isNew) {
+    if (!this.settings?.sectionCapacity) {
+      this.settings!.sectionCapacity = {};
+    }
+    
+    const grades = this.settings?.grades || [];
+    const sections = this.settings?.sections || [];
+    const defaultCapacity = this.settings?.maxStudentsPerSection || 0;
+    
+    grades.forEach(grade => {
+      sections.forEach(section => {
+        const key = `${grade}-${section}`;
+        if (!this.settings!.sectionCapacity![key]) {
+          this.settings!.sectionCapacity![key] = {
+            maxStudents: defaultCapacity,
+            currentStudents: 0
+          };
+        }
+      });
+    });
   }
 
   // Validate academic session dates only if currentSession exists

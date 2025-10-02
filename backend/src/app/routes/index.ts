@@ -18,6 +18,7 @@ import { parentRoutes } from "../modules/parent/parent.route";
 import { SubjectRoutes } from "../modules/subject/subject.route";
 import { AcademicCalendarRoutes } from "../modules/academic-calendar/academic-calendar.route";
 import { ScheduleRoutes } from "../modules/schedule/schedule.route";
+import { EventRoutes } from "../modules/event/event.route";
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
@@ -80,6 +81,10 @@ const moduleRoutes = [
   {
     path: "/schedules",
     route: ScheduleRoutes,
+  },
+  {
+    path: "/events",
+    route: EventRoutes,
   },
 ];
 

@@ -9,6 +9,7 @@ import { Schedule } from '../schedule/schedule.model';
 import { AcademicCalendar } from '../academic-calendar/academic-calendar.model';
 import { AppError } from '../../errors/AppError';
 import { AuthenticatedRequest } from '../../middlewares/auth';
+import { School } from '../school/school.model';
 
 // Dashboard controller
 export const getAdminDashboard = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -488,4 +489,203 @@ export const addDisciplinaryActionComment = catchAsync(async (req: Authenticated
   } catch (error) {
     return next(new AppError(500, `Failed to add comment: ${(error as Error).message}`));
   }
+});
+
+// School Settings Controllers
+export const getSchoolSettings = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const adminSchoolId = req.user?.schoolId;
+  
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  const school = await School.findById(adminSchoolId)
+    .populate('adminUserId', 'username firstName lastName email phone')
+    .populate('createdBy', 'username firstName lastName');
+
+  if (!school) {
+    return next(new AppError(404, 'School not found'));
+  }
+
+  // Get school data - sectionCapacity is already an object
+  const schoolData = school.toObject();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: 'School settings retrieved successfully',
+    data: schoolData
+  });
+});
+
+export const updateSchoolSettings = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const adminSchoolId = req.user?.schoolId;
+  
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  const school = await School.findById(adminSchoolId);
+  if (!school) {
+    return next(new AppError(404, 'School not found'));
+  }
+
+  // Update basic information
+  const { name, establishedYear, address, contact, affiliation, recognition, settings } = req.body;
+
+  if (name) school.name = name;
+  if (establishedYear) school.establishedYear = establishedYear;
+  if (address) school.address = { ...school.address, ...address };
+  if (contact) school.contact = { ...school.contact, ...contact };
+  if (affiliation) school.affiliation = affiliation;
+  if (recognition) school.recognition = recognition;
+
+  // Update settings
+  if (settings) {
+    school.settings = { ...school.settings, ...settings };
+    
+    // Handle section capacity if provided
+    if (settings.sectionCapacity) {
+      school.settings.sectionCapacity = settings.sectionCapacity;
+    }
+  }
+
+  school.lastModifiedBy = new mongoose.Types.ObjectId(req.user?.id);
+  await school.save();
+
+  // Get updated school data
+  const schoolData = school.toObject();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: 'School settings updated successfully',
+    data: schoolData
+  });
+});
+
+export const updateSectionCapacity = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const adminSchoolId = req.user?.schoolId;
+  const { grade, section, maxStudents } = req.body;
+  
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  const school = await School.findById(adminSchoolId);
+  if (!school) {
+    return next(new AppError(404, 'School not found'));
+  }
+
+  // Validate grade and section are offered by the school
+  if (!school.getGradesOffered().includes(grade)) {
+    return next(new AppError(400, `Grade ${grade} is not offered by this school`));
+  }
+
+  if (!school.getSectionsForGrade(grade).includes(section)) {
+    return next(new AppError(400, `Section ${section} is not available for Grade ${grade}`));
+  }
+
+  // Update section capacity
+  await school.setSectionCapacity(grade, section, maxStudents);
+
+  const updatedCapacity = school.getSectionCapacity(grade, section);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: 'Section capacity updated successfully',
+    data: {
+      grade,
+      section,
+      capacity: updatedCapacity
+    }
+  });
+});
+
+export const getSectionCapacityReport = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const adminSchoolId = req.user?.schoolId;
+  
+  if (!adminSchoolId) {
+    return next(new AppError(400, 'School ID not found in user context'));
+  }
+
+  const school = await School.findById(adminSchoolId);
+  if (!school) {
+    return next(new AppError(404, 'School not found'));
+  }
+
+  // Get actual student counts from Student collection
+  const studentCounts = await Student.aggregate([
+    {
+      $match: {
+        schoolId: new mongoose.Types.ObjectId(adminSchoolId),
+        isActive: true
+      }
+    },
+    {
+      $group: {
+        _id: {
+          grade: '$grade',
+          section: '$section'
+        },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Build capacity report
+  const capacityReport: any[] = [];
+  const grades = school.getGradesOffered();
+  const sections = school.settings?.sections || [];
+
+  grades.forEach(grade => {
+    sections.forEach(section => {
+      const capacity = school.getSectionCapacity(grade, section);
+      const actualCount = studentCounts.find(sc => 
+        sc._id.grade === grade && sc._id.section === section
+      )?.count || 0;
+
+      // Update current student count if different
+      if (capacity.currentStudents !== actualCount) {
+        school.settings!.sectionCapacity![`${grade}-${section}`] = {
+          maxStudents: capacity.maxStudents,
+          currentStudents: actualCount
+        };
+      }
+
+      const utilizationPercent = capacity.maxStudents > 0 ? (actualCount / capacity.maxStudents) * 100 : 0;
+
+      capacityReport.push({
+        grade,
+        section,
+        maxCapacity: capacity.maxStudents,
+        currentStudents: actualCount,
+        availableSpots: Math.max(0, capacity.maxStudents - actualCount),
+        utilizationPercent: Math.round(utilizationPercent * 100) / 100,
+        status: utilizationPercent > 90 ? 'full' : utilizationPercent > 75 ? 'high' : 'available'
+      });
+    });
+  });
+
+  // Save updated counts
+  await school.save();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: 'Section capacity report generated successfully',
+    data: {
+      report: capacityReport,
+      summary: {
+        totalSections: capacityReport.length,
+        fullSections: capacityReport.filter(r => r.status === 'full').length,
+        highUtilizationSections: capacityReport.filter(r => r.status === 'high').length,
+        availableSections: capacityReport.filter(r => r.status === 'available').length,
+        totalCapacity: capacityReport.reduce((sum, r) => sum + r.maxCapacity, 0),
+        totalStudents: capacityReport.reduce((sum, r) => sum + r.currentStudents, 0),
+        totalAvailableSpots: capacityReport.reduce((sum, r) => sum + r.availableSpots, 0)
+      }
+    }
+  });
 });

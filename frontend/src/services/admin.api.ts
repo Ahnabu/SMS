@@ -4,7 +4,6 @@ import { api, ApiResponse } from "./api-base";
 export const adminApi = {
   // Dashboard
   getDashboard: () => api.get<ApiResponse>("/admin/dashboard"),
-  getSchool: (id: string) => api.get<ApiResponse>(`/admin/school/${id}`),
 
   // Subject management (matches backend schema)
   createSubject: (data: {
@@ -90,69 +89,49 @@ export const adminApi = {
 
   deleteSchedule: (id: string) => api.delete<ApiResponse>(`/schedules/${id}`),
 
-  // Academic Calendar management (matches backend routes)
+  // Event management (using new event system)
   createCalendarEvent: (data: {
     title: string;
     description?: string;
-    eventType: "holiday" | "exam" | "meeting" | "event" | "sports" | "cultural" | "parent-teacher" | "other";
-    startDate: string;
-    endDate: string;
-    isAllDay: boolean;
-    startTime?: string;
-    endTime?: string;
+    type: "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other";
+    date: string;
+    time?: string;
     location?: string;
-    organizerId: string;
-    schoolId: string;
     targetAudience: {
-      allSchool: boolean;
-      grades?: string[];
-      classes?: string[];
-      teachers?: string[];
-      students?: string[];
-      parents?: string[];
+      roles: ("admin" | "teacher" | "student" | "parent")[];
+      grades?: number[];
+      sections?: string[];
     };
-    priority: "low" | "medium" | "high";
-    status: "draft" | "published" | "cancelled";
-    isRecurring: boolean;
-    color?: string;
-  }) => api.post<ApiResponse>("/calendar", data),
+    isActive?: boolean;
+  }) => api.post<ApiResponse>("/events", data),
 
   getCalendarEvents: (params?: {
     type?: string;
     startDate?: string;
     endDate?: string;
-    targetAudience?: string;
-  }) => api.get<ApiResponse>("/calendar", { params }),
+    limit?: number;
+  }) => api.get<ApiResponse>("/events", { params }),
 
   updateCalendarEvent: (
     id: string,
     data: {
       title?: string;
       description?: string;
-      eventType?: "holiday" | "exam" | "meeting" | "event" | "sports" | "cultural" | "parent-teacher" | "other";
-      startDate?: string;
-      endDate?: string;
-      isAllDay?: boolean;
-      startTime?: string;
-      endTime?: string;
+      type?: "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other";
+      date?: string;
+      time?: string;
       location?: string;
       targetAudience?: {
-        allSchool: boolean;
-        grades?: string[];
-        classes?: string[];
-        teachers?: string[];
-        students?: string[];
-        parents?: string[];
+        roles?: ("admin" | "teacher" | "student" | "parent")[];
+        grades?: number[];
+        sections?: string[];
       };
-      priority?: "low" | "medium" | "high";
-      status?: "draft" | "published" | "cancelled";
-      isRecurring?: boolean;
-      color?: string;
+      isActive?: boolean;
     }
-  ) => api.put<ApiResponse>(`/calendar/${id}`, data),
+  ) => api.put<ApiResponse>(`/events/${id}`, data),
 
   deleteCalendarEvent: (id: string) =>
-    api.delete<ApiResponse>(`/calendar/${id}`),
+    api.delete<ApiResponse>(`/events/${id}`),
 
   // Teacher management (needed by schedule component)
   getTeachers: (params?: {
@@ -228,4 +207,60 @@ export const adminApi = {
   
   addDisciplinaryActionComment: (actionId: string, data: { comment: string }) =>
     api.post<ApiResponse>(`/admin/disciplinary/actions/comment/${actionId}`, data),
+
+  // School Settings management
+  getSchoolSettings: () => api.get<ApiResponse>("/admin/school/settings"),
+  
+  updateSchoolSettings: (data: {
+    name?: string;
+    establishedYear?: number;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postalCode?: string;
+    };
+    contact?: {
+      phone?: string;
+      email?: string;
+      website?: string;
+    };
+    affiliation?: string;
+    recognition?: string;
+    settings?: {
+      maxStudentsPerSection?: number;
+      grades?: number[];
+      sections?: string[];
+      timezone?: string;
+      language?: string;
+      currency?: string;
+      academicYearStart?: number;
+      academicYearEnd?: number;
+      attendanceGracePeriod?: number;
+      maxPeriodsPerDay?: number;
+      attendanceLockAfterDays?: number;
+      maxAttendanceEditHours?: number;
+      sectionCapacity?: {
+        [key: string]: {
+          maxStudents: number;
+          currentStudents: number;
+        };
+      };
+    };
+  }) => api.put<ApiResponse>("/admin/school/settings", data),
+
+  updateSectionCapacity: (data: {
+    grade: number;
+    section: string;
+    maxStudents: number;
+  }) => api.put<ApiResponse>("/admin/school/section-capacity", data),
+
+  getSectionCapacityReport: () => api.get<ApiResponse>("/admin/school/capacity-report"),
+
+  // Events
+  getEvents: () => api.get<ApiResponse>("/admin/events"),
+  createEvent: (data: any) => api.post<ApiResponse>("/admin/events", data),
+  updateEvent: (id: string, data: any) => api.put<ApiResponse>(`/admin/events/${id}`, data),
+  deleteEvent: (id: string) => api.delete<ApiResponse>(`/admin/events/${id}`),
 };

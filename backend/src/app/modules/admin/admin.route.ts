@@ -79,7 +79,7 @@ import {
   deleteCalendarEvent,
   getAdminDashboard,
 } from "./admin.controller";
-import { getSchool } from "../school/school.controller";
+// import { getSchool } from "../school/school.controller";
 
 const router = express.Router();
 
@@ -89,11 +89,11 @@ router.use(requireSchoolAdmin);
 
 // Dashboard endpoint
 router.get("/dashboard", getAdminDashboard);
-router.get(
-  "/school/:id",
-  //validateRequest(getSchoolValidationSchema),
-  getSchool
-);
+// router.get(
+//   "/school/:id",
+//   //validateRequest(getSchoolValidationSchema),
+//   getSchool
+// );
 
 // Student management routes
 router.post(
@@ -217,6 +217,10 @@ import {
   getAllDisciplinaryActions,
   resolveDisciplinaryAction,
   addDisciplinaryActionComment,
+  getSchoolSettings,
+  updateSchoolSettings,
+  updateSectionCapacity,
+  getSectionCapacityReport,
 } from "./admin.controller";
 import {
   resolveDisciplinaryActionValidationSchema,
@@ -234,5 +238,11 @@ router.post(
   validateRequest(addDisciplinaryActionCommentValidationSchema),
   addDisciplinaryActionComment
 );
+
+// School Settings management routes
+router.get("/school/settings", getSchoolSettings);
+router.put("/school/settings", updateSchoolSettings);
+router.put("/school/section-capacity", updateSectionCapacity);
+router.get("/school/capacity-report", getSectionCapacityReport);
 
 export const adminRoutes = router;

@@ -14,6 +14,7 @@ import ScheduleManagement from "../components/admin/ScheduleManagement";
 import AcademicCalendar from "../components/admin/AcademicCalendar";
 import TeacherDetailView from "../components/admin/TeacherDetailView";
 import AdminDisciplinaryActionsManager from "../components/admin/AdminDisciplinaryActionsManager";
+import SchoolSettings from "../components/admin/SchoolSettings";
 
 import MinimalTeacherForm from "../components/admin/teacher/MinimalTeacherForm";
 
@@ -30,6 +31,7 @@ const AdminDashboard: React.FC = () => {
     { href: '/admin/schedules', label: 'Schedules' },
     { href: '/admin/disciplinary-actions', label: 'Disciplinary Actions' },
     { href: '/admin/calendar', label: 'Calendar' },
+    { href: '/admin/settings', label: 'School Settings' },
   ];
 
   useEffect(() => {
@@ -88,6 +90,7 @@ const AdminDashboard: React.FC = () => {
           <Route path="/schedules" element={<ScheduleManagementPage />} />
           <Route path="/disciplinary-actions" element={<AdminDisciplinaryActionsManager />} />
           <Route path="/calendar" element={<CalendarManagementPage />} />
+          <Route path="/settings" element={<SchoolSettingsPage />} />
         </Routes>
       </main>
     </div>
@@ -645,6 +648,7 @@ const TeacherManagement: React.FC = () => {
             <MinimalTeacherForm
               onBack={handleFormClose}
               onSave={handleSaveTeacher}
+              teacher={selectedTeacher}
             />
           </div>
         </div>
@@ -679,6 +683,12 @@ const ScheduleManagementPage: React.FC = () => (
 const CalendarManagementPage: React.FC = () => (
   <div className="px-4 sm:px-0">
     <AcademicCalendar />
+  </div>
+);
+
+const SchoolSettingsPage: React.FC = () => (
+  <div className="px-4 sm:px-0">
+    <SchoolSettings />
   </div>
 );
 

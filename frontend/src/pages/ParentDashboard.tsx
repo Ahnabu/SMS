@@ -17,6 +17,7 @@ import { ChildAttendanceView } from "./parent/ChildAttendanceView";
 import { ChildHomeworkView } from "./parent/ChildHomeworkView";
 import { ChildScheduleView } from "./parent/ChildScheduleView";
 import ParentDisciplinaryActions from "@/components/parent/ParentDisciplinaryActions";
+import EventCalendar from "../components/ui/EventCalendar";
 
 const ParentDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -63,6 +64,8 @@ const ParentDashboard: React.FC = () => {
     { label: "Attendance", href: "/parent/attendance" },
     // { label: 'Grades', href: '/parent/grades' },
     { label: "Homework", href: "/parent/homework" },
+    { label: "Schedule", href: "/parent/schedule" },
+    { label: "Calendar", href: "/parent/calendar" },
     { label: "Notices", href: "/parent/notices" },
   ];
 
@@ -145,6 +148,20 @@ const ParentDashboard: React.FC = () => {
             <Route
               path="/schedule"
               element={<ChildScheduleView selectedChild={selectedChild} />}
+            />
+            <Route
+              path="/calendar"
+              element={
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-6">School Calendar</h1>
+                  <EventCalendar
+                    onEventClick={(event) => {
+                      console.log('Event clicked:', event);
+                      // Handle event click - could show a modal with event details
+                    }}
+                  />
+                </div>
+              }
             />
             <Route
               path="/notices"

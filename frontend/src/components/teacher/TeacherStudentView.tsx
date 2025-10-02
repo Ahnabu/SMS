@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { teacherApi } from "../../services/teacher.api";
+// import { useAuth } from "../../context/AuthContext"; // TODO: Uncomment when implementing class teacher verification
 
 interface Student {
   id: string;
@@ -56,6 +57,7 @@ interface ClassStats {
 }
 
 const TeacherStudentView: React.FC = () => {
+  // const { user } = useAuth(); // TODO: Use for class teacher verification
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +67,9 @@ const TeacherStudentView: React.FC = () => {
   const [riskFilter, setRiskFilter] = useState<string>('');
   const [classStats, setClassStats] = useState<ClassStats | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  // TODO: Implement class teacher verification
+  // const [teacherInfo, setTeacherInfo] = useState<any>(null);
+  // const [isClassTeacher, setIsClassTeacher] = useState(false);
 
   useEffect(() => {
     if (selectedGrade) {
@@ -432,7 +437,7 @@ const TeacherStudentView: React.FC = () => {
               <div className="p-2 bg-purple-100 rounded-lg inline-block mb-2">
                 <BarChart3 className="h-6 w-6 text-purple-600" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">{classStats.averageDisciplinaryPoints.toFixed(1)}</p>
+              <p className="text-2xl font-bold text-gray-900">{(classStats.averageDisciplinaryPoints || 0).toFixed(1)}</p>
               <p className="text-sm text-gray-600">Avg. Points</p>
             </CardContent>
           </Card>

@@ -7,7 +7,8 @@ import {
   Clock,
   GraduationCap,
 } from "lucide-react";
-import { apiService } from "@/services";
+import { eventAPI, IEvent } from "@/services/event.api";
+import { useAuth } from "../../context/AuthContext";
 
 interface CalendarEvent {
   title: string;
@@ -30,6 +31,7 @@ interface CalendarData {
 }
 
 const CalendarView: React.FC = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,34 +43,56 @@ const CalendarView: React.FC = () => {
 
   useEffect(() => {
     loadCalendarData();
-  }, []);
+  }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCalendarData = async () => {
+    // Don't load if user is not authenticated
+    if (authLoading || !user) {
+      setLoading(false);
+      if (!authLoading && !user) {
+        setError('Please log in to view calendar events');
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const response = await apiService.student.getCalendar();
-      console.log("Calendar API response:", response);
-      if (response.data.success) {
-        console.log("Calendar data:", response.data.data);
-        const data = response.data.data;
-        // Validate data structure
-        if (data && typeof data === "object" && Array.isArray(data.events)) {
-          setCalendarData(data);
-        } else {
-          setError("Invalid calendar data format received");
-        }
+      const response = await eventAPI.getEvents({ limit: 100 });
+      if (response.success && response.data) {
+        const events = 'events' in response.data ? response.data.events : [];
+        
+        // Convert IEvent to CalendarEvent format
+        const convertedEvents = events.map((event: IEvent) => ({
+          title: event.title,
+          description: event.description || '',
+          eventType: event.type,
+          startDate: event.date,
+          endDate: event.date,
+          color: getEventColor({ eventType: event.type } as CalendarEvent),
+          applicableTo: event.targetAudience.roles
+        }));
+
+        // Create summary  
+        const summary = {
+          totalEvents: convertedEvents.length,
+          holidays: convertedEvents.filter(e => e.eventType === 'holiday').length,
+          exams: convertedEvents.filter(e => e.eventType === 'exam').length,
+          homework: convertedEvents.filter(e => e.eventType === 'academic' || e.eventType === 'announcement').length,
+        };
+
+        setCalendarData({ events: convertedEvents, summary });
       } else {
-        setError(
-          "Failed to load calendar data: " +
-            (response.data.message || "Unknown error")
-        );
+        setError("Failed to load calendar data: " + (response.message || "Unknown error"));
       }
     } catch (err: any) {
-      console.error("Failed to load calendar data:", err);
-      setError(
-        "Failed to load calendar data: " + (err.message || "Network error")
-      );
+      if (err.response?.status === 401) {
+        setError("Please log in to view calendar events");
+      } else if (err.response?.status === 403) {
+        setError("You don't have permission to view calendar events");
+      } else {
+        setError("Unable to load calendar events. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }

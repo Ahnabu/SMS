@@ -3,6 +3,7 @@ import { UserRole } from '../modules/user/user.interface';
 import { School } from '../modules/school/school.model';
 import { SchoolStatus } from '../modules/school/school.interface';
 import { Subject } from '../modules/subject/subject.model';
+import { seedEvents } from '../scripts/seed-events';
 import config from '../config';
 
 /**
@@ -162,6 +163,9 @@ export async function seedDatabase(): Promise<void> {
 
     // Seed superadmin
     await seedSuperadmin();
+
+    // Seed sample events
+    await seedEvents();
 
     // Future: Add other seeding operations here
     // - Default school settings

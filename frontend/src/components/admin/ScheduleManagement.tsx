@@ -91,11 +91,15 @@ const ScheduleManagement: React.FC = () => {
     dayOfWeek: "monday",
     grade: "",
     section: "",
-    academicYear: new Date().getFullYear().toString(),
+    academicYear: (() => {
+      const currentYear = new Date().getFullYear();
+      return `${currentYear}-${currentYear + 1}`;
+    })(),
     periods: [] as Period[],
   });
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [schoolData, setSchoolData] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   // Calculate duration in minutes from start and end time
@@ -163,12 +167,24 @@ const ScheduleManagement: React.FC = () => {
     }
   }, []);
 
+  const fetchSchoolData = useCallback(async () => {
+    try {
+      const response = await adminApi.getSchoolSettings();
+      if (response.data.success) {
+        setSchoolData(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching school data:", error);
+    }
+  }, []);
+
   // Fetch data when user context changes
   useEffect(() => {
     fetchSchedules();
     fetchSubjects();
     fetchTeachers();
-  }, [user, fetchSchedules, fetchSubjects, fetchTeachers]);
+    fetchSchoolData();
+  }, [user, fetchSchedules, fetchSubjects, fetchTeachers, fetchSchoolData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,11 +279,12 @@ const ScheduleManagement: React.FC = () => {
   };
 
   const resetForm = () => {
+    const currentYear = new Date().getFullYear();
     setFormData({
       dayOfWeek: "monday",
       grade: "",
       section: "",
-      academicYear: new Date().getFullYear().toString(),
+      academicYear: `${currentYear}-${currentYear + 1}`,
       periods: [],
     });
   };
@@ -463,15 +480,49 @@ const ScheduleManagement: React.FC = () => {
       {/* Schedule Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-              <CardTitle className="text-2xl font-semibold">
-                {editingSchedule ? "Edit Schedule" : "Create New Schedule"}
-              </CardTitle>
+          <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-xl">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg relative">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl font-semibold flex items-center gap-3">
+                    <Calendar className="w-6 h-6" />
+                    {editingSchedule ? "Edit Schedule" : "Create New Schedule"}
+                  </CardTitle>
+                  <p className="text-blue-100 mt-1">
+                    {editingSchedule ? "Modify the schedule details below" : "Set up a new class schedule with periods and subjects"}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setEditingSchedule(null);
+                    const currentYear = new Date().getFullYear();
+                    setFormData({
+                      dayOfWeek: "monday",
+                      grade: "",
+                      section: "",
+                      academicYear: `${currentYear}-${currentYear + 1}`,
+                      periods: [],
+                    });
+                  }}
+                  className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-8">
               <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Basic Schedule Information */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-800">Schedule Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">
                       Day of Week*
@@ -495,72 +546,105 @@ const ScheduleManagement: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <label
-                      htmlFor="grade"
-                      className="text-sm font-semibold text-gray-700"
-                    >
+                    <label className="text-sm font-semibold text-gray-700">
                       Grade*
                     </label>
-                    <Input
-                      id="grade"
+                    <Select
                       value={formData.grade}
-                      onChange={(e) =>
-                        setFormData({ ...formData, grade: e.target.value })
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, grade: value })
                       }
-                      placeholder="e.g., 10"
-                      className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
-                      required
-                    />
+                    >
+                      <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
+                        <SelectValue placeholder="Select Grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {schoolData?.settings?.grades?.length > 0 ? (
+                          schoolData.settings.grades.map((grade: number) => (
+                            <SelectItem key={grade} value={grade.toString()}>
+                              Grade {grade}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading" disabled>
+                            {schoolData ? "No grades configured" : "Loading grades..."}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <label
-                      htmlFor="section"
-                      className="text-sm font-semibold text-gray-700"
-                    >
+                    <label className="text-sm font-semibold text-gray-700">
                       Section*
                     </label>
-                    <Input
-                      id="section"
+                    <Select
                       value={formData.section}
-                      onChange={(e) =>
-                        setFormData({ ...formData, section: e.target.value })
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, section: value })
                       }
-                      placeholder="e.g., A"
-                      className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
-                      required
-                    />
+                    >
+                      <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
+                        <SelectValue placeholder="Select Section" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {schoolData?.settings?.sections?.length > 0 ? (
+                          schoolData.settings.sections.map((section: string) => (
+                            <SelectItem key={section} value={section}>
+                              Section {section}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading" disabled>
+                            {schoolData ? "No sections configured" : "Loading sections..."}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <label
-                      htmlFor="academicYear"
-                      className="text-sm font-semibold text-gray-700"
-                    >
+                    <label className="text-sm font-semibold text-gray-700">
                       Academic Year*
                     </label>
-                    <Input
-                      id="academicYear"
+                    <Select
                       value={formData.academicYear}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          academicYear: e.target.value,
-                        })
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, academicYear: value })
                       }
-                      placeholder="e.g., 2024"
-                      className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg"
-                      required
-                    />
+                    >
+                      <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 rounded-lg">
+                        <SelectValue placeholder="Select Academic Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(() => {
+                          const currentYear = new Date().getFullYear();
+                          const years = [];
+                          for (let i = currentYear - 1; i <= currentYear + 2; i++) {
+                            const yearRange = `${i}-${i + 1}`;
+                            years.push(
+                              <SelectItem key={`year-${yearRange}`} value={yearRange}>
+                                {yearRange}
+                              </SelectItem>
+                            );
+                          }
+                          return years;
+                        })()}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+                </div>
 
+                {/* Periods Section */}
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold text-gray-800">Periods</h3>
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-green-600" />
+                      <h3 className="text-lg font-semibold text-gray-800">Class Periods</h3>
+                    </div>
                     <Button 
                       type="button" 
                       onClick={addPeriod} 
-                      variant="outline"
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 shadow-md"
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 shadow-md hover:shadow-lg transform hover:scale-105 transition-all"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Add Period
@@ -569,7 +653,7 @@ const ScheduleManagement: React.FC = () => {
 
                   <div className="space-y-6">
                     {formData.periods.map((period, index) => (
-                      <div key={index} className="bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 hover:border-blue-300 p-6 rounded-xl shadow-sm">
+                      <div key={`period-${period.periodNumber}-${index}`} className="bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 hover:border-blue-300 p-6 rounded-xl shadow-sm">
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="font-semibold text-lg text-gray-800">
                             Period {period.periodNumber}
@@ -729,14 +813,14 @@ const ScheduleManagement: React.FC = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {teachers.map((teacher: any) => (
-                                  <SelectItem
-                                    key={teacher.id}
-                                    value={teacher.id}
-                                  >
-                                    {teacher.user.firstName}{" "}
-                                    {teacher.user.lastName}
-                                  </SelectItem>
-                                ))}
+                                    <SelectItem
+                                      key={teacher._id || teacher.id}
+                                      value={teacher._id || teacher.id}
+                                    >
+                                      {teacher.user.firstName}{" "}
+                                      {teacher.user.lastName}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -902,7 +986,7 @@ const ScheduleManagement: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-3 mt-6">
                       {classSchedules.map((schedule) => (
-                        <div key={schedule._id} className="flex gap-2">
+                        <div key={schedule._id || schedule.id || `edit-${schedule.grade}-${schedule.section}-${schedule.dayOfWeek}`} className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -938,7 +1022,7 @@ const ScheduleManagement: React.FC = () => {
                 <div className="space-y-4">
                   {schedules.map((schedule) => (
                     <div
-                      key={schedule._id}
+                      key={schedule._id || schedule.id || `schedule-${schedule.grade}-${schedule.section}-${schedule.dayOfWeek}`}
                       className="flex items-center justify-between p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl hover:shadow-md transition-all duration-300"
                     >
                       <div className="flex-1">

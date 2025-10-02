@@ -149,12 +149,19 @@ const StudentForm: React.FC<StudentFormProps> = ({
   // Load school data to get grade configuration
   useEffect(() => {
     const loadSchoolData = async () => {
-      if (!user?.schoolId) return;
-
+      console.log('Loading school data, user:', user);
+      console.log('User schoolId:', user?.schoolId);
+      
+      if (!user?.schoolId) {
+        console.error('No schoolId found in user context');
+        setLoadingSchool(false);
+        return;
+      }
+      
       setLoadingSchool(true);
       try {
-        const response = await adminApi.getSchool(user.schoolId);
-        console.log(response.data);
+        const response = await adminApi.getSchoolSettings();
+        console.log('School settings loaded:', response.data);
         if (response.data.success && response.data) {
           setSchoolData(response.data.data);
         }
@@ -165,8 +172,10 @@ const StudentForm: React.FC<StudentFormProps> = ({
       }
     };
 
-    loadSchoolData();
-  }, [user?.schoolId]);
+    if (isOpen) {
+      loadSchoolData();
+    }
+  }, [user, isOpen]);
 
   useEffect(() => {
     if (student) {
@@ -674,16 +683,18 @@ const StudentForm: React.FC<StudentFormProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {loadingSchool ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="loading" disabled>
                           Loading grades...
                         </SelectItem>
                       ) : schoolData?.settings?.grades &&
                         schoolData.settings.grades.length > 0 ? (
-                        schoolData.settings.grades.map((grade: number) => (
-                          <SelectItem key={grade} value={grade.toString()}>
-                            Grade {grade}
-                          </SelectItem>
-                        ))
+                        schoolData.settings.grades
+                          .filter((grade: number) => grade && grade > 0) // Filter out invalid grades
+                          .map((grade: number) => (
+                            <SelectItem key={grade} value={grade.toString()}>
+                              Grade {grade}
+                            </SelectItem>
+                          ))
                       ) : (
                         // Fallback to default grades if school data not available
                         <>
@@ -701,20 +712,46 @@ const StudentForm: React.FC<StudentFormProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Section (Optional)
+                    Section
                   </label>
-                  <Input
+                  <Select
                     value={formData.section || ""}
-                    onChange={(e) =>
-                      handleInputChange("section", e.target.value)
+                    onValueChange={(value) =>
+                      handleInputChange("section", value)
                     }
-                    placeholder="Leave empty for auto-assignment"
-                    className={errors.section ? "border-red-500" : ""}
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    If left empty, section will be automatically assigned based
-                    on capacity
-                  </p>
+                  >
+                    <SelectTrigger
+                      className={`w-full ${
+                        errors.section ? "border-red-500" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="Select Section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingSchool ? (
+                        <SelectItem value="loading" disabled>
+                          Loading sections...
+                        </SelectItem>
+                      ) : schoolData?.settings?.sections &&
+                        schoolData.settings.sections.length > 0 ? (
+                        schoolData.settings.sections
+                          .filter((section: string) => section && section.trim()) // Filter out empty strings
+                          .map((section: string) => (
+                            <SelectItem key={section} value={section}>
+                              Section {section}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        // Fallback to default sections if school data not available
+                        <>
+                          <SelectItem value="A">Section A</SelectItem>
+                          <SelectItem value="B">Section B</SelectItem>
+                          <SelectItem value="C">Section C</SelectItem>
+                          <SelectItem value="D">Section D</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                   {errors.section && (
                     <p className="text-red-500 text-sm mt-1">
                       {errors.section}

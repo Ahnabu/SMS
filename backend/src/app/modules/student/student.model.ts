@@ -162,10 +162,7 @@ const studentSchema = new Schema<
     rollNumber: {
       type: Number,
       min: [1, "Roll number must be at least 1"],
-      max: [
-        config.max_students_per_section,
-        `Roll number cannot exceed ${config.max_students_per_section}`,
-      ],
+      // Removed max validation to allow flexible section capacity
     },
     isActive: {
       type: Boolean,

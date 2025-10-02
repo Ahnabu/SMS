@@ -39,6 +39,13 @@ export interface ISchoolSettings {
   currency: string;
   attendanceLockAfterDays: number;
   maxAttendanceEditHours: number;
+  // Section capacity tracking - format: "grade-section" => { maxStudents, currentStudents }
+  sectionCapacity?: {
+    [key: string]: {
+      maxStudents: number;
+      currentStudents: number;
+    };
+  };
 }
 
 export interface IAcademicSession {
@@ -125,6 +132,13 @@ export interface ISchoolMethods {
   canEnrollStudents(): boolean;
   getMaxStudentsForGrade(grade: number): number;
   createGoogleDriveFolder(): Promise<string>;
+  // Section capacity management
+  getSectionCapacity(grade: number, section: string): { maxStudents: number; currentStudents: number };
+  setSectionCapacity(grade: number, section: string, maxStudents: number): Promise<ISchoolDocument>;
+  updateCurrentStudentCount(grade: number, section: string, increment?: number): Promise<ISchoolDocument>;
+  canEnrollInSection(grade: number, section: string): boolean;
+  getAvailableSectionsForGrade(grade: number): string[];
+  initializeSectionCapacity(): Promise<ISchoolDocument>;
 }
 
 export interface ISchoolModel extends Model<ISchoolDocument> {

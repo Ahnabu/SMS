@@ -30,6 +30,21 @@ import {
 } from "./student.interface";
 
 class StudentService {
+  // Helper method to get event colors
+  private getEventColor(eventType: string): string {
+    switch (eventType) {
+      case 'exam': return '#ef4444';
+      case 'holiday': return '#10b981';
+      case 'meeting': return '#3b82f6';
+      case 'academic': return '#6366f1';
+      case 'extracurricular': return '#8b5cf6';
+      case 'administrative': return '#6b7280';
+      case 'announcement': return '#f59e0b';
+      case 'homework': return '#f97316';
+      default: return '#6b7280';
+    }
+  }
+
   async createStudent(
     studentData: ICreateStudentRequest,
     photos?: Express.Multer.File[],
@@ -2131,42 +2146,38 @@ class StudentService {
       student.section
     );
 
-    // Get academic calendar events
-    const calendarEvents = await AcademicCalendar.aggregate([
-      {
-        $match: {
-          schoolId: student.schoolId,
-          $or: [
-            { targetAudience: "all" },
-            { targetAudience: "students" },
-            {
-              $and: [
-                { targetAudience: "specific" },
-                {
-                  $or: [
-                    { "specificAudience.grades": student.grade },
-                    { "specificAudience.sections": student.section },
-                  ],
-                },
-              ],
-            },
-          ],
-          isActive: true,
-        },
-      },
-      {
-        $project: {
-          title: "$eventTitle",
-          description: "$eventDescription",
-          eventType: 1,
-          startDate: 1,
-          endDate: 1,
-          color: 1,
-          targetAudience: 1,
-        },
-      },
-      { $sort: { startDate: 1 } },
-    ]);
+    // Use the new event service instead of AcademicCalendar
+    const { eventService } = await import('../event/event.service');
+    
+    // Get all events for the student
+    const eventsResult = await eventService.getEvents(
+      student.schoolId,
+      'student',
+      student.grade,
+      student.section,
+      { limit: 100, isActive: true }
+    );
+
+    // Get today's events
+    const todaysEvents = await eventService.getTodaysEvents(
+      student.schoolId,
+      'student',
+      student.grade,
+      student.section
+    );
+
+    // Convert events to calendar format
+    const calendarEvents = eventsResult.events.map((event: any) => ({
+      title: event.title,
+      description: event.description,
+      eventType: event.type,
+      startDate: event.date,
+      endDate: event.date,
+      color: this.getEventColor(event.type),
+      targetAudience: event.targetAudience
+    }));
+
+    console.log(`Found ${calendarEvents.length} calendar events for student`);
 
     // Get upcoming exams
     const upcomingExams = await Exam.aggregate([

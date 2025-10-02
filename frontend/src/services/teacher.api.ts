@@ -353,6 +353,9 @@ export const teacherApi = {
   addDisciplinaryActionComment: (actionId: string, data: { comment: string }) =>
     api.post<ApiResponse>(`/teachers/discipline/comment/${actionId}`, data),
   
+  // Events
+  getEvents: () => api.get<ApiResponse>("/teachers/events"),
+
   // Generic HTTP methods for flexibility
   get: (endpoint: string) => api.get<ApiResponse>(endpoint),
   post: (endpoint: string, data?: any) => api.post<ApiResponse>(endpoint, data),

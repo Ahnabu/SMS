@@ -23,6 +23,14 @@ interface School {
   };
   affiliation?: string;
   recognition?: string;
+  settings?: {
+    maxStudentsPerSection?: number;
+    grades?: number[];
+    sections?: string[];
+    timezone?: string;
+    language?: string;
+    currency?: string;
+  };
   adminDetails?: {
     firstName: string;
     lastName: string;
@@ -63,6 +71,14 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
     },
     affiliation: '',
     recognition: '',
+    settings: {
+      maxStudentsPerSection: 0,
+      grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // Default grades
+      sections: ['A', 'B', 'C', 'D'], // Default sections
+      timezone: 'Asia/Kolkata',
+      language: 'en',
+      currency: 'INR',
+    },
     adminDetails: {
       firstName: '',
       lastName: '',
@@ -98,6 +114,14 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
         },
         affiliation: '',
         recognition: '',
+        settings: {
+          maxStudentsPerSection: 0,
+          grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // Default grades
+          sections: ['A', 'B', 'C', 'D'], // Default sections
+          timezone: 'Asia/Kolkata',
+          language: 'en',
+          currency: 'INR',
+        },
         adminDetails: {
           firstName: '',
           lastName: '',
@@ -152,6 +176,16 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
       } catch {
         newErrors.website = 'Please enter a valid URL (starting with http:// or https://)';
       }
+    }
+
+    // Grades validation
+    if (!formData.settings?.grades || formData.settings.grades.length === 0) {
+      newErrors.grades = 'At least one grade must be selected';
+    }
+
+    // Sections validation
+    if (!formData.settings?.sections || formData.settings.sections.length === 0) {
+      newErrors.sections = 'At least one section must be selected';
     }
 
     if (!school && formData.adminDetails) {
@@ -451,6 +485,110 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
                 />
                 {errors.website && <p className="text-red-500 text-xs mt-1">{errors.website}</p>}
                 <p className="text-xs text-gray-500 mt-1">Enter a valid URL or leave blank</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Academic Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="w-5 h-5" />
+                Academic Settings
+              </CardTitle>
+              <CardDescription>
+                Configure the grades and sections offered by this school
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Grade Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Grades Offered *
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                    <label key={grade} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.settings?.grades?.includes(grade) || false}
+                        onChange={(e) => {
+                          const currentGrades = formData.settings?.grades || [];
+                          const newGrades = e.target.checked
+                            ? [...currentGrades, grade].sort((a: number, b: number) => a - b)
+                            : currentGrades.filter((g: number) => g !== grade);
+                          
+                          setFormData(prev => ({
+                            ...prev,
+                            settings: {
+                              ...prev.settings,
+                              grades: newGrades
+                            }
+                          }));
+                        }}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Grade {grade}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.grades && <p className="text-red-500 text-xs mt-2">{errors.grades}</p>}
+              </div>
+
+              {/* Section Configuration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Available Sections
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((section) => (
+                    <label key={section} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.settings?.sections?.includes(section) || false}
+                        onChange={(e) => {
+                          const currentSections = formData.settings?.sections || [];
+                          const newSections = e.target.checked
+                            ? [...currentSections, section].sort()
+                            : currentSections.filter((s: string) => s !== section);
+                          
+                          setFormData(prev => ({
+                            ...prev,
+                            settings: {
+                              ...prev.settings,
+                              sections: newSections
+                            }
+                          }));
+                        }}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Section {section}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.sections && <p className="text-red-500 text-xs mt-2">{errors.sections}</p>}
+              </div>
+
+              {/* Max Students Per Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Maximum Students Per Section
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.settings?.maxStudentsPerSection || 0}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      maxStudentsPerSection: parseInt(e.target.value) || 0
+                    }
+                  }))}
+                  placeholder="0"
+                  className="max-w-xs"
+                />
+                <p className="text-xs text-gray-500 mt-1">Default capacity for all sections</p>
               </div>
             </CardContent>
           </Card>

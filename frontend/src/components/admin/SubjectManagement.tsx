@@ -47,6 +47,7 @@ const SubjectManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [schoolData, setSchoolData] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -91,8 +92,22 @@ const SubjectManagement: React.FC = () => {
     if (user) {
       fetchSubjects();
       fetchTeachers();
+      fetchSchoolData();
     }
   }, [user, fetchSubjects, fetchTeachers]);
+
+  const fetchSchoolData = async () => {
+    try {
+      console.log('Loading school data in SubjectManagement');
+      const response = await adminApi.getSchoolSettings();
+      console.log('School settings response:', response.data);
+      if (response.data.success) {
+        setSchoolData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch school data:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -374,7 +389,7 @@ const SubjectManagement: React.FC = () => {
                     Grades* (Select applicable grades)
                   </label>
                   <div className="grid grid-cols-6 gap-2">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+                    {(schoolData?.settings?.grades || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).map((grade: number) => (
                       <label key={grade} className="flex items-center">
                         <input
                           type="checkbox"
