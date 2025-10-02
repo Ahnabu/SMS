@@ -33,15 +33,24 @@ class StudentService {
   // Helper method to get event colors
   private getEventColor(eventType: string): string {
     switch (eventType) {
-      case 'exam': return '#ef4444';
-      case 'holiday': return '#10b981';
-      case 'meeting': return '#3b82f6';
-      case 'academic': return '#6366f1';
-      case 'extracurricular': return '#8b5cf6';
-      case 'administrative': return '#6b7280';
-      case 'announcement': return '#f59e0b';
-      case 'homework': return '#f97316';
-      default: return '#6b7280';
+      case "exam":
+        return "#ef4444";
+      case "holiday":
+        return "#10b981";
+      case "meeting":
+        return "#3b82f6";
+      case "academic":
+        return "#6366f1";
+      case "extracurricular":
+        return "#8b5cf6";
+      case "administrative":
+        return "#6b7280";
+      case "announcement":
+        return "#f59e0b";
+      case "homework":
+        return "#f97316";
+      default:
+        return "#6b7280";
     }
   }
 
@@ -234,12 +243,12 @@ class StudentService {
           await newStudent[0].save({ session });
 
           // Set parentUser to existing parent's user for credential creation
-          const existingParentUser = await User.findById(existingParent.userId).session(session);
+          const existingParentUser = await User.findById(
+            existingParent.userId
+          ).session(session);
           if (existingParentUser) {
             parentUser = [existingParentUser];
           }
-
-
         } else {
           // Ensure credentials are available
           if (!credentials) {
@@ -388,8 +397,6 @@ class StudentService {
           // Update student with parent reference
           newStudent[0].parentId = newParent[0]._id;
           await newStudent[0].save({ session });
-
-
         }
       }
 
@@ -447,16 +454,12 @@ class StudentService {
         studentId!
       );
 
-
-
       // Upload photos to Cloudinary
       const cloudinaryResults = await uploadPhotosToCloudinary(
         photos,
         cloudinaryFolderPath,
         studentId!
       );
-
-
 
       // Create photo records with Cloudinary data
       const photoPromises = cloudinaryResults.map((result) =>
@@ -479,8 +482,6 @@ class StudentService {
 
       const photoResults = await Promise.all(photoPromises);
       uploadedPhotos = photoResults.flat();
-
-
 
       // Create photo folder structure for future uploads
       const age =
@@ -535,11 +536,12 @@ class StudentService {
         // Handle parent credentials - check if credentials already exist for this parent
         if (parentUser && parentUser.length > 0) {
           // Check if parent credentials already exist for this specific student
-          const existingParentCredentialsForStudent = await UserCredentials.findOne({
-            userId: parentUser[0]._id,
-            role: "parent",
-            associatedStudentId: newStudent[0]._id,
-          }).session(session);
+          const existingParentCredentialsForStudent =
+            await UserCredentials.findOne({
+              userId: parentUser[0]._id,
+              role: "parent",
+              associatedStudentId: newStudent[0]._id,
+            }).session(session);
 
           if (!existingParentCredentialsForStudent) {
             // Check if parent credentials exist for other students (to reuse credentials)
@@ -555,7 +557,8 @@ class StudentService {
                 schoolId: studentData.schoolId,
                 initialUsername: existingParentCredentials.initialUsername,
                 initialPassword: existingParentCredentials.initialPassword,
-                hasChangedPassword: existingParentCredentials.hasChangedPassword,
+                hasChangedPassword:
+                  existingParentCredentials.hasChangedPassword,
                 role: "parent",
                 associatedStudentId: newStudent[0]._id,
                 issuedBy: new Types.ObjectId(adminUserId),
@@ -790,7 +793,10 @@ class StudentService {
 
       const student = await Student.findById(id)
         .populate("userId", "firstName lastName username email phone")
-        .populate("schoolId", "_id name schoolId establishedYear address contact affiliation logo")
+        .populate(
+          "schoolId",
+          "_id name schoolId establishedYear address contact affiliation logo"
+        )
         .populate({
           path: "parentId",
           select: "_id userId occupation address relationship",
@@ -1060,16 +1066,12 @@ class StudentService {
         student.studentId
       );
 
-
-
       // Upload photos to Cloudinary
       const cloudinaryResults = await uploadPhotosToCloudinary(
         files,
         cloudinaryFolderPath,
         student.studentId
       );
-
-
 
       // Create photo records with Cloudinary data
       const uploadedPhotos: IStudentPhotoResponse[] = [];
@@ -1653,6 +1655,7 @@ class StudentService {
     const attendanceRecords = await Attendance.aggregate([
       {
         $match: {
+          schoolId: student.schoolId,
           "students.studentId": student._id,
           date: { $gte: startOfYear, $lte: endOfYear },
         },
@@ -1773,6 +1776,7 @@ class StudentService {
         },
       },
       { $unwind: "$exam" },
+      { $match: { "exam.schoolId": student.schoolId } },
       {
         $lookup: {
           from: "subjects",
@@ -1813,6 +1817,7 @@ class StudentService {
         },
       },
       { $unwind: "$exam" },
+      { $match: { "exam.schoolId": student.schoolId } },
       {
         $lookup: {
           from: "subjects",
@@ -1859,6 +1864,7 @@ class StudentService {
         },
       },
       { $unwind: "$exam" },
+      { $match: { "exam.schoolId": student.schoolId } },
       {
         $group: {
           _id: {
@@ -1923,6 +1929,7 @@ class StudentService {
     const homework = await Homework.aggregate([
       {
         $match: {
+          schoolId: student.schoolId,
           grade: student.grade,
           section: student.section || { $exists: true },
           isPublished: true,
@@ -1986,7 +1993,13 @@ class StudentService {
           status: {
             $ifNull: [
               { $arrayElemAt: ["$submission.status", 0] },
-              { $cond: [{ $lt: ["$dueDate", new Date()] }, "overdue", "pending"] },
+              {
+                $cond: [
+                  { $lt: ["$dueDate", new Date()] },
+                  "overdue",
+                  "pending",
+                ],
+              },
             ],
           },
           submittedAt: { $arrayElemAt: ["$submission.submittedAt", 0] },
@@ -2035,6 +2048,7 @@ class StudentService {
     const schedule = await Schedule.aggregate([
       {
         $match: {
+          schoolId: student.schoolId,
           grade: student.grade,
           section: student.section,
           isActive: true,
@@ -2079,7 +2093,14 @@ class StudentService {
           subjectId: "$subject._id",
           teacherName: "$teacherUser.fullName",
           teacherId: "$teacher._id",
-          className: { $concat: ["Grade ", { $toString: "$grade" }, " - Section ", "$section"] },
+          className: {
+            $concat: [
+              "Grade ",
+              { $toString: "$grade" },
+              " - Section ",
+              "$section",
+            ],
+          },
           room: "$periods.roomNumber",
           isActive: 1,
         },
@@ -2119,12 +2140,12 @@ class StudentService {
     }
 
     // Use the new event service instead of AcademicCalendar
-    const { eventService } = await import('../event/event.service');
-    
+    const { eventService } = await import("../event/event.service");
+
     // Get all events for the student
     const eventsResult = await eventService.getEvents(
       student.schoolId,
-      'student',
+      "student",
       student.grade,
       student.section,
       { limit: 100, isActive: true }
@@ -2133,7 +2154,7 @@ class StudentService {
     // Get today's events
     const todaysEvents = await eventService.getTodaysEvents(
       student.schoolId,
-      'student',
+      "student",
       student.grade,
       student.section
     );
@@ -2146,13 +2167,14 @@ class StudentService {
       startDate: event.date,
       endDate: event.date,
       color: this.getEventColor(event.type),
-      targetAudience: event.targetAudience
+      targetAudience: event.targetAudience,
     }));
 
     // Get upcoming exams
     const upcomingExams = await Exam.aggregate([
       {
         $match: {
+          schoolId: student.schoolId,
           grade: student.grade,
           section: student.section,
           date: { $gte: new Date() },
@@ -2248,36 +2270,43 @@ class StudentService {
         throw new AppError(httpStatus.NOT_FOUND, "Student not found");
       }
 
-      const { DisciplinaryAction } = await import('../disciplinary/disciplinary.model');
-      
+      const { DisciplinaryAction } = await import(
+        "../disciplinary/disciplinary.model"
+      );
+
       // Get only red warrants for this student (students/parents can only see red warrants)
       const actions = await DisciplinaryAction.find({
         studentId: student._id,
-        isRedWarrant: true
+        isRedWarrant: true,
       })
         .populate({
-          path: 'teacherId',
-          select: 'userId',
+          path: "teacherId",
+          select: "userId",
           populate: {
-            path: 'userId',
-            select: 'firstName lastName'
-          }
+            path: "userId",
+            select: "firstName lastName",
+          },
         })
         .sort({ issuedDate: -1 });
 
       // Get stats for this student (only red warrants)
-      const stats = await DisciplinaryAction.getDisciplinaryStats(student.schoolId.toString(), { 
-        studentId: student._id,
-        isRedWarrant: true 
-      });
+      const stats = await DisciplinaryAction.getDisciplinaryStats(
+        student.schoolId.toString(),
+        {
+          studentId: student._id,
+          isRedWarrant: true,
+        }
+      );
 
       const formattedActions = actions.map((action: any) => {
         const teacher = action.teacherId as any;
         const teacherUser = teacher?.userId as any;
-        
+
         return {
           id: action._id,
-          teacherName: teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : 'N/A',
+          teacherName: teacherUser
+            ? `${teacherUser.firstName} ${teacherUser.lastName}`
+            : "N/A",
           actionType: action.actionType,
           severity: action.severity,
           category: action.category,
@@ -2300,13 +2329,15 @@ class StudentService {
 
       return {
         actions: formattedActions,
-        stats
+        stats,
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        `Failed to get student disciplinary actions: ${(error as Error).message}`
+        `Failed to get student disciplinary actions: ${
+          (error as Error).message
+        }`
       );
     }
   }

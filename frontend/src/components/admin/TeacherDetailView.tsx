@@ -169,13 +169,13 @@ const TeacherDetailView: React.FC<TeacherDetailViewProps> = ({
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         {/* Floating Close Button */}
-        <button
+        {/* <button
           onClick={onClose}
           className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors duration-200"
           aria-label="Close modal"
         >
           <X className="h-4 w-4" />
-        </button>
+        </button> */}
 
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
