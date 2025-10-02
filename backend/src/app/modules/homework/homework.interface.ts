@@ -4,7 +4,7 @@ export interface IHomework {
   schoolId: Types.ObjectId;
   teacherId: Types.ObjectId;
   subjectId: Types.ObjectId;
-  classId?: Types.ObjectId; // Optional class reference
+  classId?: Types.ObjectId; 
   grade: number;
   section?: string; // If not specified, applies to all sections of the grade
   title: string;
