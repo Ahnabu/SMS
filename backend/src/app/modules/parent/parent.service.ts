@@ -598,14 +598,11 @@ class ParentService {
 
       const children = parent.children || [];
 
-      // Get dashboard stats for all children
-      const dashboardStats = {
-        totalChildren: children.length,
-        totalAttendanceAlerts: 0,
-        totalPendingHomework: 0,
-        totalUpcomingEvents: 0,
-        totalNotices: 0,
-      };
+      // Initialize dashboard stats
+      let totalAttendanceAlerts = 0;
+      let totalPendingHomework = 0;
+      let totalUpcomingEvents = 0;
+      let totalNotices = 0;
 
       // Calculate attendance alerts (children with < 75% attendance this month)
       const currentMonth = new Date();
@@ -613,17 +610,38 @@ class ParentService {
       const nextMonth = new Date(currentMonth);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
 
+      // Get once per parent (not per child) to avoid duplication
+      totalUpcomingEvents = await AcademicCalendar.countDocuments({
+        startDate: { $gte: new Date() },
+        isActive: true,
+        schoolId: parent.schoolId,
+      });
+
+      totalNotices = await Notification.countDocuments({
+        schoolId: parent.schoolId,
+        $or: [
+          { recipientType: "parent" },
+          { recipientType: "all" },
+          { recipientId: parentUserId }
+        ],
+        isActive: true,
+        createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      });
+
       for (const child of children) {
+        // Cast child to proper type since it's populated
+        const studentChild = child as any;
+        
         // Attendance calculation
         const attendanceRecords = await Attendance.aggregate([
           {
             $match: {
-              "students.studentId": child._id,
+              "students.studentId": studentChild._id,
               date: { $gte: currentMonth, $lt: nextMonth },
             },
           },
           { $unwind: "$students" },
-          { $match: { "students.studentId": child._id } },
+          { $match: { "students.studentId": studentChild._id } },
         ]);
 
         const totalDays = attendanceRecords.length;
@@ -634,31 +652,34 @@ class ParentService {
           totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
 
         if (attendancePercentage < 75) {
-          dashboardStats.totalAttendanceAlerts++;
+          totalAttendanceAlerts++;
         }
 
-        // Pending homework count
-        const pendingHomework = await Homework.countDocuments({
-          "assignments.studentId": child._id,
-          "assignments.status": { $in: ["pending", "overdue"] },
+        // Pending homework count for this child
+        const pendingHomeworkCount = await Homework.countDocuments({
+          grade: studentChild.grade,
+          section: studentChild.section,
+          isPublished: true,
+          dueDate: { $gte: new Date() },
         });
-        dashboardStats.totalPendingHomework += pendingHomework;
 
-        // Upcoming events count
-        const upcomingEvents = await AcademicCalendar.countDocuments({
-          startDate: { $gte: new Date() },
-          isActive: true,
+        // Check which homework has been submitted by this child
+        const submittedHomework = await HomeworkSubmission.countDocuments({
+          studentId: studentChild._id,
         });
-        dashboardStats.totalUpcomingEvents += upcomingEvents;
 
-        // Notices count
-        const notices = await Notification.countDocuments({
-          targetAudience: { $in: ["parents", "all"] },
-          isActive: true,
-          createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
-        });
-        dashboardStats.totalNotices += notices;
+        // Approximate pending homework (not exact but gives an idea)
+        const childPendingHomework = Math.max(0, pendingHomeworkCount - submittedHomework);
+        totalPendingHomework += childPendingHomework;
       }
+
+      const dashboardStats = {
+        totalChildren: children.length,
+        totalAttendanceAlerts,
+        totalPendingHomework,
+        totalUpcomingEvents,
+        totalNotices,
+      };
 
       return {
         parent: {
@@ -676,6 +697,8 @@ class ParentService {
         children: children.map((child: any) => ({
           id: child._id,
           studentId: child.studentId,
+          firstName: child.userId?.firstName || "",
+          lastName: child.userId?.lastName || "",
           fullName:
             child.userId &&
             typeof child.userId === "object" &&

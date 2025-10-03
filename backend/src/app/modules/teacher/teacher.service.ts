@@ -12,6 +12,7 @@ import { Subject } from "../subject/subject.model";
 import { Schedule } from "../schedule/schedule.model";
 import { Attendance } from "../attendance/attendance.model";
 import { Student } from "../student/student.model";
+import { Homework } from "../homework/homework.model";
 import { Notification } from "../notification/notification.model";
 import {
   ICreateTeacherRequest,
@@ -1069,8 +1070,40 @@ class TeacherService {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-      // TODO: Replace with actual collections when implemented
-      // For now, returning mock data structure that matches frontend expectations
+      // Calculate real dashboard statistics
+      // totalClasses: grades × sections
+      const totalClasses = teacher.grades.length * teacher.sections.length;
+
+      // totalStudents: count students in teacher's grades/sections at their school
+      const totalStudents = await Student.countDocuments({
+        schoolId: teacher.schoolId,
+        grade: { $in: teacher.grades },
+        section: { $in: teacher.sections },
+        isActive: true
+      });
+
+      // pendingHomework: count homework assigned by this teacher that is not past due
+      const now = new Date();
+      const pendingHomework = await Homework.countDocuments({
+        teacherId: teacher._id,
+        dueDate: { $gte: now },
+        isPublished: true
+      });
+
+      // todayClasses: count of classes scheduled for this teacher today
+      const schedules = await Schedule.find({
+        'periods.teacherId': teacher._id,
+        isActive: true
+      });
+      let todayClasses = 0;
+      const todayDayOfWeek = today.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+      schedules.forEach((schedule: any) => {
+        if (schedule.dayOfWeek && schedule.dayOfWeek.toLowerCase() === todayDayOfWeek) {
+          // Count periods for this teacher today
+          todayClasses += schedule.periods.filter((p: any) => String(p.teacherId) === String(teacher._id)).length;
+        }
+      });
+
       const dashboardData = {
         teacher: {
           id: teacher._id,
@@ -1079,10 +1112,10 @@ class TeacherService {
           grades: teacher.grades,
           sections: teacher.sections,
         },
-        totalClasses: teacher.grades.length * teacher.sections.length || 0,
-        totalStudents: 0, // TODO: Count actual students from student collection
-        pendingHomework: 0, // TODO: Count from homework collection
-        todayClasses: 0, // TODO: Count from schedule collection
+        totalClasses,
+        totalStudents,
+        pendingHomework,
+        todayClasses,
         upcomingClasses: [],
         recentActivity: [],
       };
