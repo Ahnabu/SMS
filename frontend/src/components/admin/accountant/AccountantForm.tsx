@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Save, Upload, X, Camera } from "lucide-react";
+import { Save, Upload, X, Camera, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../../../context/AuthContext";
 import { showApiError, showToast } from "../../../utils/toast";
 import { adminApi } from "../../../services/admin.api";
+import { AccountantCredentialsModal } from "./AccountantCredentialsModal";
 
 interface AccountantFormData {
   // Basic Information (Required)
@@ -87,9 +88,13 @@ interface AccountantFormData {
 }
 
 interface Credentials {
-  username: string;
-  password: string;
-  accountantId: string;
+  accountant: {
+    id: string;
+    username: string;
+    password: string;
+    email?: string;
+    phone?: string;
+  };
   employeeId: string;
 }
 
@@ -186,9 +191,11 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
         bloodGroup: accountant.bloodGroup || "O+",
         dob: accountant.dob ? accountant.dob.split("T")[0] : "",
         joinDate: accountant.joinDate ? accountant.joinDate.split("T")[0] : "",
-        experience: accountant.experience || {
-          totalYears: 0,
-          previousCompanies: [],
+        experience: {
+          totalYears: accountant.experience?.totalYears || 0,
+          previousCompanies: Array.isArray(accountant.experience?.previousCompanies) 
+            ? accountant.experience.previousCompanies 
+            : [],
         },
         address: accountant.address || {
           street: "",
@@ -197,14 +204,16 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
           zipCode: "",
           country: "Bangladesh",
         },
-        qualifications: accountant.qualifications || [
-          {
-            degree: "",
-            institution: "",
-            year: new Date().getFullYear().toString(),
-            specialization: "",
-          },
-        ],
+        qualifications: Array.isArray(accountant.qualifications) && accountant.qualifications.length > 0
+          ? accountant.qualifications
+          : [
+              {
+                degree: "",
+                institution: "",
+                year: new Date().getFullYear().toString(),
+                specialization: "",
+              },
+            ],
         emergencyContact: accountant.emergencyContact || {
           name: "",
           relationship: "",
@@ -216,8 +225,12 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
           allowances: 0,
           deductions: 0,
         },
-        responsibilities: accountant.responsibilities || [""],
-        certifications: accountant.certifications || [],
+        responsibilities: Array.isArray(accountant.responsibilities) && accountant.responsibilities.length > 0
+          ? accountant.responsibilities
+          : [""],
+        certifications: Array.isArray(accountant.certifications) 
+          ? accountant.certifications 
+          : [],
         photos: [], // Photos handled separately in edit mode
       });
     }
@@ -630,7 +643,18 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
         showToast.success("Accountant created successfully!");
         
         if (response.data?.data?.credentials) {
-          setCredentials(response.data.data.credentials);
+          const creds = response.data.data.credentials;
+          // Transform to match CredentialsModal format
+          setCredentials({
+            accountant: {
+              id: creds.accountantId || "",
+              username: creds.username || "",
+              password: creds.password || "",
+              email: formData.email,
+              phone: formData.phone,
+            },
+            employeeId: creds.employeeId || "",
+          });
         }
 
         // Call success callback
@@ -693,38 +717,41 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center p-0 sm:p-4 z-50 overflow-y-auto">
+      <div className="bg-white w-full h-full sm:h-auto sm:rounded-lg sm:shadow-xl sm:w-[95vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl sm:my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b sticky top-0 bg-white sm:rounded-t-lg z-10 shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 truncate">
                 {isEditMode ? "Edit Accountant" : "Add New Accountant"}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-0.5 hidden sm:block">
                 {isEditMode 
                   ? "Update accountant profile information"
                   : "Create a new accountant profile with credentials"
                 }
               </p>
             </div>
-            <Button variant="outline" onClick={onClose} className="p-2">
-              <X className="w-5 h-5" />
-            </Button>
           </div>
+          <Button variant="outline" onClick={onClose} size="sm" className="flex-shrink-0 ml-2">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Basic Information */}
-              <Card>
+          {/* Form Content - Scrollable */}
+          <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100vh-80px)] sm:h-auto sm:max-h-[calc(90vh-80px)]">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+            {/* Basic Information */}
+            <Card>
                 <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Basic Information</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         First Name <span className="text-red-500">*</span>
@@ -758,7 +785,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email
@@ -787,7 +814,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Designation <span className="text-red-500">*</span>
@@ -896,7 +923,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Date of Birth <span className="text-red-500">*</span>
@@ -929,7 +956,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
               {/* Address Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Address Information</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Address Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -945,7 +972,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         City <span className="text-red-500">*</span>
@@ -985,7 +1012,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Zip Code <span className="text-red-500">*</span>
@@ -1025,7 +1052,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Educational Qualifications</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Educational Qualifications</CardTitle>
                     <Button
                       type="button"
                       variant="outline"
@@ -1058,7 +1085,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Degree <span className="text-red-500">*</span>
@@ -1128,10 +1155,10 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
               {/* Emergency Contact */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Emergency Contact</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Emergency Contact</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Name <span className="text-red-500">*</span>
@@ -1185,7 +1212,7 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Phone <span className="text-red-500">*</span>
@@ -1232,236 +1259,8 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                 </CardContent>
               </Card>
 
-              {/* Experience */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Work Experience</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Total Years of Experience
-                    </label>
-                    <Input
-                      type="number"
-                      value={formData.experience.totalYears}
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "experience",
-                          "totalYears",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      placeholder="Total years"
-                      min="0"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-gray-700">
-                      Previous Companies
-                    </h4>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addExperience}
-                      size="sm"
-                    >
-                      Add Experience
-                    </Button>
-                  </div>
-
-                  {formData.experience.previousCompanies.map((exp, index) => (
-                    <div
-                      key={index}
-                      className="p-4 border border-gray-200 rounded-lg space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Experience {index + 1}
-                        </h5>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => removeExperience(index)}
-                          size="sm"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Company Name
-                          </label>
-                          <Input
-                            value={exp.companyName}
-                            onChange={(e) => {
-                              const newExp = [
-                                ...formData.experience.previousCompanies,
-                              ];
-                              newExp[index].companyName = e.target.value;
-                              handleNestedChange(
-                                "experience",
-                                "previousCompanies",
-                                newExp
-                              );
-                            }}
-                            placeholder="Company name"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Position
-                          </label>
-                          <Input
-                            value={exp.position}
-                            onChange={(e) => {
-                              const newExp = [
-                                ...formData.experience.previousCompanies,
-                              ];
-                              newExp[index].position = e.target.value;
-                              handleNestedChange(
-                                "experience",
-                                "previousCompanies",
-                                newExp
-                              );
-                            }}
-                            placeholder="Job position"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            From Date
-                          </label>
-                          <Input
-                            type="date"
-                            value={exp.fromDate}
-                            onChange={(e) => {
-                              const newExp = [
-                                ...formData.experience.previousCompanies,
-                              ];
-                              newExp[index].fromDate = e.target.value;
-                              handleNestedChange(
-                                "experience",
-                                "previousCompanies",
-                                newExp
-                              );
-                            }}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            To Date
-                          </label>
-                          <Input
-                            type="date"
-                            value={exp.toDate}
-                            onChange={(e) => {
-                              const newExp = [
-                                ...formData.experience.previousCompanies,
-                              ];
-                              newExp[index].toDate = e.target.value;
-                              handleNestedChange(
-                                "experience",
-                                "previousCompanies",
-                                newExp
-                              );
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Salary (Optional) */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Salary Information (Optional)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Basic Salary
-                      </label>
-                      <Input
-                        type="number"
-                        value={formData.salary?.basic}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "salary",
-                            "basic",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        placeholder="Basic salary"
-                        min="0"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Allowances
-                      </label>
-                      <Input
-                        type="number"
-                        value={formData.salary?.allowances}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "salary",
-                            "allowances",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        placeholder="Allowances"
-                        min="0"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Deductions
-                      </label>
-                      <Input
-                        type="number"
-                        value={formData.salary?.deductions}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "salary",
-                            "deductions",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        placeholder="Deductions"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-
-                  {formData.salary && formData.salary.basic > 0 && (
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm font-medium text-blue-900">
-                        Net Salary:{" "}
-                        {(
-                          (formData.salary.basic || 0) +
-                          (formData.salary.allowances || 0) -
-                          (formData.salary.deductions || 0)
-                        ).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Photos */}
+              
+            {/*  Photos */}
             <div className="space-y-6">
               {/* Photo Upload */}
               <Card>
@@ -1561,111 +1360,295 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
                 </CardContent>
               </Card>
             </div>
-          </div>
 
-            {/* Form Actions */}
-            <div className="flex justify-end gap-4 pt-6 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+              {/* Experience */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">Work Experience</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total Years of Experience
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.experience.totalYears}
+                      onChange={(e) =>
+                        handleNestedChange(
+                          "experience",
+                          "totalYears",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      placeholder="Total years"
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Previous Companies
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addExperience}
+                      size="sm"
+                    >
+                      Add Experience
+                    </Button>
+                  </div>
+
+                  {formData.experience.previousCompanies.map((exp, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-200 rounded-lg space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-medium text-gray-700">
+                          Experience {index + 1}
+                        </h5>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeExperience(index)}
+                          size="sm"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Company Name
+                          </label>
+                          <Input
+                            value={exp.companyName}
+                            onChange={(e) => {
+                              const newExp = [
+                                ...formData.experience.previousCompanies,
+                              ];
+                              newExp[index].companyName = e.target.value;
+                              handleNestedChange(
+                                "experience",
+                                "previousCompanies",
+                                newExp
+                              );
+                            }}
+                            placeholder="Company name"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Position
+                          </label>
+                          <Input
+                            value={exp.position}
+                            onChange={(e) => {
+                              const newExp = [
+                                ...formData.experience.previousCompanies,
+                              ];
+                              newExp[index].position = e.target.value;
+                              handleNestedChange(
+                                "experience",
+                                "previousCompanies",
+                                newExp
+                              );
+                            }}
+                            placeholder="Job position"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            From Date
+                          </label>
+                          <Input
+                            type="date"
+                            value={exp.fromDate}
+                            onChange={(e) => {
+                              const newExp = [
+                                ...formData.experience.previousCompanies,
+                              ];
+                              newExp[index].fromDate = e.target.value;
+                              handleNestedChange(
+                                "experience",
+                                "previousCompanies",
+                                newExp
+                              );
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            To Date
+                          </label>
+                          <Input
+                            type="date"
+                            value={exp.toDate}
+                            onChange={(e) => {
+                              const newExp = [
+                                ...formData.experience.previousCompanies,
+                              ];
+                              newExp[index].toDate = e.target.value;
+                              handleNestedChange(
+                                "experience",
+                                "previousCompanies",
+                                newExp
+                              );
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Salary (Optional) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">Salary Information (Optional)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Basic Salary
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.salary?.basic}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "salary",
+                            "basic",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        placeholder="Basic salary"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Allowances
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.salary?.allowances}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "salary",
+                            "allowances",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        placeholder="Allowances"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Deductions
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.salary?.deductions}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "salary",
+                            "deductions",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        placeholder="Deductions"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  {formData.salary && formData.salary.basic > 0 && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900">
+                        Net Salary:{" "}
+                        {(
+                          (formData.salary.basic || 0) +
+                          (formData.salary.allowances || 0) -
+                          (formData.salary.deductions || 0)
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Form Actions - Fixed at bottom */}
+            <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4 p-3 sm:p-4 md:p-6 border-t bg-white">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                className="w-full sm:w-auto"
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Save className="h-4 w-4" />
-                {isSubmitting 
-                  ? (isEditMode ? "Updating..." : "Creating...")
-                  : (isEditMode ? "Update Accountant" : "Create Accountant")
-                }
+                <span className="truncate">
+                  {isSubmitting 
+                    ? (isEditMode ? "Updating..." : "Creating...")
+                    : (isEditMode ? "Update Accountant" : "Create Accountant")
+                  }
+                </span>
               </Button>
             </div>
           </form>
         </div>
 
-      </div>
-
-      {/* Progress Indicator */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <div>
-                <p className="font-medium">
-                  {isEditMode ? "Updating accountant profile..." : "Creating accountant profile..."}
-                </p>
-                {!isEditMode && formData.photos.length > 0 && (
-                  <p className="text-sm text-gray-500">
-                    Uploading photos to Cloudinary
+        {/* Progress Indicator */}
+        {isSubmitting && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div>
+                  <p className="font-medium text-sm sm:text-base">
+                    {isEditMode ? "Updating accountant profile..." : "Creating accountant profile..."}
                   </p>
-                )}
+                  {!isEditMode && formData.photos.length > 0 && (
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      Uploading photos to Cloudinary
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Credentials Display Modal */}
-      {credentials && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Accountant Credentials Generated
-            </h2>
-
-            <div className="space-y-4 mb-6">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Accountant ID</p>
-                <p className="font-mono font-bold text-lg">
-                  {credentials.accountantId}
-                </p>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Employee ID</p>
-                <p className="font-mono font-bold text-lg">
-                  {credentials.employeeId}
-                </p>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Username</p>
-                <p className="font-mono font-bold text-lg">{credentials.username}</p>
-              </div>
-
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-sm text-gray-600 mb-1">Temporary Password</p>
-                <p className="font-mono font-bold text-lg text-yellow-900">
-                  {credentials.password}
-                </p>
-                <p className="text-xs text-yellow-700 mt-2">
-                  ⚠️ User must change password on first login
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg mb-6">
-              <p className="text-sm text-blue-800">
-                <strong>Important:</strong> Please save these credentials securely.
-                They will not be shown again. The accountant must use these to log
-                in for the first time.
-              </p>
-            </div>
-
-            <Button
-              onClick={() => {
-                setCredentials(null);
-                onClose();
-              }}
-              className="w-full"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      )}
-    </>
+        {/* Credentials Modal */}
+        <AccountantCredentialsModal
+          isOpen={!!credentials}
+          onClose={() => {
+            setCredentials(null);
+            onClose();
+          }}
+          credentials={credentials}
+          accountantName={`${formData.firstName} ${formData.lastName}`}
+        />
+    </div>
   );
 };
 
