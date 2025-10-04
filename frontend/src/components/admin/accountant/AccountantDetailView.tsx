@@ -22,7 +22,7 @@ import {
   FileText,
   Award,
 } from "lucide-react";
-import { AccountantCredentialsModal } from "./AccountantCredentialsModal";
+import AccountantCredentialsManager from "./AccountantCredentialsManager";
 
 interface Accountant {
   id: string;
@@ -664,20 +664,12 @@ const AccountantDetailView: React.FC<AccountantDetailViewProps> = ({
 
       {/* Credentials Manager Modal */}
       {showCredentials && (
-        <AccountantCredentialsModal
-          isOpen={showCredentials}
-          onClose={() => setShowCredentials(false)}
-          credentials={{
-            accountant: {
-              id: accountant.accountantId || accountant.id,
-              username: accountant.user?.username || "",
-              password: "••••••••", // Password not available in view mode
-              email: accountant.user?.email,
-              phone: accountant.user?.phone,
-            },
-            employeeId: accountant.employeeId || "",
+        <AccountantCredentialsManager
+          accountant={{
+            accountantId: accountant.accountantId || accountant.id,
+            user: accountant.user,
           }}
-          accountantName={getFullName()}
+          onClose={() => setShowCredentials(false)}
         />
       )}
     </div>

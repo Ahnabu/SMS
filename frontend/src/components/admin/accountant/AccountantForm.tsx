@@ -644,16 +644,17 @@ const AccountantForm: React.FC<AccountantFormProps> = ({ accountant, isOpen, onC
         
         if (response.data?.data?.credentials) {
           const creds = response.data.data.credentials;
+          console.log("Received credentials from backend:", creds); // Debug log
           // Transform to match CredentialsModal format
           setCredentials({
             accountant: {
               id: creds.accountantId || "",
               username: creds.username || "",
-              password: creds.password || "",
+              password: creds.password || "", // Password should be here
               email: formData.email,
               phone: formData.phone,
             },
-            employeeId: creds.employeeId || "",
+            employeeId: creds.employeeId || response.data.data.employeeId || "",
           });
         }
 

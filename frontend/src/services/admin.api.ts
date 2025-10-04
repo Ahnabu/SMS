@@ -193,6 +193,8 @@ export const adminApi = {
   updateAccountant: (id: string, data: any) => api.put<ApiResponse>(`/accountants/${id}`, data),
   deleteAccountant: (id: string) => api.delete<ApiResponse>(`/accountants/${id}`),
   getAccountantStats: (schoolId: string) => api.get<ApiResponse>(`/accountants/stats/${schoolId}`),
+  getAccountantCredentials: (accountantId: string) => api.get<ApiResponse>(`/accountants/${accountantId}/credentials`),
+  resetAccountantPassword: (accountantId: string) => api.post<ApiResponse>(`/accountants/${accountantId}/credentials/reset`),
 
   // Reports and analytics
   getStudentStats: () => api.get<ApiResponse>("/admin/stats/students"),
