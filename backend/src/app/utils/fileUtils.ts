@@ -95,6 +95,37 @@ export class FileUtils {
   }
 
   /**
+   * Create photo folder for accountant with required naming structure
+   */
+  static async createAccountantPhotoFolder(
+    schoolName: string,
+    accountantInfo: {
+      firstName: string;
+      age: number;
+      bloodGroup: string;
+      joinDate: string;
+      accountantId: string;
+    }
+  ): Promise<string> {
+    // Clean school name for folder path
+    const cleanSchoolName = schoolName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+
+    // Create folder name with required format
+    const folderName = `accountant@${accountantInfo.firstName}@${accountantInfo.age}@${accountantInfo.bloodGroup}@${accountantInfo.joinDate}@${accountantInfo.accountantId}`;
+
+    // Build full path
+    const baseStoragePath = path.resolve(config.upload_path);
+    const schoolPath = path.join(baseStoragePath, cleanSchoolName);
+    const accountantsPath = path.join(schoolPath, 'Accountants');
+    const accountantFolderPath = path.join(accountantsPath, folderName);
+
+    // Ensure directory exists
+    await this.ensureDirectory(accountantFolderPath);
+
+    return accountantFolderPath;
+  }
+
+  /**
    * Save uploaded file to specific directory with numbered naming
    */
   static async savePhotoWithNumber(

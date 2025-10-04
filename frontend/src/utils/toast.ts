@@ -106,6 +106,16 @@ const FIELD_NAME_MAPPING: Record<string, string> = {
   qualifications: "Educational Qualifications",
   experience: "Work Experience",
   
+  // Accountant fields
+  department: "Department",
+  responsibilities: "Job Responsibilities",
+  certifications: "Professional Certifications",
+  salary: "Salary Information",
+  
+  // Photo fields
+  photos: "Photos",
+  photo: "Photo",
+  
   // School fields
   schoolId: "School",
   schoolName: "School Name",
@@ -200,6 +210,25 @@ const getFriendlyErrorMessage = (path: string, message: string): string => {
   
   if (path === "employeeId" && message.includes("duplicate")) {
     return `This employee ID is already in use`;
+  }
+  
+  // Photo-specific validation messages
+  if (path === "photos" || path === "photo") {
+    if (message.includes("required")) {
+      return `Please upload at least 3 photos (3-10 photos required)`;
+    }
+    if (message.includes("minimum") || message.includes("at least 3")) {
+      return `Please upload at least 3 photos`;
+    }
+    if (message.includes("maximum") || message.includes("more than 10") || message.includes("exceeds")) {
+      return `Maximum 10 photos allowed`;
+    }
+    if (message.includes("size") || message.includes("10MB")) {
+      return `Each photo must be under 10MB`;
+    }
+    if (message.includes("format") || message.includes("type")) {
+      return `Only image files (JPG, PNG, GIF) are allowed`;
+    }
   }
   
   // Default: Use field name + cleaned message

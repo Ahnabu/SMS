@@ -15,6 +15,7 @@ import AcademicCalendar from "../components/admin/AcademicCalendar";
 import TeacherDetailView from "../components/admin/TeacherDetailView";
 import AdminDisciplinaryActionsManager from "../components/admin/AdminDisciplinaryActionsManager";
 import SchoolSettings from "../components/admin/SchoolSettings";
+import AccountantManagement from "../components/admin/accountant/AccountantManagement";
 
 import MinimalTeacherForm from "../components/admin/teacher/MinimalTeacherForm";
 
@@ -27,6 +28,7 @@ const AdminDashboard: React.FC = () => {
     { href: '/admin', label: 'Dashboard' },
     { href: '/admin/students', label: 'Students' },
     { href: '/admin/teachers', label: 'Teachers' },
+    { href: '/admin/accountants', label: 'Accountants' },
     { href: '/admin/subjects', label: 'Subjects' },
     { href: '/admin/schedules', label: 'Schedules' },
     { href: '/admin/disciplinary-actions', label: 'Disciplinary Actions' },
@@ -86,6 +88,7 @@ const AdminDashboard: React.FC = () => {
           />
           <Route path="/students" element={<StudentManagement onDataChange={loadDashboardData} />} />
           <Route path="/teachers" element={<TeacherManagement />} />
+          <Route path="/accountants" element={<AccountantManagement />} />
           <Route path="/subjects" element={<SubjectManagementPage />} />
           <Route path="/schedules" element={<ScheduleManagementPage />} />
           <Route path="/disciplinary-actions" element={<AdminDisciplinaryActionsManager />} />

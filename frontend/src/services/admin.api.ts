@@ -179,6 +179,21 @@ export const adminApi = {
   updateTeacher: (id: string, data: any) => api.put<ApiResponse>(`/teachers/${id}`, data),
   deleteTeacher: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
 
+  // Accountant management
+  createAccountant: (data: any) => api.post<ApiResponse>("/accountants", data),
+  getAccountants: (params?: {
+    page?: number;
+    limit?: number;
+    department?: string;
+    designation?: string;
+    search?: string;
+    isActive?: boolean;
+  }) => api.get<ApiResponse>("/accountants", { params }),
+  getAccountantById: (id: string) => api.get<ApiResponse>(`/accountants/${id}`),
+  updateAccountant: (id: string, data: any) => api.put<ApiResponse>(`/accountants/${id}`, data),
+  deleteAccountant: (id: string) => api.delete<ApiResponse>(`/accountants/${id}`),
+  getAccountantStats: (schoolId: string) => api.get<ApiResponse>(`/accountants/stats/${schoolId}`),
+
   // Reports and analytics
   getStudentStats: () => api.get<ApiResponse>("/admin/stats/students"),
   getTeacherStats: () => api.get<ApiResponse>("/admin/stats/teachers"),

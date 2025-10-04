@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { Student } from "../modules/student/student.model";
 import { Teacher } from "../modules/teacher/teacher.model";
 import { User } from "../modules/user/user.model";
+// Accountant model will be dynamically imported to avoid circular dependencies
 
 export interface GeneratedCredentials {
   username: string;
@@ -577,6 +578,109 @@ export class CredentialGenerator {
     }
 
     return { teacherId, employeeId, sequenceNumber: nextSequence };
+  }
+
+  /**
+   * Generate unique accountant ID (similar to teacher ID generation)
+   */
+  static async generateUniqueAccountantId(
+    joiningYear: number,
+    schoolId: string,
+    designation?: string
+  ): Promise<{
+    accountantId: string;
+    employeeId: string;
+    sequenceNumber: number;
+  }> {
+    // Get school information for school code prefix
+    const School = (await import('../modules/school/school.model')).School;
+    const school = await School.findById(schoolId);
+    if (!school) {
+      throw new Error('School not found');
+    }
+    const schoolCode = school.schoolId || 'SCH001';
+    
+    // Import Accountant model dynamically to avoid circular dependency
+    const { Accountant } = await import('../modules/accountant/accountant.model');
+    
+    // Find all existing accountants for this year and school
+    const existingAccountants = await Accountant.find({
+      schoolId,
+      joinDate: {
+        $gte: new Date(joiningYear, 0, 1),
+        $lt: new Date(joiningYear + 1, 0, 1),
+      },
+      isActive: true,
+    })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    let nextSequence = 1;
+
+    if (existingAccountants.length > 0) {
+      const allSequences = existingAccountants
+        .map((accountant) => {
+          const match = accountant.accountantId.match(new RegExp(`${schoolCode}-ACC-\\d{4}-(\\d{3})`));
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter((seq) => seq > 0);
+
+      if (allSequences.length > 0) {
+        nextSequence = Math.max(...allSequences) + 1;
+      }
+    }
+
+    const sequenceStr = nextSequence.toString().padStart(3, "0");
+    const accountantId = `${schoolCode}-ACC-${joiningYear}-${sequenceStr}`;
+    const employeeId = `${schoolCode}-EMP-ACC-${joiningYear}-${sequenceStr}`;
+
+    // Double-check uniqueness
+    const existingWithId = await Accountant.findOne({
+      $or: [{ accountantId }, { employeeId }],
+      schoolId,
+      isActive: true,
+    });
+
+    if (existingWithId) {
+      return this.generateUniqueAccountantId(joiningYear, schoolId, designation);
+    }
+
+    return { accountantId, employeeId, sequenceNumber: nextSequence };
+  }
+
+  /**
+   * Generate accountant credentials (similar to teacher credentials)
+   */
+  static async generateAccountantCredentials(
+    firstName: string,
+    lastName: string,
+    accountantId: string
+  ): Promise<GeneratedCredentials> {
+    // Generate username from accountant ID (remove dashes, lowercase)
+    const baseUsername = accountantId.replace(/-/g, "").toLowerCase();
+
+    // Ensure username uniqueness
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await User.findOne({ username })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    // Generate secure password (accountant ID + random suffix for initial login)
+    const randomSuffix = crypto.randomBytes(2).toString("hex").toUpperCase();
+    const password = `${accountantId}-${randomSuffix}`;
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    return {
+      username,
+      password,
+      hashedPassword,
+      requiresPasswordChange: true,
+    };
   }
 
   /**
