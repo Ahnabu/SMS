@@ -68,7 +68,7 @@ export class AccountantCredentialsService {
   static async getAccountantCredentials(accountantId: string): Promise<CredentialsResponse | null> {
     try {
       const accountant = await Accountant.findOne({ accountantId })
-        .populate('userId', 'username firstName lastName credentialsGenerated passwordChangeRequired');
+        .populate('userId', 'username firstName lastName displayPassword credentialsGenerated passwordChangeRequired');
 
       if (!accountant || !accountant.userId) {
         return null;
@@ -80,7 +80,7 @@ export class AccountantCredentialsService {
         credentials: {
           accountantId,
           username: user.username,
-          password: accountantId,
+          password: user.displayPassword || accountantId,
           temporaryPassword: user.passwordChangeRequired !== false
         },
         message: user.credentialsGenerated 
@@ -101,30 +101,31 @@ export class AccountantCredentialsService {
   static async resetAccountantPassword(accountantId: string): Promise<CredentialsResponse> {
     try {
       const accountant = await Accountant.findOne({ accountantId })
-        .populate('userId', 'username');
+        .populate('userId', 'username displayPassword');
 
       if (!accountant || !accountant.userId) {
         throw new AppError(httpStatus.NOT_FOUND, 'Accountant not found');
       }
 
+      const user = accountant.userId as any;
+      const newPassword = user.displayPassword || accountantId;
+
       await User.findByIdAndUpdate(accountant.userId, {
         $set: {
-          passwordHash: accountantId,
+          passwordHash: newPassword,
           passwordChangeRequired: true,
           passwordResetAt: new Date()
         }
       });
 
-      const user = accountant.userId as any;
-
       return {
         credentials: {
           accountantId,
           username: user.username,
-          password: accountantId,
+          password: newPassword,
           temporaryPassword: true
         },
-        message: 'Password has been reset to Accountant ID. Should change password on first login.'
+        message: 'Password has been reset to the original credentials. Should change password on first login.'
       };
     } catch (error) {
       if (error instanceof AppError) {

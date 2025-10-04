@@ -74,7 +74,7 @@ export class TeacherCredentialsService {
   static async getTeacherCredentials(teacherId: string): Promise<CredentialsResponse | null> {
     try {
       const teacher = await Teacher.findOne({ teacherId })
-        .populate('userId', 'username firstName lastName credentialsGenerated passwordChangeRequired');
+        .populate('userId', 'username firstName lastName displayPassword credentialsGenerated passwordChangeRequired');
 
       if (!teacher || !teacher.userId) {
         return null;
@@ -87,7 +87,7 @@ export class TeacherCredentialsService {
         credentials: {
           teacherId,
           username: user.username,
-          password: teacherId, // Default password is teacherId
+          password: user.displayPassword || teacherId, // Use displayPassword if available
           temporaryPassword: user.passwordChangeRequired !== false
         },
         message: user.credentialsGenerated 
@@ -108,31 +108,32 @@ export class TeacherCredentialsService {
   static async resetTeacherPassword(teacherId: string): Promise<CredentialsResponse> {
     try {
       const teacher = await Teacher.findOne({ teacherId })
-        .populate('userId', 'username');
+        .populate('userId', 'username displayPassword');
 
       if (!teacher || !teacher.userId) {
         throw new AppError(httpStatus.NOT_FOUND, 'Teacher not found');
       }
 
-      // Reset password to teacherId
+      const user = teacher.userId as any;
+      const newPassword = user.displayPassword || teacherId;
+
+      // Reset password to original credentials
       await User.findByIdAndUpdate(teacher.userId, {
         $set: {
-          passwordHash: teacherId, // Will be hashed by pre-save middleware
+          passwordHash: newPassword, // Will be hashed by pre-save middleware
           passwordChangeRequired: true,
           passwordResetAt: new Date()
         }
       });
 
-      const user = teacher.userId as any;
-
       return {
         credentials: {
           teacherId,
           username: user.username,
-          password: teacherId,
+          password: newPassword,
           temporaryPassword: true
         },
-        message: 'Password has been reset to Teacher ID. Teacher should change password on first login.'
+        message: 'Password has been reset to the original credentials. Teacher should change password on first login.'
       };
     } catch (error) {
       if (error instanceof AppError) {

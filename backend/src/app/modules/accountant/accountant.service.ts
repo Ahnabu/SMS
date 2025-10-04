@@ -65,6 +65,7 @@ class AccountantService {
             role: "accountant",
             username: credentials.username,
             passwordHash: credentials.hashedPassword,
+            displayPassword: credentials.password,
             firstName: accountantData.firstName,
             lastName: accountantData.lastName,
             email: accountantData.email,

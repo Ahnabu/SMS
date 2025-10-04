@@ -72,6 +72,7 @@ class TeacherService {
             role: "teacher",
             username: credentials.username,
             passwordHash: credentials.hashedPassword,
+            displayPassword: credentials.password,
             firstName: teacherData.firstName,
             lastName: teacherData.lastName,
             email: teacherData.email,

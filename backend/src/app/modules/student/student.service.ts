@@ -144,6 +144,7 @@ class StudentService {
                 role: "student",
                 username: credentials.student.username,
                 passwordHash: credentials.student.hashedPassword,
+                displayPassword: credentials.student.password,
                 firstName: studentData.firstName,
                 lastName: studentData.lastName,
                 email: studentData.email,
@@ -266,6 +267,7 @@ class StudentService {
                 role: "parent",
                 username: credentials.parent.username,
                 passwordHash: credentials.parent.hashedPassword,
+                displayPassword: credentials.parent.password,
                 firstName: parentInfo.name.split(" ")[0] || parentInfo.name,
                 lastName:
                   parentInfo.name.split(" ").slice(1).join(" ") || "Guardian", // Default lastName if not provided
