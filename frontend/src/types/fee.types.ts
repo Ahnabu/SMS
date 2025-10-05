@@ -74,6 +74,7 @@ export interface FeeComponent {
   amount: number;
   description?: string;
   isMandatory: boolean;
+  isOneTime: boolean;
 }
 
 export interface FeeStructure {
@@ -82,8 +83,10 @@ export interface FeeStructure {
   grade: string;
   academicYear: string;
   feeComponents: FeeComponent[];
-  totalMonthlyFee: number;
-  totalYearlyFee: number;
+  totalAmount: number; // Monthly fee total (excluding one-time fees)
+  totalMonthlyFee: number; // Same as totalAmount
+  totalOneTimeFee: number; // Sum of one-time fees
+  totalYearlyFee: number; // (totalMonthlyFee × 12) + totalOneTimeFee
   dueDate: number;
   lateFeePercentage: number;
   isActive: boolean;
@@ -192,6 +195,7 @@ export interface CreateFeeStructureRequest {
     amount: number;
     description?: string;
     isMandatory: boolean;
+    isOneTime: boolean;
   }>;
   dueDate: number;
   lateFeePercentage: number;
@@ -203,6 +207,7 @@ export interface UpdateFeeStructureRequest {
     amount: number;
     description?: string;
     isMandatory: boolean;
+    isOneTime: boolean;
   }>;
   dueDate?: number;
   lateFeePercentage?: number;

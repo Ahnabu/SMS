@@ -82,6 +82,7 @@ export interface IFeeComponent {
   amount: number;
   description?: string;
   isMandatory: boolean;
+  isOneTime: boolean;
 }
 
 /**
@@ -93,7 +94,7 @@ export interface IFeeStructure {
   grade: string;
   academicYear: string; // e.g., "2025-2026"
   feeComponents: IFeeComponent[];
-  totalAmount: number;
+  totalAmount: number; // Monthly fee total (excluding one-time fees)
   dueDate: number; // Day of month (1-31)
   lateFeePercentage: number;
   isActive: boolean;
@@ -101,6 +102,10 @@ export interface IFeeStructure {
   updatedBy?: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
+  // Virtual properties
+  totalMonthlyFee?: number; // Same as totalAmount
+  totalOneTimeFee?: number; // Sum of one-time fees
+  totalYearlyFee?: number; // (totalAmount × 12) + totalOneTimeFee
   // Methods
   deactivate(updatedBy: string): Promise<IFeeStructure>;
   canModify(): boolean;

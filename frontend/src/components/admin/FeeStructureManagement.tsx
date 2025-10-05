@@ -154,6 +154,7 @@ const FeeStructureManagement: React.FC = () => {
         amount: fc.amount,
         description: fc.description,
         isMandatory: fc.isMandatory,
+        isOneTime: fc.isOneTime || false,
       })),
       dueDate: structure.dueDate,
       lateFeePercentage: structure.lateFeePercentage,
@@ -231,7 +232,7 @@ const FeeStructureManagement: React.FC = () => {
       ...formData,
       feeComponents: [
         ...formData.feeComponents,
-        { feeType: FeeType.TUITION, amount: 0, description: "", isMandatory: true },
+        { feeType: FeeType.TUITION, amount: 0, description: "", isMandatory: true, isOneTime: false },
       ],
     });
   };
@@ -251,9 +252,15 @@ const FeeStructureManagement: React.FC = () => {
     });
   };
 
-  // Calculate total
+  // Calculate total yearly fee per student
   const calculateTotal = () => {
-    return formData.feeComponents.reduce((sum, component) => sum + component.amount, 0);
+    const monthlyTotal = formData.feeComponents
+      .filter(c => !c.isOneTime)
+      .reduce((sum, c) => sum + c.amount, 0);
+    const oneTimeTotal = formData.feeComponents
+      .filter(c => c.isOneTime)
+      .reduce((sum, c) => sum + c.amount, 0);
+    return (monthlyTotal * 12) + oneTimeTotal;
   };
 
   if (loading && feeStructures.length === 0) {
@@ -368,7 +375,7 @@ const FeeStructureManagement: React.FC = () => {
                     <p className="text-sm text-gray-600 mb-2">Monthly Components:</p>
                     <div className="space-y-1">
                       {structure.feeComponents
-                        .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                        .filter(c => !c.isOneTime)
                         .map((component, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-gray-600 capitalize">
@@ -382,16 +389,16 @@ const FeeStructureManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {structure.feeComponents.some(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL) && (
+                  {structure.feeComponents.some(c => c.isOneTime) && (
                     <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
                       <p className="text-sm text-orange-800 font-medium mb-2">One-Time Fees:</p>
                       <div className="space-y-1">
                         {structure.feeComponents
-                          .filter(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL)
+                          .filter(c => c.isOneTime)
                           .map((component, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
                             <span className="text-orange-700 capitalize font-medium">
-                              {component.feeType === FeeType.ADMISSION ? '🎓' : '📅'} {component.feeType}
+                              {component.feeType === FeeType.ADMISSION ? '🎓' : component.feeType === FeeType.ANNUAL ? '📅' : '⚡'} {component.feeType}
                             </span>
                             <span className="font-bold text-orange-800">
                               ₹{formatCurrency(component.amount)}
@@ -566,8 +573,7 @@ const FeeStructureManagement: React.FC = () => {
 
                   <div className="space-y-3">
                     {formData.feeComponents.map((component, index) => {
-                      const isOneTimeFee = component.feeType === FeeType.ADMISSION || 
-                                          component.feeType === FeeType.ANNUAL;
+                      const isOneTimeFee = component.isOneTime;
                       
                       return (
                         <div 
@@ -589,20 +595,18 @@ const FeeStructureManagement: React.FC = () => {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value={FeeType.TUITION}>Tuition (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.TRANSPORT}>Transport (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.HOSTEL}>Hostel (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.LIBRARY}>Library (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.LAB}>Lab (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.SPORTS}>Sports (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.EXAM}>Exam (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.OTHER}>Other (Monthly)</SelectItem>
-                                  <SelectItem value={FeeType.ADMISSION} className="font-semibold text-orange-600">
-                                    🎓 Admission (One-Time)
+                                  <SelectItem value={FeeType.TUITION}>Tuition</SelectItem>
+                                  <SelectItem value={FeeType.TRANSPORT}>Transport</SelectItem>
+                                  <SelectItem value={FeeType.HOSTEL}>Hostel</SelectItem>
+                                  <SelectItem value={FeeType.LIBRARY}>Library</SelectItem>
+                                  <SelectItem value={FeeType.LAB}>Lab</SelectItem>
+                                  <SelectItem value={FeeType.SPORTS}>Sports</SelectItem>
+                                  <SelectItem value={FeeType.EXAM}>Exam</SelectItem>
+                                  <SelectItem value={FeeType.ADMISSION}>🎓 Admission
                                   </SelectItem>
-                                  <SelectItem value={FeeType.ANNUAL} className="font-semibold text-orange-600">
-                                    📅 Annual (One-Time)
+                                  <SelectItem value={FeeType.ANNUAL}>📅 Annual
                                   </SelectItem>
+                                  <SelectItem value={FeeType.OTHER}>Other</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -649,9 +653,22 @@ const FeeStructureManagement: React.FC = () => {
                                 />
                                 Mandatory
                               </label>
+                              <label className="flex items-center text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={component.isOneTime}
+                                  onChange={(e) =>
+                                    updateFeeComponent(index, "isOneTime", e.target.checked)
+                                  }
+                                  className="mr-2"
+                                />
+                                <span className={isOneTimeFee ? "text-orange-600 font-medium" : ""}>
+                                  One-Time Fee
+                                </span>
+                              </label>
                               {isOneTimeFee && (
                                 <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded font-medium">
-                                  One-Time Fee
+                                  ⚡ One-Time
                                 </span>
                               )}
                             </div>
@@ -680,7 +697,7 @@ const FeeStructureManagement: React.FC = () => {
                           <span className="text-xl font-bold text-blue-700">
                             {formatCurrency(
                               formData.feeComponents
-                                .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                                .filter(c => !c.isOneTime)
                                 .reduce((sum, c) => sum + c.amount, 0)
                             )}
                           </span>
@@ -688,26 +705,26 @@ const FeeStructureManagement: React.FC = () => {
                         <p className="text-xs text-gray-600 mt-1">
                           Collected every month × 12 = ₹{formatCurrency(
                             formData.feeComponents
-                              .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                              .filter(c => !c.isOneTime)
                               .reduce((sum, c) => sum + c.amount, 0) * 12
                           )}
                         </p>
                       </div>
 
-                      {formData.feeComponents.some(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL) && (
+                      {formData.feeComponents.some(c => c.isOneTime) && (
                         <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
                           <div className="flex justify-between items-center">
                             <span className="font-medium text-orange-800">One-Time Fees</span>
                             <span className="text-xl font-bold text-orange-700">
                               {formatCurrency(
                                 formData.feeComponents
-                                  .filter(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL)
+                                  .filter(c => c.isOneTime)
                                   .reduce((sum, c) => sum + c.amount, 0)
                               )}
                             </span>
                           </div>
                           <p className="text-xs text-orange-600 mt-1">
-                            Collected once per student (admission/annual fees)
+                            Collected once per student (paid with first monthly payment)
                           </p>
                         </div>
                       )}

@@ -74,13 +74,12 @@ const AccountantFeeCollection: React.FC = () => {
   const [amount, setAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [remarks, setRemarks] = useState("");
+  const [includeLateFee, setIncludeLateFee] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
-
-  // One-time fee states
-  const [feeCollectionType, setFeeCollectionType] = useState<"monthly" | "onetime">("monthly");
-  const [selectedFeeType, setSelectedFeeType] = useState<string>("admission");
-  const [oneTimeFeeAmount, setOneTimeFeeAmount] = useState<number>(0);
+  const [validationData, setValidationData] = useState<any>(null);
   const [detailedFeeStatus, setDetailedFeeStatus] = useState<any>(null);
+  const [lastTransaction, setLastTransaction] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,10 +195,6 @@ const AccountantFeeCollection: React.FC = () => {
       if (detailedResponse.success) {
         setDetailedFeeStatus(detailedResponse.data);
         
-        // If admission fee is pending, set it as default
-        if (detailedResponse.data.admissionPending && detailedResponse.data.admissionFeeAmount) {
-          setOneTimeFeeAmount(detailedResponse.data.admissionFeeAmount - (detailedResponse.data.admissionFeePaid || 0));
-        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to load fee status");
@@ -220,12 +215,19 @@ const AccountantFeeCollection: React.FC = () => {
         studentId: selectedStudent._id,
         month: selectedMonth,
         amount: amount,
+        includeLateFee: includeLateFee,
       });
 
       if (response.success) {
+        setValidationData(response.data);
         setWarnings(response.data.warnings || []);
 
         if (response.data.valid) {
+          // Auto-set amount if it includes one-time fees or late fees
+          const suggestedAmount = response.data.expectedAmount;
+          if (amount === 0 || (response.data.isFirstPayment && response.data.totalOneTimeFeeAmount > 0)) {
+            setAmount(suggestedAmount);
+          }
           setSuccess("Validation successful! You can proceed with collection.");
           setTimeout(() => setSuccess(null), 3000);
         } else {
@@ -247,7 +249,11 @@ const AccountantFeeCollection: React.FC = () => {
       return;
     }
 
-    if (window.confirm(`Confirm fee collection of ₹${formatCurrency(amount)} for ${selectedStudent.name}?`)) {
+    const confirmMessage = validationData?.isFirstPayment && validationData?.totalOneTimeFeeAmount > 0
+      ? `Confirm fee collection of ₹${formatCurrency(amount)} for ${selectedStudent.name}?\n\nThis includes:\n- Monthly fee: ₹${formatCurrency(validationData.monthlyExpectedAmount)}\n- One-time fees: ₹${formatCurrency(validationData.totalOneTimeFeeAmount)}`
+      : `Confirm fee collection of ₹${formatCurrency(amount)} for ${selectedStudent.name}?`;
+
+    if (window.confirm(confirmMessage)) {
       try {
         setLoading(true);
         setError(null);
@@ -258,56 +264,29 @@ const AccountantFeeCollection: React.FC = () => {
           amount: amount,
           paymentMethod: paymentMethod,
           remarks: remarks,
+          includeLateFee: includeLateFee,
         });
 
         if (response.success) {
-          setSuccess(`Fee collected successfully! Transaction ID: ${response.data.transaction?.transactionId || 'N/A'}`);
+          // Store transaction data for receipt
+          setLastTransaction({
+            ...response.data.transaction,
+            oneTimeFeeTransactions: response.data.oneTimeFeeTransactions,
+            student: selectedStudent,
+            totalOneTimeFeeAmount: response.data.totalOneTimeFeeAmount,
+            isFirstPayment: response.data.isFirstPayment,
+          });
 
+          setSuccess(`Fee collected successfully! Transaction ID: ${response.data.transaction?.transactionId || 'N/A'}`);
+          setShowReceipt(true);
+
+          // Refresh fee status
           const statusResponse = await apiService.accountant.getStudentFeeStatus(
             selectedStudent._id
           );
           if (statusResponse.success) {
             setFeeStatus(statusResponse.data);
           }
-
-          loadAllStudents();
-
-          setAmount(0);
-          setRemarks("");
-          setWarnings([]);
-          setPaymentMethod("cash");
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to collect fee");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleCollectOneTimeFee = async () => {
-    if (!selectedStudent) return;
-
-    if (!oneTimeFeeAmount || oneTimeFeeAmount <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    if (window.confirm(`Confirm ${selectedFeeType} fee collection of ₹${formatCurrency(oneTimeFeeAmount)} for ${selectedStudent.name}?`)) {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await apiService.fee.collectOneTimeFee({
-          studentId: selectedStudent.studentId,
-          feeType: selectedFeeType,
-          amount: oneTimeFeeAmount,
-          paymentMethod: paymentMethod,
-          remarks: remarks,
-        });
-
-        if (response.success) {
-          setSuccess(`${selectedFeeType} fee collected successfully! Transaction ID: ${response.data.transaction?.transactionId || 'N/A'}`);
 
           // Refresh detailed fee status
           const detailedResponse = await apiService.fee.getStudentFeeStatusDetailed(
@@ -320,17 +299,22 @@ const AccountantFeeCollection: React.FC = () => {
 
           loadAllStudents();
 
-          setOneTimeFeeAmount(0);
+          setAmount(0);
           setRemarks("");
+          setWarnings([]);
+          setValidationData(null);
           setPaymentMethod("cash");
-          setTimeout(() => setSuccess(null), 5000);
         }
       } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to collect one-time fee");
+        setError(err.response?.data?.message || "Failed to collect fee");
       } finally {
         setLoading(false);
       }
     }
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
   };
 
   const handleClearSelection = () => {
@@ -582,34 +566,39 @@ const AccountantFeeCollection: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Fee Collection Type Tabs */}
+                  {/* Unified Fee Collection Form */}
                   <div className="border-t pt-4">
-                    <div className="flex gap-2 mb-4">
-                      <button
-                        onClick={() => setFeeCollectionType("monthly")}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                          feeCollectionType === "monthly"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Monthly Fee
-                      </button>
-                      <button
-                        onClick={() => setFeeCollectionType("onetime")}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                          feeCollectionType === "onetime"
-                            ? "bg-orange-600 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        One-Time Fee
-                      </button>
-                    </div>
+                    {validationData?.isFirstPayment && validationData?.totalOneTimeFeeAmount > 0 && (
+                      <Alert className="bg-orange-50 border-orange-200 mb-4">
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-orange-800">
+                          <strong>First Payment Notice:</strong><br/>
+                          This is the first payment. One-time fees will be automatically collected.
+                          <div className="mt-3 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Monthly Fee:</span>
+                              <span className="font-semibold">₹{formatCurrency(validationData.monthlyExpectedAmount)}</span>
+                            </div>
+                            {validationData.pendingOneTimeFees && validationData.pendingOneTimeFees.length > 0 && (
+                              <>
+                                {validationData.pendingOneTimeFees.map((f: any, idx: number) => (
+                                  <div key={idx} className="flex justify-between text-orange-700">
+                                    <span>• {f.feeType}:</span>
+                                    <span className="font-semibold">₹{formatCurrency(f.amount)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between font-bold pt-2 border-t border-orange-300">
+                                  <span>Total to Pay:</span>
+                                  <span>₹{formatCurrency(validationData.expectedAmount)}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                    {feeCollectionType === "monthly" ? (
-                      /* Monthly Fee Collection Form */
-                      <div className="space-y-4">
+                    <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
                           <select
@@ -632,101 +621,29 @@ const AccountantFeeCollection: React.FC = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Enter amount"
                           />
+                          {validationData?.lateFeeAmount > 0 && (
+                            <p className="text-xs text-red-600 mt-1">
+                              Late fee applicable: ₹{formatCurrency(validationData.lateFeeAmount)}
+                            </p>
+                          )}
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                          <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            {paymentMethods.map((method) => (
-                              <option key={method.value} value={method.value}>{method.label}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (Optional)</label>
-                          <textarea
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            rows={3}
-                            placeholder="Add any remarks..."
-                          />
-                        </div>
-
-                        <div className="space-y-2 pt-2">
-                          <Button
-                            onClick={handleValidate}
-                            disabled={loading || !amount}
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                          >
-                            Validate
-                          </Button>
-                          <Button
-                            onClick={handleCollectFee}
-                            disabled={loading || !amount}
-                            className="w-full bg-orange-600 hover:bg-orange-700"
-                          >
-                            {loading ? "Processing..." : "Collect Monthly Fee"}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* One-Time Fee Collection Form */
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Fee Type</label>
-                          <select
-                            value={selectedFeeType}
-                            onChange={(e) => {
-                              setSelectedFeeType(e.target.value);
-                              // Auto-set amount if admission fee
-                              if (e.target.value === "admission" && detailedFeeStatus?.admissionPending) {
-                                setOneTimeFeeAmount(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0));
-                              } else {
-                                setOneTimeFeeAmount(0);
-                              }
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="admission">🎓 Admission Fee</option>
-                            <option value="annual">📅 Annual Fee</option>
-                          </select>
-                        </div>
-
-                        {selectedFeeType === "admission" && detailedFeeStatus?.admissionPending && (
-                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Total Admission Fee:</span>
-                              <span className="font-semibold">₹{formatCurrency(detailedFeeStatus.admissionFeeAmount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Already Paid:</span>
-                              <span className="font-semibold text-green-600">₹{formatCurrency(detailedFeeStatus.admissionFeePaid || 0)}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-orange-700 pt-2 border-t mt-2">
-                              <span>Remaining:</span>
-                              <span>₹{formatCurrency(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0))}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                        <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <input
-                            type="number"
-                            value={oneTimeFeeAmount}
-                            onChange={(e) => setOneTimeFeeAmount(Number(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="Enter amount"
+                            type="checkbox"
+                            id="includeLateFee"
+                            checked={includeLateFee}
+                            onChange={(e) => {
+                              setIncludeLateFee(e.target.checked);
+                              // Reset validation when checkbox changes
+                              setValidationData(null);
+                              setWarnings([]);
+                            }}
+                            className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            You can collect partial payments. Enter any amount up to the remaining due.
-                          </p>
+                          <label htmlFor="includeLateFee" className="text-sm font-medium text-gray-700 cursor-pointer">
+                            Include Late Fee {validationData?.lateFeeAmount > 0 && `(₹${formatCurrency(validationData.lateFeeAmount)})`}
+                          </label>
                         </div>
 
                         <div>
@@ -734,7 +651,7 @@ const AccountantFeeCollection: React.FC = () => {
                           <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             {paymentMethods.map((method) => (
                               <option key={method.value} value={method.value}>{method.label}</option>
@@ -747,23 +664,29 @@ const AccountantFeeCollection: React.FC = () => {
                           <textarea
                             value={remarks}
                             onChange={(e) => setRemarks(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             rows={3}
                             placeholder="Add any remarks..."
                           />
                         </div>
 
-                        <div className="space-y-2 pt-2">
-                          <Button
-                            onClick={handleCollectOneTimeFee}
-                            disabled={loading || !oneTimeFeeAmount}
-                            className="w-full bg-orange-600 hover:bg-orange-700"
-                          >
-                            {loading ? "Processing..." : `Collect ${selectedFeeType === "admission" ? "Admission" : "Annual"} Fee`}
-                          </Button>
-                        </div>
+                      <div className="space-y-2 pt-2">
+                        <Button
+                          onClick={handleValidate}
+                          disabled={loading || !amount}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          Validate Payment
+                        </Button>
+                        <Button
+                          onClick={handleCollectFee}
+                          disabled={loading || !amount}
+                          className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white"
+                        >
+                          {loading ? "Processing..." : "Collect Fee"}
+                        </Button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -771,6 +694,144 @@ const AccountantFeeCollection: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Receipt Modal */}
+      {showReceipt && lastTransaction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white print:shadow-none">
+            <CardHeader className="border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-2xl">Payment Receipt</CardTitle>
+                  <CardDescription>Transaction ID: {lastTransaction.transactionId}</CardDescription>
+                </div>
+                <button 
+                  onClick={() => setShowReceipt(false)} 
+                  className="text-gray-400 hover:text-gray-600 print:hidden"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              {/* School Header */}
+              <div className="text-center border-b pb-4">
+                <h2 className="text-xl font-bold">School Management System</h2>
+                <p className="text-sm text-gray-600">Fee Payment Receipt</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Date: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                </p>
+              </div>
+
+              {/* Student Details */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-600">Student Name</p>
+                  <p className="font-semibold">{lastTransaction.student.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Student ID</p>
+                  <p className="font-semibold">{lastTransaction.student.studentId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Grade/Section</p>
+                  <p className="font-semibold">
+                    Grade {lastTransaction.student.grade} {lastTransaction.student.section}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Roll Number</p>
+                  <p className="font-semibold">{lastTransaction.student.rollNumber}</p>
+                </div>
+              </div>
+
+              {/* Payment Details */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">Payment Details</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-600">Month:</span>
+                    <span className="font-medium">{months[lastTransaction.month - 1]}</span>
+                  </div>
+                  
+                  {lastTransaction.isFirstPayment && lastTransaction.oneTimeFeeTransactions?.length > 0 && (
+                    <>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 my-3">
+                        <p className="font-semibold text-orange-800 mb-2">One-Time Fees Collected:</p>
+                        {lastTransaction.oneTimeFeeTransactions.map((txn: any, idx: number) => (
+                          <div key={idx} className="flex justify-between text-sm py-1">
+                            <span className="text-gray-700">{txn.feeType}:</span>
+                            <span className="font-semibold text-orange-700">₹{formatCurrency(txn.amount)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between font-bold text-orange-800 pt-2 border-t border-orange-300 mt-2">
+                          <span>One-Time Total:</span>
+                          <span>₹{formatCurrency(lastTransaction.totalOneTimeFeeAmount)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-gray-600">Monthly Fee Amount:</span>
+                        <span className="font-medium">₹{formatCurrency(lastTransaction.amount)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-600">Payment Method:</span>
+                    <span className="font-medium capitalize">{lastTransaction.paymentMethod.replace('_', ' ')}</span>
+                  </div>
+                  
+                  {lastTransaction.remarks && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-gray-600">Remarks:</span>
+                      <span className="font-medium">{lastTransaction.remarks}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between py-3 bg-green-50 border border-green-200 rounded-lg px-4 mt-4">
+                    <span className="text-lg font-bold text-green-800">Total Amount Paid:</span>
+                    <span className="text-2xl font-bold text-green-700">
+                      ₹{formatCurrency(
+                        lastTransaction.amount + (lastTransaction.totalOneTimeFeeAmount || 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="text-center bg-green-50 border border-green-200 rounded-lg p-3">
+                <Check className="w-12 h-12 text-green-600 mx-auto mb-2" />
+                <p className="font-semibold text-green-800">Payment Successful</p>
+                <p className="text-sm text-green-600">Thank you for your payment!</p>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center text-xs text-gray-500 border-t pt-4">
+                <p>This is a computer-generated receipt. No signature required.</p>
+                <p className="mt-1">For any queries, please contact the accounts department.</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 print:hidden">
+                <Button 
+                  onClick={handlePrintReceipt} 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Print Receipt
+                </Button>
+                <Button 
+                  onClick={() => setShowReceipt(false)} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

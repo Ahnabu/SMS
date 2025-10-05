@@ -62,7 +62,7 @@ export const getStudentFeeStatus = catchAsync(async (req: Request, res: Response
  * Validate fee collection
  */
 export const validateFeeCollection = catchAsync(async (req: Request, res: Response) => {
-  const { studentId, month, amount } = req.body;
+  const { studentId, month, amount, includeLateFee } = req.body;
   const schoolId = req.user?.schoolId;
 
   if (!schoolId) {
@@ -73,7 +73,8 @@ export const validateFeeCollection = catchAsync(async (req: Request, res: Respon
     studentId,
     schoolId,
     month,
-    amount
+    amount,
+    includeLateFee || false
   );
 
   sendResponse(res, {
@@ -88,7 +89,7 @@ export const validateFeeCollection = catchAsync(async (req: Request, res: Respon
  * Collect fee
  */
 export const collectFee = catchAsync(async (req: Request, res: Response) => {
-  const { studentId, month, amount, paymentMethod, remarks } = req.body;
+  const { studentId, month, amount, paymentMethod, remarks, includeLateFee } = req.body;
   const schoolId = req.user?.schoolId;
   const collectedBy = req.user?.id;
 
@@ -110,6 +111,7 @@ export const collectFee = catchAsync(async (req: Request, res: Response) => {
     paymentMethod,
     collectedBy,
     remarks,
+    includeLateFee: includeLateFee || false,
     auditInfo,
   });
 

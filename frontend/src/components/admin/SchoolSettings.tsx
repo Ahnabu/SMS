@@ -110,8 +110,6 @@ const SchoolSettingsComponent: React.FC<SchoolSettingsProps> = ({ schoolData }) 
         adminApi.getSectionCapacityReport()
       ]);
       
-      console.log('School settings response:', settingsResponse.data);
-      console.log('Capacity report response:', capacityResponse.data);
       
       if (settingsResponse.data.success) {
         const schoolData = settingsResponse.data.data;

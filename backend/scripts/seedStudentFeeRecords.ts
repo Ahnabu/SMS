@@ -74,11 +74,22 @@ async function seedStudentFeeRecords() {
           continue;
         }
 
-        // Calculate total fee
-        const totalMonthlyFee = feeStructure.feeComponents.reduce(
-          (sum, component) => sum + component.amount,
-          0
-        );
+        // Calculate monthly fee (excluding one-time fees)
+        const totalMonthlyFee = feeStructure.totalAmount; // This already excludes one-time fees
+        
+        // Calculate one-time fees separately
+        const oneTimeFees = feeStructure.feeComponents
+          .filter((c: any) => c.isOneTime)
+          .map((c: any) => ({
+            feeType: c.feeType,
+            dueAmount: c.amount,
+            paidAmount: 0, // For seed data, assume not paid yet
+            status: PaymentStatus.PENDING,
+          }));
+        
+        const oneTimeFeeTotal = feeStructure.feeComponents
+          .filter((c: any) => c.isOneTime)
+          .reduce((sum: number, c: any) => sum + c.amount, 0);
 
         // Create monthly payments (all 12 months)
         const monthlyPayments = [];
@@ -145,8 +156,13 @@ async function seedStudentFeeRecords() {
         }
 
         // Calculate totals
-        const totalPaidAmount = monthlyPayments.reduce((sum, mp) => sum + mp.paidAmount, 0);
-        const totalDueAmount = totalMonthlyFee * 12 - totalPaidAmount;
+        const totalMonthlyPaid = monthlyPayments.reduce((sum, mp) => sum + mp.paidAmount, 0);
+        const totalOneTimePaid = oneTimeFees.reduce((sum, f) => sum + f.paidAmount, 0);
+        const totalPaidAmount = totalMonthlyPaid + totalOneTimePaid;
+        
+        // Total yearly fee = (monthly × 12) + one-time fees
+        const totalYearlyFee = (totalMonthlyFee * 12) + oneTimeFeeTotal;
+        const totalDueAmount = totalYearlyFee - totalPaidAmount;
         const totalLateFee = monthlyPayments.reduce((sum, mp) => sum + mp.lateFee, 0);
 
         // Create student fee record
@@ -156,10 +172,11 @@ async function seedStudentFeeRecords() {
           grade: student.grade,
           academicYear,
           feeStructure: feeStructure._id,
-          totalFeeAmount: totalMonthlyFee * 12,
+          totalFeeAmount: totalYearlyFee, // Now includes one-time fees correctly
           totalPaidAmount,
           totalDueAmount,
           monthlyPayments,
+          oneTimeFees, // Add one-time fees array
           nextDueMonth: monthlyPayments.find(mp => mp.status === PaymentStatus.PENDING)?.month || null,
           overdueFees: monthlyPayments.filter(mp => mp.status === PaymentStatus.OVERDUE).length,
           totalLateFee,

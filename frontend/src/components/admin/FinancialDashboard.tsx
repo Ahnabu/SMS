@@ -268,7 +268,7 @@ const FinancialDashboard: React.FC = () => {
               {formatCurrency(overview.totalOverdue)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {defaultersSummary.totalDefaulters} defaulters
+              {defaultersSummary?.totalDefaulters || 0} defaulters
             </p>
           </CardContent>
         </Card>

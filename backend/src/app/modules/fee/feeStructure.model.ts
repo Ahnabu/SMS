@@ -104,18 +104,35 @@ feeStructureSchema.index(
   { unique: true, partialFilterExpression: { isActive: true } }
 );
 
-// Virtual property for compatibility with frontend
+// Virtual properties for fee calculations
 feeStructureSchema.virtual("totalMonthlyFee").get(function () {
   return this.totalAmount;
 });
 
-// Pre-save middleware to calculate total amount
+feeStructureSchema.virtual("totalOneTimeFee").get(function () {
+  if (!this.feeComponents || this.feeComponents.length === 0) return 0;
+  return this.feeComponents
+    .filter(component => component.isOneTime)
+    .reduce((sum, component) => sum + component.amount, 0);
+});
+
+feeStructureSchema.virtual("totalYearlyFee").get(function () {
+  const monthlyTotal = this.totalAmount || 0;
+  const oneTimeTotal = this.feeComponents
+    ? this.feeComponents
+        .filter(component => component.isOneTime)
+        .reduce((sum, component) => sum + component.amount, 0)
+    : 0;
+  return (monthlyTotal * 12) + oneTimeTotal;
+});
+
+// Pre-save middleware to calculate total amount (monthly fees only)
 feeStructureSchema.pre("save", function (next) {
   if (this.feeComponents && this.feeComponents.length > 0) {
-    this.totalAmount = this.feeComponents.reduce(
-      (sum, component) => sum + component.amount,
-      0
-    );
+    // totalAmount should only include monthly fees, not one-time fees
+    this.totalAmount = this.feeComponents
+      .filter(component => !component.isOneTime)
+      .reduce((sum, component) => sum + component.amount, 0);
   }
   next();
 });

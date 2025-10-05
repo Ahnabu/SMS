@@ -90,20 +90,34 @@ class FeeCollectionService {
         );
       }
 
+      // Calculate total fee: monthly fees × 12 + one-time fees
+      const oneTimeFeeTotal = feeStructure.feeComponents
+        .filter((c: any) => c.isOneTime)
+        .reduce((sum: number, c: any) => sum + c.amount, 0);
+      const totalYearlyFee = (feeStructure.totalAmount * 12) + oneTimeFeeTotal;
+
       feeRecord = await StudentFeeRecord.create({
         student: student._id,
         school: schoolId,
         grade: student.grade,
         academicYear: currentYear,
         feeStructure: feeStructure._id,
-        totalFeeAmount: feeStructure.totalAmount * 12,
+        totalFeeAmount: totalYearlyFee,
         totalPaidAmount: 0,
-        totalDueAmount: feeStructure.totalAmount * 12,
+        totalDueAmount: totalYearlyFee,
         monthlyPayments: this.generateMonthlyPayments(
           feeStructure.totalAmount,
           feeStructure.dueDate,
           currentYear
         ),
+        oneTimeFees: feeStructure.feeComponents
+          .filter((c: any) => c.isOneTime)
+          .map((c: any) => ({
+            feeType: c.feeType,
+            dueAmount: c.amount,
+            paidAmount: 0,
+            status: "pending",
+          })),
         status: "pending",
       });
     }
@@ -152,7 +166,8 @@ class FeeCollectionService {
     studentId: string,
     schoolId: string,
     month: Month,
-    amount: number
+    amount: number,
+    includeLateFee: boolean = false
   ) {
     const status = await this.getStudentFeeStatus(studentId, schoolId);
     const monthlyPayment = status.feeRecord.monthlyPayments.find(
@@ -176,22 +191,48 @@ class FeeCollectionService {
       errors.push("This month's fee has been waived");
     }
 
-    // Check amount mismatch
-    const expectedAmount =
-      monthlyPayment.dueAmount - monthlyPayment.paidAmount + (monthlyPayment.lateFee || 0);
+    // Check if this is the first payment - need to include one-time fees
+    const isFirstPayment = status.feeRecord.totalPaidAmount === 0;
+    const pendingOneTimeFees = status.feeRecord.oneTimeFees?.filter(
+      (f: any) => f.status === "pending" || f.status === "partial"
+    ) || [];
 
-    if (amount > expectedAmount) {
+    let totalOneTimeFeeAmount = 0;
+    if (isFirstPayment && pendingOneTimeFees.length > 0) {
+      totalOneTimeFeeAmount = pendingOneTimeFees.reduce(
+        (sum: number, f: any) => sum + (f.dueAmount - f.paidAmount),
+        0
+      );
+      
       warnings.push(
-        `Amount exceeds due amount. Due: ${expectedAmount}, Received: ${amount}`
+        `First payment must include ₹${totalOneTimeFeeAmount} one-time fees (${pendingOneTimeFees.map((f: any) => f.feeType).join(", ")})`
       );
     }
 
-    if (amount < expectedAmount) {
+    // Calculate late fee if applicable
+    const lateFeeAmount = includeLateFee ? (monthlyPayment.lateFee || 0) : 0;
+    
+    // Check amount mismatch
+    const monthlyExpectedAmount =
+      monthlyPayment.dueAmount - monthlyPayment.paidAmount + lateFeeAmount;
+    const totalExpectedAmount = monthlyExpectedAmount + totalOneTimeFeeAmount;
+
+    if (amount > totalExpectedAmount) {
       warnings.push(
-        `Partial payment. Due: ${expectedAmount}, Received: ${amount}, Remaining: ${
-          expectedAmount - amount
-        }`
+        `Amount exceeds due amount. Due: ₹${totalExpectedAmount} (Monthly: ₹${monthlyExpectedAmount}${totalOneTimeFeeAmount > 0 ? ` + One-time: ₹${totalOneTimeFeeAmount}` : ''}), Received: ₹${amount}`
       );
+    }
+
+    if (amount < totalExpectedAmount) {
+      if (isFirstPayment && amount < totalOneTimeFeeAmount) {
+        errors.push(
+          `Insufficient amount. First payment must be at least ₹${totalOneTimeFeeAmount} to cover one-time fees. You can pay the monthly fee partially after that.`
+        );
+      } else {
+        warnings.push(
+          `Partial payment. Due: ₹${totalExpectedAmount}, Received: ₹${amount}, Remaining: ₹${totalExpectedAmount - amount}`
+        );
+      }
     }
 
     // Check for overdue
@@ -227,7 +268,16 @@ class FeeCollectionService {
         status: monthlyPayment.status,
         dueDate: monthlyPayment.dueDate,
       },
-      expectedAmount,
+      expectedAmount: totalExpectedAmount,
+      monthlyExpectedAmount,
+      totalOneTimeFeeAmount,
+      lateFeeAmount,
+      includeLateFee,
+      isFirstPayment,
+      pendingOneTimeFees: pendingOneTimeFees.map((f: any) => ({
+        feeType: f.feeType,
+        amount: f.dueAmount - f.paidAmount,
+      })),
     };
   }
 
@@ -242,6 +292,7 @@ class FeeCollectionService {
     paymentMethod: PaymentMethod;
     collectedBy: string;
     remarks?: string;
+    includeLateFee?: boolean;
     auditInfo?: {
       ipAddress?: string;
       deviceInfo?: string;
@@ -252,7 +303,8 @@ class FeeCollectionService {
       data.studentId,
       data.schoolId,
       data.month,
-      data.amount
+      data.amount,
+      data.includeLateFee || false
     );
 
     if (!validation.valid) {
@@ -262,21 +314,80 @@ class FeeCollectionService {
     // Get student and fee record
     const status = await this.getStudentFeeStatus(data.studentId, data.schoolId);
 
-    // Record payment in fee record
-    await status.feeRecord.recordPayment(data.month, data.amount);
+    // Check if this is the first payment and there are pending one-time fees
+    const isFirstPayment = status.feeRecord.totalPaidAmount === 0;
+    const pendingOneTimeFees = status.feeRecord.oneTimeFees?.filter(
+      (f: any) => f.status === "pending" || f.status === "partial"
+    ) || [];
 
-    // Create transaction
+    let totalOneTimeFeeAmount = 0;
+    if (isFirstPayment && pendingOneTimeFees.length > 0) {
+      totalOneTimeFeeAmount = pendingOneTimeFees.reduce(
+        (sum: number, f: any) => sum + (f.dueAmount - f.paidAmount),
+        0
+      );
+    }
+
+    const monthlyPaymentAmount = data.amount - totalOneTimeFeeAmount;
+    
+    if (monthlyPaymentAmount < 0) {
+      throw new AppError(400, `Amount must be at least ₹${totalOneTimeFeeAmount} to cover one-time fees`);
+    }
+
+    // Record monthly payment in fee record
+    if (monthlyPaymentAmount > 0) {
+      await status.feeRecord.recordPayment(data.month, monthlyPaymentAmount);
+    }
+
+    // Record one-time fee payments if this is first payment
+    const oneTimeFeeTransactions = [];
+    if (isFirstPayment && totalOneTimeFeeAmount > 0) {
+      for (const oneTimeFee of pendingOneTimeFees) {
+        const amountToPay = oneTimeFee.dueAmount - oneTimeFee.paidAmount;
+        oneTimeFee.paidAmount += amountToPay;
+        oneTimeFee.paidDate = new Date();
+        oneTimeFee.status = PaymentStatus.PAID;
+
+        // Create separate transaction for one-time fee
+        const oneTimeTxn = await FeeTransaction.create({
+          transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+          student: status.student._id,
+          studentFeeRecord: status.feeRecord._id,
+          school: data.schoolId,
+          transactionType: TransactionType.PAYMENT,
+          amount: amountToPay,
+          paymentMethod: data.paymentMethod,
+          feeType: oneTimeFee.feeType,
+          collectedBy: data.collectedBy,
+          remarks: `One-time fee (${oneTimeFee.feeType}) - Collected with first payment`,
+          status: "completed",
+          auditLog: {
+            ipAddress: data.auditInfo?.ipAddress,
+            deviceInfo: data.auditInfo?.deviceInfo,
+            timestamp: new Date(),
+          },
+        });
+        oneTimeFeeTransactions.push(oneTimeTxn);
+      }
+
+      status.feeRecord.markModified('oneTimeFees');
+      await status.feeRecord.save();
+    }
+
+    // Create transaction for monthly payment
     const transaction = await FeeTransaction.create({
       transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`,
       student: status.student._id,
       studentFeeRecord: status.feeRecord._id,
       school: data.schoolId,
       transactionType: TransactionType.PAYMENT,
-      amount: data.amount,
+      amount: monthlyPaymentAmount > 0 ? monthlyPaymentAmount : data.amount,
       paymentMethod: data.paymentMethod,
       month: data.month,
       collectedBy: data.collectedBy,
-      remarks: data.remarks,
+      remarks: data.remarks || (isFirstPayment && totalOneTimeFeeAmount > 0 
+        ? `First payment including ₹${totalOneTimeFeeAmount} one-time fees` 
+        : undefined),
       status: "completed",
       auditLog: {
         ipAddress: data.auditInfo?.ipAddress,
@@ -288,8 +399,11 @@ class FeeCollectionService {
     return {
       success: true,
       transaction,
+      oneTimeFeeTransactions,
       feeRecord: status.feeRecord,
       warnings: validation.warnings,
+      isFirstPayment,
+      totalOneTimeFeeAmount,
     };
   }
 
@@ -1153,11 +1267,10 @@ class FeeCollectionService {
       0
     );
 
-    // Calculate one-time dues
-    const oneTimeDues = (feeRecord.oneTimeFees || []).reduce(
-      (sum: number, f: any) => sum + (f.dueAmount - f.paidAmount),
-      0
-    );
+    // Calculate one-time dues (pending and partial only)
+    const oneTimeDues = (feeRecord.oneTimeFees || [])
+      .filter((f: any) => f.status === 'pending' || f.status === 'partial')
+      .reduce((sum: number, f: any) => sum + (f.dueAmount - f.paidAmount), 0);
 
     // Check for pending admission fee
     const admissionFee = (feeRecord.oneTimeFees || []).find(

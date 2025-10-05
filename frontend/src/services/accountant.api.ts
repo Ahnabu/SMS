@@ -42,6 +42,7 @@ export const validateFeeCollection = async (data: {
   studentId: string;
   month: number;
   amount: number;
+  includeLateFee?: boolean;
 }) => {
   const response = await apiClient.post("/accountant-fees/validate", data);
   return response.data;
@@ -56,6 +57,7 @@ export const collectFee = async (data: {
   amount: number;
   paymentMethod: string;
   remarks?: string;
+  includeLateFee?: boolean;
 }) => {
   const response = await apiClient.post("/accountant-fees/collect", data);
   return response.data;
