@@ -1,7 +1,7 @@
 import StudentFeeRecord from "./studentFeeRecord.model";
 import FeeTransaction from "./feeTransaction.model";
 import FeeStructure from "./feeStructure.model";
-import { Month, PaymentMethod, TransactionType } from "./fee.interface";
+import { Month, PaymentMethod, TransactionType, PaymentStatus } from "./fee.interface";
 import {AppError} from "../../errors/AppError";
 import { model, Types } from "mongoose";
 
@@ -978,6 +978,354 @@ class FeeCollectionService {
     }
 
     return payments;
+  }
+
+  /**
+   * Collect one-time fee (admission, annual, etc.)
+   */
+  async collectOneTimeFee(data: {
+    studentId: string;
+    schoolId: string;
+    feeType: string; // 'admission', 'annual', etc.
+    amount: number;
+    paymentMethod: PaymentMethod;
+    collectedBy: string;
+    remarks?: string;
+    auditInfo?: {
+      ipAddress?: string;
+      deviceInfo?: string;
+    };
+  }) {
+    const schoolObjectId = new Types.ObjectId(data.schoolId);
+    
+    // Get student and fee record
+    const student = await Student.findOne({
+      studentId: data.studentId,
+      schoolId: data.schoolId,
+    });
+
+    if (!student) {
+      throw new AppError(404, "Student not found");
+    }
+
+    const feeRecord = await StudentFeeRecord.findOne({
+      student: student._id,
+      school: schoolObjectId,
+      academicYear: this.getCurrentAcademicYear(),
+    });
+
+    if (!feeRecord) {
+      throw new AppError(404, "Student fee record not found");
+    }
+
+    // Find the one-time fee (use index to modify in place)
+    const oneTimeFeeIndex = feeRecord.oneTimeFees?.findIndex(
+      (fee: any) => fee.feeType === data.feeType && fee.status !== PaymentStatus.PAID
+    );
+
+    if (oneTimeFeeIndex === undefined || oneTimeFeeIndex === -1 || !feeRecord.oneTimeFees) {
+      throw new AppError(
+        404,
+        `${data.feeType} fee not found or already paid`
+      );
+    }
+
+    const oneTimeFee = feeRecord.oneTimeFees[oneTimeFeeIndex];
+
+    // Validate amount
+    const remainingAmount = oneTimeFee.dueAmount - oneTimeFee.paidAmount;
+    if (data.amount > remainingAmount) {
+      throw new AppError(
+        400,
+        `Payment amount (${data.amount}) exceeds remaining due amount (${remainingAmount})`
+      );
+    }
+
+    // Update one-time fee directly on the array
+    feeRecord.oneTimeFees[oneTimeFeeIndex].paidAmount = (feeRecord.oneTimeFees[oneTimeFeeIndex].paidAmount || 0) + data.amount;
+    if (feeRecord.oneTimeFees[oneTimeFeeIndex].paidAmount >= feeRecord.oneTimeFees[oneTimeFeeIndex].dueAmount) {
+      feeRecord.oneTimeFees[oneTimeFeeIndex].status = PaymentStatus.PAID;
+      feeRecord.oneTimeFees[oneTimeFeeIndex].paidDate = new Date();
+    } else {
+      feeRecord.oneTimeFees[oneTimeFeeIndex].status = PaymentStatus.PARTIAL;
+    }
+
+    // Mark the array as modified for Mongoose
+    feeRecord.markModified('oneTimeFees');
+
+    // Update totals
+    feeRecord.totalPaidAmount += data.amount;
+    feeRecord.totalDueAmount -= data.amount;
+
+    // Update overall status
+    if (feeRecord.totalDueAmount === 0) {
+      feeRecord.status = PaymentStatus.PAID;
+    } else if (feeRecord.totalPaidAmount > 0) {
+      feeRecord.status = PaymentStatus.PARTIAL;
+    }
+
+    await feeRecord.save();
+
+    // Create transaction
+    const transaction = await FeeTransaction.create({
+      transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+      student: student._id,
+      studentFeeRecord: feeRecord._id,
+      school: schoolObjectId,
+      transactionType: TransactionType.PAYMENT,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod,
+      collectedBy: data.collectedBy,
+      remarks: data.remarks || `${data.feeType} fee payment`,
+      status: "completed",
+      auditLog: {
+        ipAddress: data.auditInfo?.ipAddress,
+        deviceInfo: data.auditInfo?.deviceInfo,
+        timestamp: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      transaction,
+      feeRecord,
+      oneTimeFee: {
+        feeType: oneTimeFee.feeType,
+        dueAmount: oneTimeFee.dueAmount,
+        paidAmount: oneTimeFee.paidAmount,
+        status: oneTimeFee.status,
+        remainingAmount: oneTimeFee.dueAmount - oneTimeFee.paidAmount,
+      },
+    };
+  }
+
+  /**
+   * Get student fee status with complete details
+   */
+  async getStudentFeeStatusDetailed(studentId: string, schoolId: string) {
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    
+    const student: any = await Student.findOne({
+      studentId,
+      schoolId: schoolId,
+    })
+      .populate('userId', 'firstName lastName email phone')
+      .lean();
+
+    if (!student) {
+      throw new AppError(404, "Student not found");
+    }
+
+    const feeRecord: any = await StudentFeeRecord.findOne({
+      student: student._id,
+      school: schoolObjectId,
+      academicYear: this.getCurrentAcademicYear(),
+    })
+      .populate('feeStructure')
+      .lean();
+
+    if (!feeRecord) {
+      return {
+        student: {
+          _id: student._id,
+          studentId: student.studentId,
+          name: `${student.userId?.firstName || ''} ${student.userId?.lastName || ''}`.trim(),
+          grade: student.grade,
+          rollNumber: student.rollNumber,
+        },
+        hasFeeRecord: false,
+        totalFeeAmount: 0,
+        totalPaidAmount: 0,
+        totalDueAmount: 0,
+        monthlyDues: 0,
+        oneTimeDues: 0,
+        pendingMonths: 0,
+        status: 'pending',
+      };
+    }
+
+    // Calculate monthly dues
+    const pendingMonthlyPayments = feeRecord.monthlyPayments.filter(
+      (p: any) => p.status !== 'paid' && !p.waived
+    );
+    const monthlyDues = pendingMonthlyPayments.reduce(
+      (sum: number, p: any) => sum + (p.dueAmount - p.paidAmount),
+      0
+    );
+
+    // Calculate one-time dues
+    const oneTimeDues = (feeRecord.oneTimeFees || []).reduce(
+      (sum: number, f: any) => sum + (f.dueAmount - f.paidAmount),
+      0
+    );
+
+    // Check for pending admission fee
+    const admissionFee = (feeRecord.oneTimeFees || []).find(
+      (f: any) => f.feeType === 'admission'
+    );
+
+    // Find next due payment
+    const now = new Date();
+    const upcomingPayments = feeRecord.monthlyPayments
+      .filter((p: any) => p.status !== 'paid' && !p.waived)
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+    const nextDue = upcomingPayments.length > 0 ? upcomingPayments[0] : null;
+
+    // Recent transactions
+    const recentTransactions = await FeeTransaction.find({
+      student: student._id,
+      school: schoolObjectId,
+      transactionType: TransactionType.PAYMENT,
+      status: "completed",
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    return {
+      student: {
+        _id: student._id,
+        studentId: student.studentId,
+        name: `${student.userId?.firstName || ''} ${student.userId?.lastName || ''}`.trim(),
+        grade: student.grade,
+        rollNumber: student.rollNumber,
+        parentContact: student.userId?.phone || '',
+      },
+      hasFeeRecord: true,
+      totalFeeAmount: feeRecord.totalFeeAmount,
+      totalPaidAmount: feeRecord.totalPaidAmount,
+      totalDueAmount: feeRecord.totalDueAmount,
+      monthlyDues,
+      oneTimeDues,
+      pendingMonths: pendingMonthlyPayments.length,
+      admissionPending: admissionFee && admissionFee.status !== 'paid',
+      admissionFeeAmount: admissionFee?.dueAmount || 0,
+      admissionFeePaid: admissionFee?.paidAmount || 0,
+      status: feeRecord.status,
+      nextDue: nextDue ? {
+        month: nextDue.month,
+        amount: nextDue.dueAmount - nextDue.paidAmount,
+        dueDate: nextDue.dueDate,
+        isOverdue: new Date(nextDue.dueDate) < now,
+      } : null,
+      monthlyPayments: feeRecord.monthlyPayments,
+      oneTimeFees: feeRecord.oneTimeFees || [],
+      recentTransactions: recentTransactions.map((t: any) => ({
+        _id: t._id,
+        transactionId: t.transactionId,
+        amount: t.amount,
+        paymentMethod: t.paymentMethod,
+        date: t.createdAt,
+        month: t.month,
+        remarks: t.remarks,
+      })),
+    };
+  }
+
+  /**
+   * Get parent's children fee status
+   */
+  async getParentChildrenFeeStatus(parentId: string, schoolId: string) {
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    
+    // Find all children of this parent
+    const children = await Student.find({
+      parentId: parentId,
+      schoolId: schoolId,
+      isActive: true,
+    })
+      .populate('userId', 'firstName lastName email phone')
+      .lean();
+
+    if (children.length === 0) {
+      return {
+        children: [],
+        totalDueAmount: 0,
+        totalChildren: 0,
+      };
+    }
+
+    // Get fee status for each child
+    const childrenWithFees = await Promise.all(
+      children.map(async (child: any) => {
+        const feeRecord = await StudentFeeRecord.findOne({
+          student: child._id,
+          school: schoolObjectId,
+          academicYear: this.getCurrentAcademicYear(),
+        }).lean();
+
+        if (!feeRecord) {
+          return {
+            _id: child._id,
+            studentId: child.studentId,
+            name: `${child.userId?.firstName || ''} ${child.userId?.lastName || ''}`.trim(),
+            grade: child.grade,
+            section: child.section,
+            totalFees: 0,
+            totalPaid: 0,
+            totalDue: 0,
+            pendingMonths: 0,
+            admissionPending: false,
+            admissionFee: 0,
+            feeStatus: 'pending',
+            hasFeeRecord: false,
+          };
+        }
+
+        // Calculate details
+        const pendingMonthlyPayments = feeRecord.monthlyPayments.filter(
+          (p: any) => p.status !== 'paid' && !p.waived
+        );
+
+        const admissionFee = (feeRecord.oneTimeFees || []).find(
+          (f: any) => f.feeType === 'admission'
+        );
+
+        // Find next due
+        const upcomingPayments = feeRecord.monthlyPayments
+          .filter((p: any) => p.status !== 'paid' && !p.waived)
+          .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+        const nextDue = upcomingPayments.length > 0 ? upcomingPayments[0] : null;
+
+        return {
+          _id: child._id,
+          studentId: child.studentId,
+          name: `${child.userId?.firstName || ''} ${child.userId?.lastName || ''}`.trim(),
+          grade: child.grade,
+          section: child.section,
+          rollNumber: child.rollNumber,
+          totalFees: feeRecord.totalFeeAmount,
+          totalPaid: feeRecord.totalPaidAmount,
+          totalDue: feeRecord.totalDueAmount,
+          pendingMonths: pendingMonthlyPayments.length,
+          admissionPending: admissionFee && admissionFee.status !== 'paid',
+          admissionFee: admissionFee?.dueAmount || 0,
+          admissionFeePaid: admissionFee?.paidAmount || 0,
+          admissionFeeRemaining: admissionFee ? (admissionFee.dueAmount - admissionFee.paidAmount) : 0,
+          feeStatus: feeRecord.status,
+          hasFeeRecord: true,
+          nextDue: nextDue ? {
+            month: nextDue.month,
+            amount: nextDue.dueAmount - nextDue.paidAmount,
+            dueDate: nextDue.dueDate,
+          } : null,
+        };
+      })
+    );
+
+    // Calculate total due for all children
+    const totalDueAmount = childrenWithFees.reduce(
+      (sum, child) => sum + child.totalDue,
+      0
+    );
+
+    return {
+      children: childrenWithFees,
+      totalDueAmount,
+      totalChildren: children.length,
+    };
   }
 }
 

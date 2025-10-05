@@ -300,3 +300,89 @@ export const getFinancialReports = catchAsync(async (req: Request, res: Response
     data: reports,
   });
 });
+
+/**
+ * Collect one-time fee (admission, annual, etc.)
+ */
+export const collectOneTimeFee = catchAsync(async (req: Request, res: Response) => {
+  const { studentId, feeType, amount, paymentMethod, remarks } = req.body;
+  const schoolId = req.user?.schoolId;
+  const collectedBy = req.user?.id;
+
+  if (!schoolId || !collectedBy) {
+    throw new Error("School ID and Collector ID are required");
+  }
+
+  // Get audit information
+  const auditInfo = {
+    ipAddress: req.ip || req.socket.remoteAddress,
+    deviceInfo: req.headers["user-agent"],
+  };
+
+  const result = await feeCollectionService.collectOneTimeFee({
+    studentId,
+    schoolId,
+    feeType,
+    amount,
+    paymentMethod,
+    collectedBy,
+    remarks,
+    auditInfo,
+  });
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 201,
+    message: `${feeType} fee collected successfully`,
+    data: result,
+  });
+});
+
+/**
+ * Get student fee status (detailed)
+ */
+export const getStudentFeeStatusDetailed = catchAsync(async (req: Request, res: Response) => {
+  const { studentId } = req.params;
+  const schoolId = req.user?.schoolId;
+
+  if (!schoolId) {
+    throw new Error("School ID is required");
+  }
+
+  const feeStatus = await feeCollectionService.getStudentFeeStatusDetailed(
+    studentId,
+    schoolId
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Student fee status retrieved successfully",
+    data: feeStatus,
+  });
+});
+
+/**
+ * Get parent's children fee status
+ */
+export const getParentChildrenFeeStatus = catchAsync(async (req: Request, res: Response) => {
+  const parentId = req.user?.id;
+  const schoolId = req.user?.schoolId;
+
+  if (!parentId || !schoolId) {
+    throw new Error("Parent ID and School ID are required");
+  }
+
+  const childrenFees = await feeCollectionService.getParentChildrenFeeStatus(
+    parentId,
+    schoolId
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Children fee status retrieved successfully",
+    data: childrenFees,
+  });
+});
+

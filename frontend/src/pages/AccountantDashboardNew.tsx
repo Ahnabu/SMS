@@ -147,7 +147,7 @@ const AccountantDashboardNew: React.FC = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
                 Accountant Dashboard
               </h1>
-              <p className="text-blue-200">Welcome back, {user?.username}</p>
+              <p className="text-blue-200">Welcome back, {user?.fullName}</p>
             </div>
             <button
               onClick={logout}

@@ -265,6 +265,38 @@ export const getReceipt = async (transactionId: string) => {
   return response.data;
 };
 
+/**
+ * Get student detailed fee status (including one-time fees)
+ */
+export const getStudentFeeStatusDetailed = async (studentId: string) => {
+  const response = await apiClient.get(
+    `/accountant-fees/student-fee-status/${studentId}`
+  );
+  return response.data;
+};
+
+/**
+ * Collect one-time fee (admission, annual, etc.)
+ */
+export const collectOneTimeFee = async (data: {
+  studentId: string;
+  feeType: string;
+  amount: number;
+  paymentMethod: string;
+  remarks?: string;
+}) => {
+  const response = await apiClient.post("/accountant-fees/collect-one-time", data);
+  return response.data;
+};
+
+/**
+ * Get parent's children fee status
+ */
+export const getParentChildrenFees = async () => {
+  const response = await apiClient.get("/accountant-fees/parent-children-fees");
+  return response.data;
+};
+
 // Export all functions
 export default {
   // Fee Structure
@@ -292,4 +324,7 @@ export default {
   getAccountantTransactions,
   getDailyCollectionSummary,
   getReceipt,
+  getStudentFeeStatusDetailed,
+  collectOneTimeFee,
+  getParentChildrenFees,
 };

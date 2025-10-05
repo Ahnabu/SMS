@@ -61,3 +61,5 @@ ARCHITECTURE_REVIEW.md
 
 # TypeScript
 *.tsbuildinfo
+
+ docs/

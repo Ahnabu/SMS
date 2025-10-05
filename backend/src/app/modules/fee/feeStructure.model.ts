@@ -21,6 +21,10 @@ const feeComponentSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    isOneTime: {
+      type: Boolean,
+      default: false,
+    },
   },
   { _id: false }
 );

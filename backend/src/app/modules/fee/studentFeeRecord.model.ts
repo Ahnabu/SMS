@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { IStudentFeeRecord, PaymentStatus, Month } from "./fee.interface";
+import { IStudentFeeRecord, PaymentStatus, Month, FeeType } from "./fee.interface";
 
 const monthlyPaymentSchema = new Schema(
   {
@@ -34,6 +34,54 @@ const monthlyPaymentSchema = new Schema(
       type: Number,
       default: 0,
       min: [0, "Late fee must be non-negative"],
+    },
+    waived: {
+      type: Boolean,
+      default: false,
+    },
+    waiverReason: {
+      type: String,
+      trim: true,
+    },
+    waiverBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    waiverDate: {
+      type: Date,
+    },
+  },
+  { _id: false }
+);
+
+const oneTimeFeeSchema = new Schema(
+  {
+    feeType: {
+      type: String,
+      enum: Object.values(FeeType),
+      required: true,
+    },
+    dueAmount: {
+      type: Number,
+      required: true,
+      min: [0, "Due amount must be non-negative"],
+    },
+    paidAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Paid amount must be non-negative"],
+    },
+    status: {
+      type: String,
+      enum: Object.values(PaymentStatus),
+      default: PaymentStatus.PENDING,
+    },
+    dueDate: {
+      type: Date,
+      required: true,
+    },
+    paidDate: {
+      type: Date,
     },
     waived: {
       type: Boolean,
@@ -109,6 +157,10 @@ const studentFeeRecordSchema = new Schema<IStudentFeeRecord>(
         },
         message: "Monthly payments must contain exactly 12 months",
       },
+    },
+    oneTimeFees: {
+      type: [oneTimeFeeSchema],
+      default: [],
     },
     status: {
       type: String,

@@ -247,6 +247,9 @@ const StudentHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
           </div>
         </div>
 
+        {/* Fee Status Card */}
+        <FeeStatusCard />
+
         {/* Daily Learning Guide */}
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-6">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center">
@@ -428,6 +431,311 @@ const StudentHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
             />
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Fee Status Component
+const FeeStatusCard: React.FC = () => {
+  const [feeStatus, setFeeStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeeStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadFeeStatus = async () => {
+    try {
+      setLoading(true);
+      // First get student dashboard to get studentId
+      const dashboardResponse = await apiService.student.getDashboard();
+      if (!dashboardResponse.data.success) {
+        console.error("Failed to load dashboard");
+        return;
+      }
+
+      const studentData = dashboardResponse.data.data;
+      const studentId = studentData?.student?.studentId || studentData?.studentId;
+      
+      if (!studentId) {
+        console.error("Student ID not found in dashboard data");
+        return;
+      }
+
+      const response = await apiService.fee.getStudentFeeStatusDetailed(studentId);
+      if (response.data) {
+        setFeeStatus(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to load fee status:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!feeStatus || !feeStatus.hasFeeRecord) {
+    return null;
+  }
+
+  const admissionRemaining = feeStatus.admissionFeeAmount - feeStatus.admissionFeePaid;
+
+  return (
+    <div className="mb-6">
+      {/* Admission Fee Pending Alert */}
+      {feeStatus.admissionPending && (
+        <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4 rounded-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-orange-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-orange-800">
+                Admission Fee Pending
+              </h3>
+              <div className="mt-2 text-sm text-orange-700">
+                <p>
+                  You have a pending admission fee of{" "}
+                  <strong>{formatCurrency(admissionRemaining)}</strong> remaining.
+                </p>
+                <p className="mt-1 text-xs">
+                  Please contact the accounts office to complete your payment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fee Status Card */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <svg
+              className="w-5 h-5 mr-2 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            Fee Status
+          </h3>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              feeStatus.status === "paid"
+                ? "bg-green-100 text-green-800"
+                : feeStatus.status === "partial"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {feeStatus.status === "paid"
+              ? "All Paid"
+              : feeStatus.status === "partial"
+              ? "Partially Paid"
+              : "Pending"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <p className="text-xs text-gray-600 mb-1">Total Fee</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatCurrency(feeStatus.totalFeeAmount)}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <p className="text-xs text-gray-600 mb-1">Paid</p>
+            <p className="text-2xl font-bold text-green-600">
+              {formatCurrency(feeStatus.totalPaidAmount)}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <p className="text-xs text-gray-600 mb-1">Due</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {formatCurrency(feeStatus.totalDueAmount)}
+            </p>
+          </div>
+        </div>
+
+        {/* Breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-700 font-medium">Monthly Dues</p>
+                <p className="text-lg font-bold text-blue-900">
+                  {formatCurrency(feeStatus.monthlyDues)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {feeStatus.pendingMonths} month(s) pending
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 7V3a4 4 0 118 0v4m-4 12v-4m0 0a7 7 0 01-7-7V8a1 1 0 011-1h12a1 1 0 011 1v1a7 7 0 01-7 7z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-700 font-medium">One-Time Fees</p>
+                <p className="text-lg font-bold text-orange-900">
+                  {formatCurrency(feeStatus.oneTimeDues)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {feeStatus.admissionPending ? "Admission pending" : "All paid"}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Next Due Payment */}
+        {feeStatus.nextDue && (
+          <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg
+                  className="w-5 h-5 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-yellow-800">
+                  Next Payment Due:{" "}
+                  <span className="font-bold">
+                    {formatCurrency(feeStatus.nextDue.amount)}
+                  </span>
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Due Date: {new Date(feeStatus.nextDue.dueDate).toLocaleDateString()}
+                  {feeStatus.nextDue.isOverdue && (
+                    <span className="ml-2 text-red-600 font-semibold">(OVERDUE)</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Transactions */}
+        {feeStatus.recentTransactions && feeStatus.recentTransactions.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Recent Payments
+            </h4>
+            <div className="space-y-2">
+              {feeStatus.recentTransactions.slice(0, 3).map((txn: any) => (
+                <div
+                  key={txn._id}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border text-sm"
+                >
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <svg
+                        className="w-4 h-4 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(txn.amount)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(txn.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-600">{txn.paymentMethod}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

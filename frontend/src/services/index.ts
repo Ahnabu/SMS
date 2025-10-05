@@ -8,6 +8,7 @@ import { parentApi } from "./parent.api";
 import { eventAPI } from "./event.api";
 import { api } from "./api-base";
 import accountantApi from "./accountant.api";
+import feeApi from "./fee.api";
 
 export {
   authApi,
@@ -126,6 +127,19 @@ export const apiService = {
     getStudentsByGradeSection: accountantApi.getStudentsByGradeSection,
     getDefaulters: accountantApi.getDefaulters,
     getFinancialReports: accountantApi.getFinancialReports,
+  },
+
+  // Fee routes
+  fee: {
+    getStudentFeeStatusDetailed: feeApi.getStudentFeeStatusDetailed,
+    collectOneTimeFee: feeApi.collectOneTimeFee,
+    getParentChildrenFees: feeApi.getParentChildrenFees,
+    createFeeStructure: feeApi.createFeeStructure,
+    getFeeStructure: feeApi.getFeeStructure,
+    getFeeStructures: feeApi.getFeeStructures,
+    updateFeeStructure: feeApi.updateFeeStructure,
+    deactivateFeeStructure: feeApi.deactivateFeeStructure,
+    cloneFeeStructure: feeApi.cloneFeeStructure,
   },
 };
 

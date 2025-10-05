@@ -1,7 +1,7 @@
-import React from "react";
-
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EventCalendar from "../../components/ui/EventCalendar";
+import { apiService } from "@/services";
 
 interface ParentHomeProps {
   dashboardData: any;
@@ -202,6 +202,9 @@ export const ParentHome: React.FC<ParentHomeProps> = ({
         </div>
       </div>
 
+      {/* Children Fee Status */}
+      <ChildrenFeeCards />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
@@ -396,6 +399,275 @@ export const ParentHome: React.FC<ParentHomeProps> = ({
             // Handle event click - could show a modal with event details
           }}
         />
+      </div>
+    </div>
+  );
+};
+
+// Children Fee Cards Component
+const ChildrenFeeCards: React.FC = () => {
+  const [feeData, setFeeData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadChildrenFees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadChildrenFees = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.fee.getParentChildrenFees();
+      if (response.data) {
+        setFeeData(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to load children fee data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-20 bg-gray-200 rounded mb-4"></div>
+          <div className="h-20 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!feeData || !feeData.children || feeData.children.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mb-6 space-y-6">
+      {/* Total Summary Card */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-lg border border-purple-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-gray-900 flex items-center">
+            <svg
+              className="w-6 h-6 mr-2 text-purple-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            Total Fee Summary
+          </h3>
+          <span className="text-sm text-gray-600">
+            {feeData.totalChildren} {feeData.totalChildren === 1 ? "Child" : "Children"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <p className="text-sm text-gray-600 mb-1">Total Due (All Children)</p>
+            <p className="text-3xl font-bold text-purple-600">
+              {formatCurrency(feeData.totalDueAmount)}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <p className="text-sm text-gray-600 mb-1">Children with Pending Fees</p>
+            <p className="text-3xl font-bold text-orange-600">
+              {feeData.children.filter((child: any) => child.totalDue > 0).length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Individual Child Cards */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-900">Children Fee Status</h3>
+        
+        {feeData.children.map((child: any) => {
+          const admissionRemaining = child.admissionFeeRemaining || 0;
+          
+          return (
+            <div
+              key={child._id}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+            >
+              {/* Child Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      {child.name}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Grade {child.grade} {child.section && ` - Section ${child.section}`} {child.rollNumber && `| Roll No: ${child.rollNumber}`}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      child.feeStatus === "paid"
+                        ? "bg-green-100 text-green-800"
+                        : child.feeStatus === "partial"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {child.feeStatus === "paid"
+                      ? "All Paid"
+                      : child.feeStatus === "partial"
+                      ? "Partial"
+                      : "Pending"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Admission Fee Alert */}
+              {child.admissionPending && (
+                <div className="bg-orange-50 border-b border-orange-200 p-4">
+                  <div className="flex items-start">
+                    <svg
+                      className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-orange-800">
+                        Admission Fee Pending
+                      </p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        Total: {formatCurrency(child.admissionFee)} | Paid:{" "}
+                        {formatCurrency(child.admissionFeePaid)} | Remaining:{" "}
+                        <strong>{formatCurrency(admissionRemaining)}</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fee Details */}
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Total Fees</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(child.totalFees)}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Paid</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {formatCurrency(child.totalPaid)}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Due</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {formatCurrency(child.totalDue)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Next Due Payment */}
+                {child.nextDue && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center">
+                      <svg
+                        className="w-4 h-4 text-yellow-600 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-800">
+                          Next Payment: {formatCurrency(child.nextDue.amount)}
+                        </p>
+                        <p className="text-xs text-yellow-700">
+                          Due Date: {new Date(child.nextDue.dueDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Months Info */}
+                {child.pendingMonths > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      <svg
+                        className="w-4 h-4 inline mr-1 text-blue-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M8 7V3a4 4 0 118 0v4m-4 12v-4m0 0a7 7 0 01-7-7V8a1 1 0 011-1h12a1 1 0 011 1v1a7 7 0 01-7 7z"
+                        />
+                      </svg>
+                      {child.pendingMonths} month(s) pending
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Help Text */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start">
+          <svg
+            className="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-blue-800">
+              Need to make a payment?
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              Please visit the school accounts office or contact the accountant to make fee payments.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

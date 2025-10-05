@@ -124,6 +124,22 @@ export interface IMonthlyPayment {
 }
 
 /**
+ * One-Time Fee Payment Record
+ */
+export interface IOneTimeFeePayment {
+  feeType: FeeType; // e.g., ADMISSION, ANNUAL
+  dueAmount: number;
+  paidAmount: number;
+  status: PaymentStatus;
+  dueDate: Date;
+  paidDate?: Date;
+  waived?: boolean;
+  waiverReason?: string;
+  waiverBy?: Types.ObjectId;
+  waiverDate?: Date;
+}
+
+/**
  * Student Fee Record Interface
  */
 export interface IStudentFeeRecord {
@@ -137,6 +153,7 @@ export interface IStudentFeeRecord {
   totalPaidAmount: number;
   totalDueAmount: number;
   monthlyPayments: IMonthlyPayment[];
+  oneTimeFees?: IOneTimeFeePayment[]; // For admission, annual fees
   status: PaymentStatus;
   createdAt?: Date;
   updatedAt?: Date;

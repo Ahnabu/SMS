@@ -20,6 +20,9 @@ class FeeReportService {
     startDate?: Date,
     endDate?: Date
   ) {
+    const { Types } = require('mongoose');
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    
     const dateFilter = startDate && endDate
       ? { createdAt: { $gte: startDate, $lte: endDate } }
       : {};
@@ -28,7 +31,7 @@ class FeeReportService {
     const collectedResult = await FeeTransaction.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           transactionType: TransactionType.PAYMENT,
           status: TransactionStatus.COMPLETED,
           ...dateFilter,
@@ -48,7 +51,7 @@ class FeeReportService {
     const dueResult = await StudentFeeRecord.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           academicYear,
         },
       },
@@ -66,7 +69,7 @@ class FeeReportService {
     const waivedResult = await StudentFeeRecord.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           academicYear,
         },
       },
@@ -90,14 +93,14 @@ class FeeReportService {
 
     // Total defaulters
     const totalDefaulters = await FeeDefaulter.countDocuments({
-      school: schoolId,
+      school: schoolObjectId,
     });
 
     // Monthly breakdown
     const monthlyBreakdown = await FeeTransaction.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           transactionType: TransactionType.PAYMENT,
           status: TransactionStatus.COMPLETED,
           ...dateFilter,
@@ -125,7 +128,7 @@ class FeeReportService {
     const gradeWiseBreakdown = await StudentFeeRecord.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           academicYear,
         },
       },
@@ -153,7 +156,7 @@ class FeeReportService {
 
     // Recent transactions
     const recentTransactions = await FeeTransaction.find({
-      school: schoolId,
+      school: schoolObjectId,
       ...dateFilter,
     })
       .populate("student", "studentId firstName lastName grade")
@@ -161,11 +164,33 @@ class FeeReportService {
       .sort({ createdAt: -1 })
       .limit(10);
 
+    // Calculate total expected revenue (total fees for all students)
+    const expectedRevenueResult = await StudentFeeRecord.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          academicYear,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalExpected: { $sum: "$totalFeeAmount" },
+        },
+      },
+    ]);
+
+    const totalExpectedRevenue = expectedRevenueResult[0]?.totalExpected || 0;
+
     return {
-      totalCollected,
-      totalDue,
-      totalWaived,
-      totalDefaulters,
+      overview: {
+        totalExpectedRevenue,
+        totalCollected,
+        totalDue,
+        totalWaived,
+        totalDefaulters,
+        collectionPercentage: totalExpectedRevenue > 0 ? (totalCollected / totalExpectedRevenue) * 100 : 0,
+      },
       monthlyBreakdown,
       gradeWiseBreakdown,
       recentTransactions,

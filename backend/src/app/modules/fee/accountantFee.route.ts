@@ -106,4 +106,27 @@ router.get(
   accountantFeeController.getFinancialReports
 );
 
+// One-Time Fee Collection (Admission, Annual, etc.)
+router.post(
+  "/collect-one-time",
+  authenticate,
+  authorize("accountant"),
+  accountantFeeController.collectOneTimeFee
+);
+
+// Student Fee Status (Detailed) - For Student Dashboard
+router.get(
+  "/student-fee-status/:studentId",
+  authenticate,
+  accountantFeeController.getStudentFeeStatusDetailed
+);
+
+// Parent Children Fee Status - For Parent Dashboard
+router.get(
+  "/parent-children-fees",
+  authenticate,
+  authorize("parent"),
+  accountantFeeController.getParentChildrenFeeStatus
+);
+
 export default router;

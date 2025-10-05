@@ -76,6 +76,12 @@ const AccountantFeeCollection: React.FC = () => {
   const [remarks, setRemarks] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
 
+  // One-time fee states
+  const [feeCollectionType, setFeeCollectionType] = useState<"monthly" | "onetime">("monthly");
+  const [selectedFeeType, setSelectedFeeType] = useState<string>("admission");
+  const [oneTimeFeeAmount, setOneTimeFeeAmount] = useState<number>(0);
+  const [detailedFeeStatus, setDetailedFeeStatus] = useState<any>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -167,6 +173,8 @@ const AccountantFeeCollection: React.FC = () => {
 
     try {
       setLoadingFeeStatus(true);
+      
+      // Get basic fee status
       const response = await apiService.accountant.getStudentFeeStatus(
         student._id
       );
@@ -177,6 +185,20 @@ const AccountantFeeCollection: React.FC = () => {
         if (response.data.upcomingDue) {
           setAmount(response.data.upcomingDue.amount);
           setSelectedMonth(response.data.upcomingDue.month);
+        }
+      }
+
+      // Get detailed fee status (including one-time fees)
+      const detailedResponse = await apiService.fee.getStudentFeeStatusDetailed(
+        student.studentId
+      );
+      
+      if (detailedResponse.success) {
+        setDetailedFeeStatus(detailedResponse.data);
+        
+        // If admission fee is pending, set it as default
+        if (detailedResponse.data.admissionPending && detailedResponse.data.admissionFeeAmount) {
+          setOneTimeFeeAmount(detailedResponse.data.admissionFeeAmount - (detailedResponse.data.admissionFeePaid || 0));
         }
       }
     } catch (err: any) {
@@ -257,6 +279,54 @@ const AccountantFeeCollection: React.FC = () => {
         }
       } catch (err: any) {
         setError(err.response?.data?.message || "Failed to collect fee");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleCollectOneTimeFee = async () => {
+    if (!selectedStudent) return;
+
+    if (!oneTimeFeeAmount || oneTimeFeeAmount <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    if (window.confirm(`Confirm ${selectedFeeType} fee collection of ₹${formatCurrency(oneTimeFeeAmount)} for ${selectedStudent.name}?`)) {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await apiService.fee.collectOneTimeFee({
+          studentId: selectedStudent.studentId,
+          feeType: selectedFeeType,
+          amount: oneTimeFeeAmount,
+          paymentMethod: paymentMethod,
+          remarks: remarks,
+        });
+
+        if (response.success) {
+          setSuccess(`${selectedFeeType} fee collected successfully! Transaction ID: ${response.data.transaction?.transactionId || 'N/A'}`);
+
+          // Refresh detailed fee status
+          const detailedResponse = await apiService.fee.getStudentFeeStatusDetailed(
+            selectedStudent.studentId
+          );
+          
+          if (detailedResponse.success) {
+            setDetailedFeeStatus(detailedResponse.data);
+          }
+
+          loadAllStudents();
+
+          setOneTimeFeeAmount(0);
+          setRemarks("");
+          setPaymentMethod("cash");
+          setTimeout(() => setSuccess(null), 5000);
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Failed to collect one-time fee");
       } finally {
         setLoading(false);
       }
@@ -478,88 +548,222 @@ const AccountantFeeCollection: React.FC = () => {
                     </p>
                   </div>
 
-                  {feeStatus && (
+                  {detailedFeeStatus && detailedFeeStatus.admissionPending && (
+                    <Alert className="bg-orange-50 border-orange-200">
+                      <AlertCircle className="h-4 w-4 text-orange-600" />
+                      <AlertDescription className="text-orange-800">
+                        <strong>Admission Fee Pending!</strong> ₹{formatCurrency(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0))} remaining
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {feeStatus && detailedFeeStatus && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Total Fee:</span>
-                        <span className="font-semibold">₹{formatCurrency(feeStatus.feeRecord?.totalFeeAmount)}</span>
+                        <span className="font-semibold">₹{formatCurrency(detailedFeeStatus.totalFeeAmount)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Paid:</span>
-                        <span className="font-semibold text-green-600">₹{formatCurrency(feeStatus.feeRecord?.totalPaidAmount)}</span>
+                        <span className="font-semibold text-green-600">₹{formatCurrency(detailedFeeStatus.totalPaidAmount)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Due:</span>
-                        <span className="font-semibold text-orange-600">₹{formatCurrency(feeStatus.feeRecord?.totalDueAmount)}</span>
+                        <span className="font-semibold text-orange-600">₹{formatCurrency(detailedFeeStatus.totalDueAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-2 border-t">
+                        <span className="text-gray-600">Monthly Dues:</span>
+                        <span className="font-semibold text-blue-600">₹{formatCurrency(detailedFeeStatus.monthlyDues)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">One-Time Dues:</span>
+                        <span className="font-semibold text-orange-600">₹{formatCurrency(detailedFeeStatus.oneTimeDues)}</span>
                       </div>
                     </div>
                   )}
 
-                  <div className="border-t pt-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  {/* Fee Collection Type Tabs */}
+                  <div className="border-t pt-4">
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={() => setFeeCollectionType("monthly")}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                          feeCollectionType === "monthly"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
                       >
-                        {months.map((month, idx) => (
-                          <option key={idx + 1} value={idx + 1}>{month}</option>
-                        ))}
-                      </select>
+                        Monthly Fee
+                      </button>
+                      <button
+                        onClick={() => setFeeCollectionType("onetime")}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                          feeCollectionType === "onetime"
+                            ? "bg-orange-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        One-Time Fee
+                      </button>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Enter amount"
-                      />
-                    </div>
+                    {feeCollectionType === "monthly" ? (
+                      /* Monthly Fee Collection Form */
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                          <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {months.map((month, idx) => (
+                              <option key={idx + 1} value={idx + 1}>{month}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      >
-                        {paymentMethods.map((method) => (
-                          <option key={method.value} value={method.value}>{method.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                          <input
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter amount"
+                          />
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (Optional)</label>
-                      <textarea
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        rows={3}
-                        placeholder="Add any remarks..."
-                      />
-                    </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {paymentMethods.map((method) => (
+                              <option key={method.value} value={method.value}>{method.label}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                    <div className="space-y-2 pt-2">
-                      <Button
-                        onClick={handleValidate}
-                        disabled={loading || !amount}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                      >
-                        Validate
-                      </Button>
-                      <Button
-                        onClick={handleCollectFee}
-                        disabled={loading || !amount}
-                        className="w-full bg-orange-600 hover:bg-orange-700"
-                      >
-                        {loading ? "Processing..." : "Collect Fee"}
-                      </Button>
-                    </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (Optional)</label>
+                          <textarea
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={3}
+                            placeholder="Add any remarks..."
+                          />
+                        </div>
+
+                        <div className="space-y-2 pt-2">
+                          <Button
+                            onClick={handleValidate}
+                            disabled={loading || !amount}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                          >
+                            Validate
+                          </Button>
+                          <Button
+                            onClick={handleCollectFee}
+                            disabled={loading || !amount}
+                            className="w-full bg-orange-600 hover:bg-orange-700"
+                          >
+                            {loading ? "Processing..." : "Collect Monthly Fee"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* One-Time Fee Collection Form */
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Fee Type</label>
+                          <select
+                            value={selectedFeeType}
+                            onChange={(e) => {
+                              setSelectedFeeType(e.target.value);
+                              // Auto-set amount if admission fee
+                              if (e.target.value === "admission" && detailedFeeStatus?.admissionPending) {
+                                setOneTimeFeeAmount(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0));
+                              } else {
+                                setOneTimeFeeAmount(0);
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="admission">🎓 Admission Fee</option>
+                            <option value="annual">📅 Annual Fee</option>
+                          </select>
+                        </div>
+
+                        {selectedFeeType === "admission" && detailedFeeStatus?.admissionPending && (
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Total Admission Fee:</span>
+                              <span className="font-semibold">₹{formatCurrency(detailedFeeStatus.admissionFeeAmount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Already Paid:</span>
+                              <span className="font-semibold text-green-600">₹{formatCurrency(detailedFeeStatus.admissionFeePaid || 0)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-orange-700 pt-2 border-t mt-2">
+                              <span>Remaining:</span>
+                              <span>₹{formatCurrency(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0))}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                          <input
+                            type="number"
+                            value={oneTimeFeeAmount}
+                            onChange={(e) => setOneTimeFeeAmount(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Enter amount"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            You can collect partial payments. Enter any amount up to the remaining due.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            {paymentMethods.map((method) => (
+                              <option key={method.value} value={method.value}>{method.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Remarks (Optional)</label>
+                          <textarea
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            rows={3}
+                            placeholder="Add any remarks..."
+                          />
+                        </div>
+
+                        <div className="space-y-2 pt-2">
+                          <Button
+                            onClick={handleCollectOneTimeFee}
+                            disabled={loading || !oneTimeFeeAmount}
+                            className="w-full bg-orange-600 hover:bg-orange-700"
+                          >
+                            {loading ? "Processing..." : `Collect ${selectedFeeType === "admission" ? "Admission" : "Annual"} Fee`}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

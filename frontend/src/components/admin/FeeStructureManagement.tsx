@@ -60,8 +60,6 @@ const FeeStructureManagement: React.FC = () => {
     lateFeePercentage: 2,
   });
 
-  const feeTypes = Object.values(FeeType);
-
   // Fetch school settings to get available grades
   const fetchSchoolSettings = async () => {
     if (!user?.schoolId) return;
@@ -362,25 +360,47 @@ const FeeStructureManagement: React.FC = () => {
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <p className="text-sm text-gray-600">Monthly Fee</p>
                     <p className="text-2xl font-bold text-blue-700">
-                      {formatCurrency(structure.totalMonthlyFee)}
+                      ₹{formatCurrency(structure.totalMonthlyFee)}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Fee Components:</p>
+                    <p className="text-sm text-gray-600 mb-2">Monthly Components:</p>
                     <div className="space-y-1">
-                      {structure.feeComponents.map((component, idx) => (
+                      {structure.feeComponents
+                        .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                        .map((component, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-gray-600 capitalize">
                             {component.feeType.replace("_", " ")}
                           </span>
                           <span className="font-medium">
-                            {formatCurrency(component.amount)}
+                            ₹{formatCurrency(component.amount)}
                           </span>
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  {structure.feeComponents.some(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL) && (
+                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                      <p className="text-sm text-orange-800 font-medium mb-2">One-Time Fees:</p>
+                      <div className="space-y-1">
+                        {structure.feeComponents
+                          .filter(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL)
+                          .map((component, idx) => (
+                          <div key={idx} className="flex justify-between text-sm">
+                            <span className="text-orange-700 capitalize font-medium">
+                              {component.feeType === FeeType.ADMISSION ? '🎓' : '📅'} {component.feeType}
+                            </span>
+                            <span className="font-bold text-orange-800">
+                              ₹{formatCurrency(component.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t space-y-2">
                     <div className="flex justify-between text-sm">
@@ -529,7 +549,7 @@ const FeeStructureManagement: React.FC = () => {
                   />
                 </div>
 
-                {/* Fee Components */}
+                  {/* Fee Components */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium">Fee Components *</label>
@@ -545,96 +565,167 @@ const FeeStructureManagement: React.FC = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {formData.feeComponents.map((component, index) => (
-                      <div key={index} className="p-3 border rounded-lg space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs mb-1">Type</label>
-                            <Select
-                              value={component.feeType}
-                              onValueChange={(value) =>
-                                updateFeeComponent(index, "feeType", value)
-                              }
-                            >
-                              <SelectTrigger className="text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {feeTypes.map((type) => (
-                                  <SelectItem key={type} value={type}>
-                                    {type.replace("_", " ")}
+                    {formData.feeComponents.map((component, index) => {
+                      const isOneTimeFee = component.feeType === FeeType.ADMISSION || 
+                                          component.feeType === FeeType.ANNUAL;
+                      
+                      return (
+                        <div 
+                          key={index} 
+                          className={`p-3 border rounded-lg space-y-2 ${
+                            isOneTimeFee ? 'border-orange-300 bg-orange-50' : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs mb-1">Type</label>
+                              <Select
+                                value={component.feeType}
+                                onValueChange={(value) =>
+                                  updateFeeComponent(index, "feeType", value)
+                                }
+                              >
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={FeeType.TUITION}>Tuition (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.TRANSPORT}>Transport (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.HOSTEL}>Hostel (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.LIBRARY}>Library (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.LAB}>Lab (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.SPORTS}>Sports (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.EXAM}>Exam (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.OTHER}>Other (Monthly)</SelectItem>
+                                  <SelectItem value={FeeType.ADMISSION} className="font-semibold text-orange-600">
+                                    🎓 Admission (One-Time)
                                   </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                  <SelectItem value={FeeType.ANNUAL} className="font-semibold text-orange-600">
+                                    📅 Annual (One-Time)
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs mb-1">
+                                Amount {isOneTimeFee && <span className="text-orange-600">(One-Time)</span>}
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={component.amount}
+                                onChange={(e) =>
+                                  updateFeeComponent(index, "amount", Number(e.target.value))
+                                }
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                required
+                              />
+                            </div>
                           </div>
 
-                          <div>
-                            <label className="block text-xs mb-1">Amount</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={component.amount}
-                              onChange={(e) =>
-                                updateFeeComponent(index, "amount", Number(e.target.value))
-                              }
-                              className="w-full px-2 py-1 border rounded text-sm"
-                              required
-                            />
+                          <input
+                            type="text"
+                            value={component.description || ""}
+                            onChange={(e) =>
+                              updateFeeComponent(index, "description", e.target.value)
+                            }
+                            className="w-full px-2 py-1 border rounded text-sm"
+                            placeholder={isOneTimeFee ? 
+                              "E.g., One-time admission fee for new students" : 
+                              "Description (optional)"}
+                          />
+
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={component.isMandatory}
+                                  onChange={(e) =>
+                                    updateFeeComponent(index, "isMandatory", e.target.checked)
+                                  }
+                                  className="mr-2"
+                                />
+                                Mandatory
+                              </label>
+                              {isOneTimeFee && (
+                                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded font-medium">
+                                  One-Time Fee
+                                </span>
+                              )}
+                            </div>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600"
+                              onClick={() => removeFeeComponent(index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
-
-                        <input
-                          type="text"
-                          value={component.description || ""}
-                          onChange={(e) =>
-                            updateFeeComponent(index, "description", e.target.value)
-                          }
-                          className="w-full px-2 py-1 border rounded text-sm"
-                          placeholder="Description (optional)"
-                        />
-
-                        <div className="flex justify-between items-center">
-                          <label className="flex items-center text-xs">
-                            <input
-                              type="checkbox"
-                              checked={component.isMandatory}
-                              onChange={(e) =>
-                                updateFeeComponent(index, "isMandatory", e.target.checked)
-                              }
-                              className="mr-2"
-                            />
-                            Mandatory
-                          </label>
-
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600"
-                            onClick={() => removeFeeComponent(index)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Total */}
                   {formData.feeComponents.length > 0 && (
-                    <div className="bg-blue-50 p-3 rounded-lg mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">Total Monthly Fee</span>
-                        <span className="text-xl font-bold text-blue-700">
-                          {formatCurrency(calculateTotal())}
-                        </span>
+                    <div className="space-y-2 mt-3">
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">Total Monthly Fee</span>
+                          <span className="text-xl font-bold text-blue-700">
+                            {formatCurrency(
+                              formData.feeComponents
+                                .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                                .reduce((sum, c) => sum + c.amount, 0)
+                            )}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Collected every month × 12 = ₹{formatCurrency(
+                            formData.feeComponents
+                              .filter(c => c.feeType !== FeeType.ADMISSION && c.feeType !== FeeType.ANNUAL)
+                              .reduce((sum, c) => sum + c.amount, 0) * 12
+                          )}
+                        </p>
+                      </div>
+
+                      {formData.feeComponents.some(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL) && (
+                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-orange-800">One-Time Fees</span>
+                            <span className="text-xl font-bold text-orange-700">
+                              {formatCurrency(
+                                formData.feeComponents
+                                  .filter(c => c.feeType === FeeType.ADMISSION || c.feeType === FeeType.ANNUAL)
+                                  .reduce((sum, c) => sum + c.amount, 0)
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-xs text-orange-600 mt-1">
+                            Collected once per student (admission/annual fees)
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-green-800">Total Yearly Fee per Student</span>
+                          <span className="text-xl font-bold text-green-700">
+                            {formatCurrency(calculateTotal())}
+                          </span>
+                        </div>
+                        <p className="text-xs text-green-600 mt-1">
+                          Monthly fees × 12 + One-time fees
+                        </p>
                       </div>
                     </div>
                   )}
-                </div>
-
-                {/* Actions */}
+                </div>                {/* Actions */}
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" className="flex-1">
                     {editingStructure ? "Update" : "Create"}

@@ -77,7 +77,7 @@ const AccountantDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <MobileNavigation
         title="Accountant Dashboard"
-        subtitle={`Welcome back, ${user?.username}`}
+        subtitle={`Welcome back, ${user?.fullName}`}
         navItems={navItems}
         onLogout={handleLogout}
         primaryColor="orange"

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { AppError } from "../../errors/AppError";
 import feeStructureService from "./feeStructure.service";
 import feeReportService from "./feeReport.service";
 import StudentFeeRecord from "./studentFeeRecord.model";
@@ -18,6 +19,10 @@ import feeTransactionService from "./feeTransaction.service";
 export const createFeeStructure = catchAsync(async (req: Request, res: Response) => {
   const { school, grade, academicYear, feeComponents, dueDate, lateFeePercentage } = req.body;
   const createdBy = req.user?.id;
+
+  if (!createdBy) {
+    throw new AppError(401, "User not authenticated");
+  }
 
   const feeStructure = await feeStructureService.createFeeStructure({
     school,
@@ -84,6 +89,10 @@ export const updateFeeStructure = catchAsync(async (req: Request, res: Response)
   const { feeComponents, dueDate, lateFeePercentage } = req.body;
   const updatedBy = req.user?.id;
 
+  if (!updatedBy) {
+    throw new AppError(401, "User not authenticated");
+  }
+
   const feeStructure = await feeStructureService.updateFeeStructure(id, {
     feeComponents,
     dueDate,
@@ -106,6 +115,10 @@ export const deactivateFeeStructure = catchAsync(async (req: Request, res: Respo
   const { id } = req.params;
   const updatedBy = req.user?.id;
 
+  if (!updatedBy) {
+    throw new AppError(401, "User not authenticated");
+  }
+
   const feeStructure = await feeStructureService.deactivateFeeStructure(id, updatedBy);
 
   sendResponse(res, {
@@ -123,6 +136,10 @@ export const cloneFeeStructure = catchAsync(async (req: Request, res: Response) 
   const { id } = req.params;
   const { targetAcademicYear } = req.body;
   const createdBy = req.user?.id;
+
+  if (!createdBy) {
+    throw new AppError(401, "User not authenticated");
+  }
 
   const feeStructure = await feeStructureService.cloneFeeStructure(
     id,
@@ -212,6 +229,10 @@ export const cancelTransaction = catchAsync(async (req: Request, res: Response) 
   const { reason } = req.body;
   const cancelledBy = req.user?.id;
 
+  if (!cancelledBy) {
+    throw new AppError(401, "User not authenticated");
+  }
+
   const transaction = await feeTransactionService.cancelTransaction(id, cancelledBy, reason);
 
   sendResponse(res, {
@@ -228,6 +249,10 @@ export const cancelTransaction = catchAsync(async (req: Request, res: Response) 
 export const waiveFee = catchAsync(async (req: Request, res: Response) => {
   const { studentId, month, reason } = req.body;
   const waivedBy = req.user?.id;
+
+  if (!waivedBy) {
+    throw new AppError(401, "User not authenticated");
+  }
 
   // Get current academic year
   const now = new Date();
@@ -247,7 +272,12 @@ export const waiveFee = catchAsync(async (req: Request, res: Response) => {
       success: false,
       statusCode: 404,
       message: "Student fee record not found",
+      data: null,
     });
+  }
+
+  if (!waivedBy) {
+    throw new AppError(401, "User not authenticated");
   }
 
   await feeRecord.waiveFee(month, reason, waivedBy);
