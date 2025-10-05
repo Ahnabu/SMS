@@ -254,3 +254,49 @@ export const getStudentsByGradeSection = catchAsync(async (req: Request, res: Re
     data: students,
   });
 });
+
+/**
+ * Get defaulters list
+ */
+export const getDefaulters = catchAsync(async (req: Request, res: Response) => {
+  const schoolId = req.user?.schoolId;
+
+  if (!schoolId) {
+    throw new Error("School ID is required");
+  }
+
+  const defaulters = await feeCollectionService.getDefaulters(schoolId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Defaulters retrieved successfully",
+    data: defaulters,
+  });
+});
+
+/**
+ * Get financial reports (daily, weekly, monthly, yearly)
+ */
+export const getFinancialReports = catchAsync(async (req: Request, res: Response) => {
+  const { reportType, startDate, endDate } = req.query;
+  const schoolId = req.user?.schoolId;
+
+  if (!schoolId) {
+    throw new Error("School ID is required");
+  }
+
+  const reports = await feeCollectionService.getFinancialReports(
+    schoolId,
+    reportType as string || 'monthly',
+    startDate as string,
+    endDate as string
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Financial reports retrieved successfully",
+    data: reports,
+  });
+});

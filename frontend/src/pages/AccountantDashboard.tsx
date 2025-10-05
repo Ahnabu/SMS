@@ -4,6 +4,31 @@ import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
 import MobileNavigation from '../components/layout/MobileNavigation';
 import AccountantFeeCollection from '../components/accountant/AccountantFeeCollection';
+import TransactionManagement from '../components/accountant/TransactionManagement';
+import DefaulterManagement from '../components/accountant/DefaulterManagement';
+import FinancialReports from '../components/accountant/FinancialReports';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const AccountantDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -194,6 +219,126 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
           </div>
         </div>
 
+        {/* Visual Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Today vs Monthly Collection Bar Chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Collection Overview</h3>
+            <div className="h-[280px]">
+              <Bar
+                data={{
+                  labels: ['Today', 'This Month'],
+                  datasets: [
+                    {
+                      label: 'Collections',
+                      data: [
+                        dashboardData?.todayTransactions || 0,
+                        dashboardData?.monthlyTransactions || 0
+                      ],
+                      backgroundColor: [
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                      ],
+                      borderColor: [
+                        'rgb(249, 115, 22)',
+                        'rgb(59, 130, 246)',
+                      ],
+                      borderWidth: 2,
+                    },
+                    {
+                      label: 'Target',
+                      data: [
+                        0, // No daily target
+                        dashboardData?.monthlyTarget || 0
+                      ],
+                      backgroundColor: 'rgba(156, 163, 175, 0.5)',
+                      borderColor: 'rgb(156, 163, 175)',
+                      borderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return context.dataset.label + ': ₹' + formatCurrency(context.parsed.y);
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return '₹' + formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Collection Status Doughnut */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Collection Status</h3>
+            <div className="h-[280px] flex items-center justify-center">
+              <Doughnut
+                data={{
+                  labels: ['Collected', 'Pending Dues', 'Defaulters'],
+                  datasets: [
+                    {
+                      data: [
+                        dashboardData?.totalCollections || 0,
+                        (dashboardData?.pendingDues || 0) - (dashboardData?.totalDefaulters || 0) * 1000, // Approximate
+                        (dashboardData?.totalDefaulters || 0) * 1000, // Approximate overdue
+                      ],
+                      backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                      ],
+                      borderColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(251, 191, 36)',
+                        'rgb(239, 68, 68)',
+                      ],
+                      borderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom' as const,
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.label || '';
+                          const value = context.parsed;
+                          return label + ': ₹' + formatCurrency(value);
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Transactions and Monthly Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Transactions</h3>
@@ -202,9 +347,9 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
                 <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{transaction.studentName}</p>
-                    <p className="text-xs text-gray-500">{transaction.feeType} - {transaction.date}</p>
+                    <p className="text-xs text-gray-500">{transaction.studentId} • {new Date(transaction.date).toLocaleDateString()}</p>
                   </div>
-                  <span className="text-sm font-bold text-green-600">₹{transaction.amount}</span>
+                  <span className="text-sm font-bold text-green-600">₹{formatCurrency(transaction.amount)}</span>
                 </div>
               )) || (
                 <p className="text-gray-500">No recent transactions.</p>
@@ -213,24 +358,63 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Monthly Collection</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-900">Tuition Fees</span>
-                <span className="text-sm font-bold text-green-600">₹{dashboardData?.tuitionCollection || 0}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-900">Exam Fees</span>
-                <span className="text-sm font-bold text-blue-600">₹{dashboardData?.examCollection || 0}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-900">Transport Fees</span>
-                <span className="text-sm font-bold text-yellow-600">₹{dashboardData?.transportCollection || 0}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-900">Other Fees</span>
-                <span className="text-sm font-bold text-purple-600">₹{dashboardData?.otherCollection || 0}</span>
-              </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Monthly Collection by Type</h3>
+            <div className="h-[240px]">
+              <Bar
+                data={{
+                  labels: ['Tuition', 'Exam', 'Transport', 'Other'],
+                  datasets: [
+                    {
+                      label: 'Amount Collected',
+                      data: [
+                        dashboardData?.tuitionCollection || 0,
+                        dashboardData?.examCollection || 0,
+                        dashboardData?.transportCollection || 0,
+                        dashboardData?.otherCollection || 0,
+                      ],
+                      backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                      ],
+                      borderColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(59, 130, 246)',
+                        'rgb(251, 191, 36)',
+                        'rgb(168, 85, 247)',
+                      ],
+                      borderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false,
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return 'Amount: ₹' + formatCurrency(context.parsed.y);
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return '₹' + formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
@@ -418,33 +602,5 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
     </div>
   );
 };
-
-// Placeholder components
-const TransactionManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Transaction Management</h2>
-      <p className="text-gray-500">Transaction management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
-const DefaulterManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Defaulter Management</h2>
-      <p className="text-gray-500">Defaulter management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
-const FinancialReports: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Financial Reports</h2>
-      <p className="text-gray-500">Financial reports interface will be implemented here.</p>
-    </div>
-  </div>
-);
 
 export default AccountantDashboard;

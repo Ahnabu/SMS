@@ -90,4 +90,20 @@ router.get(
   accountantFeeController.getStudentsByGradeSection
 );
 
+// Defaulters
+router.get(
+  "/defaulters",
+  authenticate,
+  authorize("accountant"),
+  accountantFeeController.getDefaulters
+);
+
+// Financial Reports
+router.get(
+  "/reports",
+  authenticate,
+  authorize("accountant"),
+  accountantFeeController.getFinancialReports
+);
+
 export default router;

@@ -34,6 +34,32 @@ import {
   Download,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const FinancialDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -292,84 +318,195 @@ const FinancialDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Monthly Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Collection Trend</CardTitle>
-          <CardDescription>
-            Month-wise fee collection breakdown
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {monthlyBreakdown.map((month: any) => (
-              <div key={month.month} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium text-gray-700">
-                    {getMonthName(month.month)}
-                  </span>
-                  <span className="text-gray-600">
-                    {formatCurrency(month.collected)} /{" "}
-                    {formatCurrency(month.expected)}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(
-                        (month.collected / month.expected) * 100,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500">
-                  {formatPercentage((month.collected / month.expected) * 100)}{" "}
-                  collected • {formatCurrency(month.pending)} pending
-                </p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Monthly Collection Trend Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Collection Trend</CardTitle>
+            <CardDescription>
+              Month-wise fee collection comparison
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[350px]">
+              <Line
+                data={{
+                  labels: monthlyBreakdown.map((m: any) => getMonthName(m.month)),
+                  datasets: [
+                    {
+                      label: 'Collected',
+                      data: monthlyBreakdown.map((m: any) => m.collected),
+                      borderColor: 'rgb(34, 197, 94)',
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                    },
+                    {
+                      label: 'Expected',
+                      data: monthlyBreakdown.map((m: any) => m.expected),
+                      borderColor: 'rgb(59, 130, 246)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return context.dataset.label + ': ₹' + formatCurrency(context.parsed.y);
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return '₹' + formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Grade-wise Breakdown */}
+        {/* Collection Status Doughnut */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Collection Status</CardTitle>
+            <CardDescription>
+              Overall fee collection breakdown
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[350px] flex items-center justify-center">
+              <Doughnut
+                data={{
+                  labels: ['Collected', 'Pending', 'Overdue'],
+                  datasets: [
+                    {
+                      data: [
+                        overview.totalCollected,
+                        overview.totalPending - overview.totalOverdue,
+                        overview.totalOverdue,
+                      ],
+                      backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                      ],
+                      borderColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(251, 191, 36)',
+                        'rgb(239, 68, 68)',
+                      ],
+                      borderWidth: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom' as const,
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.label || '';
+                          const value = context.parsed;
+                          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                          const percentage = ((value / total) * 100).toFixed(1);
+                          return label + ': ₹' + formatCurrency(value) + ' (' + percentage + '%)';
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Grade-wise Breakdown Chart */}
       <Card>
         <CardHeader>
           <CardTitle>Grade-wise Collection</CardTitle>
           <CardDescription>Fee collection by grade/class</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {gradeWiseBreakdown.map((grade: any) => (
-              <div
-                key={grade.grade}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-100 text-blue-700 rounded-full h-10 w-10 flex items-center justify-center font-bold">
-                    {grade.grade}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      Class {grade.grade}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {grade.totalStudents} students
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">
-                    {formatCurrency(grade.collected)}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatPercentage(grade.collectionRate)} collected
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="h-[400px]">
+            <Bar
+              data={{
+                labels: gradeWiseBreakdown.map((g: any) => `Class ${g.grade}`),
+                datasets: [
+                  {
+                    label: 'Collected Amount',
+                    data: gradeWiseBreakdown.map((g: any) => g.collected),
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1,
+                  },
+                  {
+                    label: 'Expected Amount',
+                    data: gradeWiseBreakdown.map((g: any) => g.expected || g.collected / (g.collectionRate / 100)),
+                    backgroundColor: 'rgba(156, 163, 175, 0.5)',
+                    borderColor: 'rgb(156, 163, 175)',
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top' as const,
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const label = context.dataset.label || '';
+                        const value = context.parsed.y;
+                        return label + ': ₹' + formatCurrency(value);
+                      },
+                      afterLabel: function(context) {
+                        const grade = gradeWiseBreakdown[context.dataIndex];
+                        return [
+                          `Students: ${grade.totalStudents}`,
+                          `Collection Rate: ${formatPercentage(grade.collectionRate)}`
+                        ];
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function(value) {
+                        return '₹' + formatCurrency(Number(value));
+                      }
+                    }
+                  }
+                }
+              }}
+            />
           </div>
         </CardContent>
       </Card>

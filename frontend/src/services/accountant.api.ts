@@ -116,6 +116,28 @@ export const getStudentsByGradeSection = async (params?: {
   return response.data;
 };
 
+/**
+ * Get defaulters list
+ */
+export const getDefaulters = async () => {
+  const response = await apiClient.get("/accountant-fees/defaulters");
+  return response.data;
+};
+
+/**
+ * Get financial reports
+ */
+export const getFinancialReports = async (params?: {
+  reportType?: string;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const response = await apiClient.get("/accountant-fees/reports", {
+    params,
+  });
+  return response.data;
+};
+
 // Export all functions as default
 export default {
   searchStudent,
@@ -127,4 +149,6 @@ export default {
   getReceipt,
   getDashboard,
   getStudentsByGradeSection,
+  getDefaulters,
+  getFinancialReports,
 };

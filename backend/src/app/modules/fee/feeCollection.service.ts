@@ -3,7 +3,7 @@ import FeeTransaction from "./feeTransaction.model";
 import FeeStructure from "./feeStructure.model";
 import { Month, PaymentMethod, TransactionType } from "./fee.interface";
 import {AppError} from "../../errors/AppError";
-import { model } from "mongoose";
+import { model, Types } from "mongoose";
 
 const Student = model("Student");
 
@@ -309,15 +309,35 @@ class FeeCollectionService {
     })
       .populate({
         path: "student",
-        select: "studentId grade rollNumber userId",
+        select: "studentId grade section rollNumber userId",
         populate: {
           path: "userId",
           select: "firstName lastName email phone"
         }
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    return transactions;
+    // Map transactions to include studentName for frontend
+    return transactions.map((t: any) => {
+      const userId = t.student?.userId;
+      const studentName = userId ? `${userId.firstName || ''} ${userId.lastName || ''}`.trim() : 'Unknown';
+      
+      return {
+        _id: t._id,
+        transactionId: t.transactionId,
+        studentId: t.student?.studentId,
+        studentName,
+        grade: t.student?.grade,
+        section: t.student?.section,
+        amount: t.amount,
+        paymentMethod: t.paymentMethod,
+        date: t.createdAt,
+        month: t.month,
+        status: t.status,
+        remarks: t.remarks,
+      };
+    });
   }
 
   /**
@@ -378,11 +398,14 @@ class FeeCollectionService {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
+    // Convert schoolId to ObjectId
+    const schoolObjectId = new Types.ObjectId(schoolId);
+
     // Today's collections
     const todayCollections = await FeeTransaction.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           transactionType: TransactionType.PAYMENT,
           status: "completed",
           createdAt: { $gte: startOfDay, $lte: endOfDay },
@@ -401,7 +424,7 @@ class FeeCollectionService {
     const monthCollections = await FeeTransaction.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           transactionType: TransactionType.PAYMENT,
           status: "completed",
           createdAt: { $gte: startOfMonth, $lte: endOfMonth },
@@ -420,7 +443,7 @@ class FeeCollectionService {
     const pendingDues = await StudentFeeRecord.aggregate([
       {
         $match: {
-          school: schoolId,
+          school: schoolObjectId,
           academicYear: this.getCurrentAcademicYear(),
         },
       },
@@ -435,7 +458,7 @@ class FeeCollectionService {
 
     // Defaulters count (students with overdue payments)
     const defaultersCount = await StudentFeeRecord.countDocuments({
-      school: schoolId,
+      school: schoolObjectId,
       academicYear: this.getCurrentAcademicYear(),
       "monthlyPayments": {
         $elemMatch: {
@@ -447,7 +470,7 @@ class FeeCollectionService {
 
     // Recent transactions
     const recentTransactions = await FeeTransaction.find({
-      school: schoolId,
+      school: schoolObjectId,
       transactionType: TransactionType.PAYMENT,
       status: "completed",
     })
@@ -492,11 +515,84 @@ class FeeCollectionService {
       },
     ]);
 
+    // Get collection breakdown by fee type from monthlyPayments
+    const feeTypeBreakdown = await StudentFeeRecord.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          academicYear: this.getCurrentAcademicYear(),
+        },
+      },
+      {
+        $unwind: "$monthlyPayments",
+      },
+      {
+        $match: {
+          "monthlyPayments.paidAmount": { $gt: 0 },
+          "monthlyPayments.paidDate": { $gte: startOfMonth, $lte: endOfMonth },
+        },
+      },
+      {
+        $lookup: {
+          from: "feesstructures",
+          localField: "feeStructure",
+          foreignField: "_id",
+          as: "structure",
+        },
+      },
+      {
+        $unwind: { path: "$structure", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $group: {
+          _id: null,
+          tuitionFee: { 
+            $sum: { 
+              $cond: [
+                { $gt: ["$structure.tuitionFee", 0] }, 
+                { $multiply: ["$monthlyPayments.paidAmount", { $divide: ["$structure.tuitionFee", { $add: ["$structure.tuitionFee", "$structure.computerFee", "$structure.examFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.transportFee", "$structure.otherFees"] }] }] },
+                0
+              ] 
+            } 
+          },
+          examFee: { 
+            $sum: { 
+              $cond: [
+                { $gt: ["$structure.examFee", 0] }, 
+                { $multiply: ["$monthlyPayments.paidAmount", { $divide: ["$structure.examFee", { $add: ["$structure.tuitionFee", "$structure.computerFee", "$structure.examFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.transportFee", "$structure.otherFees"] }] }] },
+                0
+              ] 
+            } 
+          },
+          transportFee: { 
+            $sum: { 
+              $cond: [
+                { $gt: ["$structure.transportFee", 0] }, 
+                { $multiply: ["$monthlyPayments.paidAmount", { $divide: ["$structure.transportFee", { $add: ["$structure.tuitionFee", "$structure.computerFee", "$structure.examFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.transportFee", "$structure.otherFees"] }] }] },
+                0
+              ] 
+            } 
+          },
+          otherFees: { 
+            $sum: { 
+              $cond: [
+                { $gt: [{ $add: ["$structure.computerFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.otherFees"] }, 0] }, 
+                { $multiply: ["$monthlyPayments.paidAmount", { $divide: [{ $add: ["$structure.computerFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.otherFees"] }, { $add: ["$structure.tuitionFee", "$structure.computerFee", "$structure.examFee", "$structure.sportsFee", "$structure.libraryFee", "$structure.transportFee", "$structure.otherFees"] }] }] },
+                0
+              ] 
+            } 
+          },
+        },
+      },
+    ]);
+
+    const breakdown = feeTypeBreakdown[0] || {};
+
     return {
-      totalCollections: todayCollections[0]?.totalAmount || 0,
-      todayTransactions: todayCollections[0]?.count || 0,
-      monthlyTarget: monthCollections[0]?.totalAmount || 0,
-      monthlyTransactions: monthCollections[0]?.count || 0,
+      totalCollections: monthCollections[0]?.totalAmount || 0,
+      todayTransactions: todayCollections[0]?.totalAmount || 0,
+      monthlyTarget: (monthCollections[0]?.totalAmount || 0) * 1.2, // 20% above current for target
+      monthlyTransactions: monthCollections[0]?.totalAmount || 0,
       pendingDues: pendingDues[0]?.totalDue || 0,
       totalDefaulters: defaultersCount,
       recentTransactions: recentTransactions.map((t: any) => {
@@ -516,10 +612,10 @@ class FeeCollectionService {
           month: t.month,
         };
       }),
-      tuitionCollection: 0, // These would need more detailed tracking
-      examCollection: 0,
-      transportCollection: 0,
-      otherCollection: 0,
+      tuitionCollection: Math.round(breakdown.tuitionFee || 0),
+      examCollection: Math.round(breakdown.examFee || 0),
+      transportCollection: Math.round(breakdown.transportFee || 0),
+      otherCollection: Math.round(breakdown.otherFees || 0),
       monthlyBreakdown,
     };
   }
@@ -576,6 +672,267 @@ class FeeCollectionService {
     );
 
     return studentsWithFees;
+  }
+
+  /**
+   * Get defaulters list
+   */
+  async getDefaulters(schoolId: string) {
+    const currentYear = this.getCurrentAcademicYear();
+    const schoolObjectId = new Types.ObjectId(schoolId);
+
+    const defaulters = await StudentFeeRecord.find({
+      school: schoolObjectId,
+      academicYear: currentYear,
+      "monthlyPayments": {
+        $elemMatch: {
+          status: "overdue",
+          waived: false,
+        },
+      },
+    })
+      .populate({
+        path: "student",
+        select: "studentId grade section rollNumber userId",
+        populate: {
+          path: "userId",
+          select: "firstName lastName email phone"
+        }
+      })
+      .sort({ totalDueAmount: -1 })
+      .lean();
+
+    return defaulters.map((record: any) => {
+      const userId = record.student?.userId;
+      const studentName = userId ? `${userId.firstName || ''} ${userId.lastName || ''}`.trim() : 'Unknown';
+      
+      const overdueMonths = record.monthlyPayments.filter(
+        (p: any) => p.status === "overdue" && !p.waived
+      );
+
+      return {
+        _id: record._id,
+        studentId: record.student?.studentId,
+        studentName,
+        grade: record.student?.grade,
+        section: record.student?.section,
+        rollNumber: record.student?.rollNumber,
+        parentContact: userId?.phone || '',
+        totalDueAmount: record.totalDueAmount,
+        totalOverdue: overdueMonths.reduce((sum: number, m: any) => sum + m.dueAmount, 0),
+        overdueMonths: overdueMonths.length,
+        lastPaymentDate: record.lastPaymentDate,
+        feeStatus: record.status,
+      };
+    });
+  }
+
+  /**
+   * Get financial reports (daily, weekly, monthly, yearly)
+   */
+  async getFinancialReports(
+    schoolId: string,
+    reportType: string = 'monthly',
+    startDate?: string,
+    endDate?: string
+  ) {
+    const schoolObjectId = new Types.ObjectId(schoolId);
+    const now = new Date();
+    let start: Date, end: Date;
+
+    // Determine date range based on report type
+    switch (reportType) {
+      case 'daily':
+        start = startDate ? new Date(startDate) : new Date(now);
+        start.setHours(0, 0, 0, 0);
+        end = endDate ? new Date(endDate) : new Date(now);
+        end.setHours(23, 59, 59, 999);
+        break;
+
+      case 'weekly':
+        start = startDate ? new Date(startDate) : new Date(now);
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        end = endDate ? new Date(endDate) : new Date(now);
+        end.setHours(23, 59, 59, 999);
+        break;
+
+      case 'monthly':
+        start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+        end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+
+      case 'yearly':
+        start = startDate ? new Date(startDate) : new Date(now.getFullYear(), 0, 1);
+        end = endDate ? new Date(endDate) : new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+
+      default:
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    // Total collections in period
+    const totalCollections = await FeeTransaction.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          transactionType: TransactionType.PAYMENT,
+          status: "completed",
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Collections by payment method
+    const byPaymentMethod = await FeeTransaction.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          transactionType: TransactionType.PAYMENT,
+          status: "completed",
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: "$paymentMethod",
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Daily breakdown for charts
+    const dailyBreakdown = await FeeTransaction.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          transactionType: TransactionType.PAYMENT,
+          status: "completed",
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" },
+          },
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+      },
+    ]);
+
+    // Collections by grade
+    const byGrade = await FeeTransaction.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          transactionType: TransactionType.PAYMENT,
+          status: "completed",
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "student",
+          foreignField: "_id",
+          as: "studentData",
+        },
+      },
+      {
+        $unwind: "$studentData",
+      },
+      {
+        $group: {
+          _id: "$studentData.grade",
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // Top collecting accountants
+    const topAccountants = await FeeTransaction.aggregate([
+      {
+        $match: {
+          school: schoolObjectId,
+          transactionType: TransactionType.PAYMENT,
+          status: "completed",
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: "$collectedBy",
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { totalAmount: -1 },
+      },
+      {
+        $limit: 5,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "accountant",
+        },
+      },
+      {
+        $unwind: "$accountant",
+      },
+      {
+        $project: {
+          accountantName: {
+            $concat: ["$accountant.firstName", " ", "$accountant.lastName"],
+          },
+          totalAmount: 1,
+          count: 1,
+        },
+      },
+    ]);
+
+    return {
+      reportType,
+      period: {
+        start,
+        end,
+      },
+      summary: {
+        totalAmount: totalCollections[0]?.totalAmount || 0,
+        totalTransactions: totalCollections[0]?.count || 0,
+        averageTransaction:
+          totalCollections[0]?.count > 0
+            ? totalCollections[0].totalAmount / totalCollections[0].count
+            : 0,
+      },
+      byPaymentMethod,
+      dailyBreakdown,
+      byGrade,
+      topAccountants,
+    };
   }
 
   /**

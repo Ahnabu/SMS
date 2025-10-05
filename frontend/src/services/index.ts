@@ -124,6 +124,8 @@ export const apiService = {
     getDailyCollectionSummary: accountantApi.getDailyCollectionSummary,
     getReceipt: accountantApi.getReceipt,
     getStudentsByGradeSection: accountantApi.getStudentsByGradeSection,
+    getDefaulters: accountantApi.getDefaulters,
+    getFinancialReports: accountantApi.getFinancialReports,
   },
 };
 
