@@ -313,6 +313,30 @@ const SchoolSettingsComponent: React.FC<SchoolSettingsProps> = ({ schoolData }) 
         </Button>
       </div>
 
+      {/* Fee Structure Link */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 p-2 rounded-lg">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Fee Structure Management</h3>
+                <p className="text-sm text-gray-600">Configure and manage fee structures for different grades</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => window.location.href = '/admin/settings/fee-structures'}
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+            >
+              Manage Fee Structures →
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-gray-200 pb-4">
         <TabButton id="basic" label="Basic Info" icon={Building} />

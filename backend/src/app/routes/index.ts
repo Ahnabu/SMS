@@ -20,6 +20,8 @@ import { AcademicCalendarRoutes } from "../modules/academic-calendar/academic-ca
 import { ScheduleRoutes } from "../modules/schedule/schedule.route";
 import { EventRoutes } from "../modules/event/event.route";
 import { AccountantRoutes } from "../modules/accountant/accountant.route";
+import feeRoutes from "../modules/fee/fee.route";
+import accountantFeeRoutes from "../modules/fee/accountantFee.route";
 
 // Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
@@ -90,6 +92,14 @@ const moduleRoutes = [
   {
     path: "/accountants",
     route: AccountantRoutes,
+  },
+  {
+    path: "/fees",
+    route: feeRoutes,
+  },
+  {
+    path: "/accountant-fees",
+    route: accountantFeeRoutes,
   },
 ];
 

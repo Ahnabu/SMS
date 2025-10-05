@@ -2,11 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '@/services';
+import MobileNavigation from '../components/layout/MobileNavigation';
+import AccountantFeeCollection from '../components/accountant/AccountantFeeCollection';
 
 const AccountantDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const navItems = [
+    { href: '/accountant', label: 'Dashboard' },
+    { href: '/accountant/collect-fee', label: 'Collect Fee' },
+    { href: '/accountant/transactions', label: 'Transactions' },
+    { href: '/accountant/defaulters', label: 'Defaulters' },
+    { href: '/accountant/reports', label: 'Reports' },
+  ];
 
   useEffect(() => {
     loadDashboardData();
@@ -15,9 +25,9 @@ const AccountantDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await apiService.accountant.getDashboard() as any;
-      if (response.data.success) {
-        setDashboardData(response.data.data);
+      const response = await apiService.accountant.getDashboard();
+      if (response.success) {
+        setDashboardData(response.data);
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -33,57 +43,26 @@ const AccountantDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Accountant Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {user?.username}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition duration-200"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <MobileNavigation
+        title="Accountant Dashboard"
+        subtitle={`Welcome back, ${user?.username}`}
+        navItems={navItems}
+        onLogout={handleLogout}
+        primaryColor="orange"
+      />
 
-      <nav className="bg-orange-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <a href="/accountant" className="text-white px-3 py-4 text-sm font-medium hover:bg-orange-700">
-              Dashboard
-            </a>
-            <a href="/accountant/transactions" className="text-white px-3 py-4 text-sm font-medium hover:bg-orange-700">
-              Transactions
-            </a>
-            <a href="/accountant/fees" className="text-white px-3 py-4 text-sm font-medium hover:bg-orange-700">
-              Fee Management
-            </a>
-            <a href="/accountant/defaulters" className="text-white px-3 py-4 text-sm font-medium hover:bg-orange-700">
-              Defaulters
-            </a>
-            <a href="/accountant/reports" className="text-white px-3 py-4 text-sm font-medium hover:bg-orange-700">
-              Reports
-            </a>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<AccountantHome dashboardData={dashboardData} />} />
+          <Route path="/collect-fee" element={<AccountantFeeCollection />} />
           <Route path="/transactions" element={<TransactionManagement />} />
-          <Route path="/fees" element={<FeeManagement />} />
           <Route path="/defaulters" element={<DefaulterManagement />} />
           <Route path="/reports" element={<FinancialReports />} />
         </Routes>
@@ -92,7 +71,66 @@ const AccountantDashboard: React.FC = () => {
   );
 };
 
+interface Student {
+  _id: string;
+  studentId: string;
+  name: string;
+  grade: number;
+  section: string;
+  rollNumber: number;
+  parentContact: string;
+  feeStatus: {
+    totalFeeAmount: number;
+    totalPaidAmount: number;
+    totalDueAmount: number;
+    status: string;
+    pendingMonths: number;
+  } | null;
+}
+
 const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [showStudentList, setShowStudentList] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState<number | ''>('');
+  const [selectedSection, setSelectedSection] = useState<string>('');
+
+  useEffect(() => {
+    if (showStudentList) {
+      loadStudents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGrade, selectedSection, showStudentList]);
+
+  const loadStudents = async () => {
+    try {
+      setStudentsLoading(true);
+      const params: any = {};
+      if (selectedGrade) params.grade = selectedGrade;
+      if (selectedSection) params.section = selectedSection;
+      
+      const response = await apiService.accountant.getStudentsByGradeSection(params);
+      if (response.success) {
+        setStudents(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load students:', error);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.studentId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null || isNaN(amount)) return "0";
+    return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(amount);
+  };
+
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
@@ -201,14 +239,14 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
           <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link 
-              to="/accountant/payments" 
+              to="/accountant/collect-fee" 
               className="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-4 rounded-xl text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-xl active:scale-95 hover:scale-105 text-center block"
             >
               <div className="flex flex-col items-center">
                 <svg className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                Record Payment
+                Collect Fee
               </div>
             </Link>
             
@@ -249,6 +287,133 @@ const AccountantHome: React.FC<{ dashboardData: any }> = ({ dashboardData }) => 
             </Link>
           </div>
         </div>
+
+        {/* Student List Section */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Student Fee Collection</h3>
+            <button
+              onClick={() => setShowStudentList(!showStudentList)}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-all duration-200"
+            >
+              {showStudentList ? 'Hide Students' : 'Show Students'}
+            </button>
+          </div>
+
+          {showStudentList && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search Student</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Name or Student ID..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    />
+                    <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
+                  <select
+                    value={selectedGrade}
+                    onChange={(e) => setSelectedGrade(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="">All Grades</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(grade => (
+                      <option key={grade} value={grade}>Grade {grade}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                  <select
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  >
+                    <option value="">All Sections</option>
+                    {['A', 'B', 'C', 'D', 'E'].map(section => (
+                      <option key={section} value={section}>Section {section}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Student List */}
+              {studentsLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+                  <p className="text-gray-500 mt-4">Loading students...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => (
+                      <div
+                        key={student._id}
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <p className="text-base font-semibold text-gray-900">{student.name}</p>
+                              <span className={`text-xs px-2 py-1 rounded-md ${
+                                student.feeStatus?.status === 'paid' 
+                                  ? 'bg-green-100 text-green-700'
+                                  : student.feeStatus?.status === 'overdue'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {student.feeStatus?.status || 'pending'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <span>{student.studentId}</span>
+                              <span>•</span>
+                              <span>Grade {student.grade} {student.section}</span>
+                              <span>•</span>
+                              <span>Roll #{student.rollNumber}</span>
+                            </div>
+                            {student.feeStatus && (
+                              <div className="flex items-center gap-4 mt-2 text-xs">
+                                <span className="text-green-600">Paid: ₹{formatCurrency(student.feeStatus.totalPaidAmount)}</span>
+                                <span className="text-orange-600">Due: ₹{formatCurrency(student.feeStatus.totalDueAmount)}</span>
+                                <span className="text-red-600">Pending: {student.feeStatus.pendingMonths} months</span>
+                              </div>
+                            )}
+                          </div>
+                          <Link
+                            to={`/accountant/collect-fee?studentId=${student.studentId}`}
+                            className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                          >
+                            Collect Fee
+                          </Link>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <p className="text-gray-500">No students found</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -260,15 +425,6 @@ const TransactionManagement: React.FC = () => (
     <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Transaction Management</h2>
       <p className="text-gray-500">Transaction management interface will be implemented here.</p>
-    </div>
-  </div>
-);
-
-const FeeManagement: React.FC = () => (
-  <div className="px-4 py-6 sm:px-0">
-    <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Fee Management</h2>
-      <p className="text-gray-500">Fee management interface will be implemented here.</p>
     </div>
   </div>
 );

@@ -7,6 +7,7 @@ import { superadminApi } from "./superadmin.api";
 import { parentApi } from "./parent.api";
 import { eventAPI } from "./event.api";
 import { api } from "./api-base";
+import accountantApi from "./accountant.api";
 
 export {
   authApi,
@@ -17,6 +18,7 @@ export {
   parentApi,
   eventAPI,
   api,
+  accountantApi,
 };
 export type { ApiResponse } from "./api-base";
 
@@ -111,13 +113,17 @@ export const apiService = {
     getChildNotices: parentApi.getChildNotices,
   },
 
-  // Accountant routes (placeholder for future implementation)
+  // Accountant routes
   accountant: {
-    getDashboard: () => Promise.reject(new Error("Not implemented")),
-    getTransactions: () => Promise.reject(new Error("Not implemented")),
-    recordFee: () => Promise.reject(new Error("Not implemented")),
-    getDefaulters: () => Promise.reject(new Error("Not implemented")),
-    addFine: () => Promise.reject(new Error("Not implemented")),
+    getDashboard: accountantApi.getDashboard,
+    searchStudent: accountantApi.searchStudent,
+    getStudentFeeStatus: accountantApi.getStudentFeeStatus,
+    validateFeeCollection: accountantApi.validateFeeCollection,
+    collectFee: accountantApi.collectFee,
+    getTransactions: accountantApi.getAccountantTransactions,
+    getDailyCollectionSummary: accountantApi.getDailyCollectionSummary,
+    getReceipt: accountantApi.getReceipt,
+    getStudentsByGradeSection: accountantApi.getStudentsByGradeSection,
   },
 };
 
