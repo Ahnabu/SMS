@@ -25,7 +25,6 @@ const SuperAdminProfile: React.FC = () => {
 
   const handleSave = () => {
     // TODO: Implement API call to update profile
-    console.log('Saving profile:', formData);
     setIsEditing(false);
   };
 

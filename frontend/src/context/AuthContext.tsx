@@ -36,7 +36,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error.code === 'ERR_NETWORK') {
         console.warn('Network error during auth check - server may be unavailable');
       } else if (error.response?.status === 401) {
-        console.log('No valid session found');
       } else if (error.response?.status === 429) {
         console.warn('Rate limited during auth check - will retry');
         // Don't clear auth data for rate limiting, just log

@@ -394,8 +394,7 @@ export const ParentHome: React.FC<ParentHomeProps> = ({
       {/* Events Calendar */}
       <div className="mt-8">
         <EventCalendar
-          onEventClick={(event) => {
-            console.log('Event clicked:', event);
+          onEventClick={(_event) => {
             // Handle event click - could show a modal with event details
           }}
         />

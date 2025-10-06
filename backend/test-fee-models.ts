@@ -9,7 +9,7 @@ import { FeeType, Month, PaymentMethod, TransactionType } from "./src/app/module
 // Load environment variables
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "";
 
 // Test data IDs (you can replace these with actual IDs from your database)
 const TEST_SCHOOL_ID = new mongoose.Types.ObjectId();
@@ -18,6 +18,9 @@ const TEST_USER_ID = new mongoose.Types.ObjectId();
 
 async function connectDB() {
   try {
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined in environment variables");
+    }
     await mongoose.connect(MONGODB_URI);
     console.log("✅ Connected to MongoDB");
   } catch (error) {

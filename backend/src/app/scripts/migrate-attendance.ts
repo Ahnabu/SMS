@@ -49,7 +49,6 @@ const NewAttendance = model('NewAttendance', newAttendanceSchema, 'attendances_n
 
 async function migrateAttendance() {
   try {
-    console.log('🔗 Connecting to MongoDB...');
     await connect(config.mongodb_uri as string);
     console.log('✅ Connected to MongoDB');
 
@@ -84,14 +83,11 @@ async function migrateAttendance() {
       }
     ]);
 
-    console.log(`📋 Found ${uniqueCombinations.length} unique attendance sessions to migrate`);
 
     if (uniqueCombinations.length === 0) {
-      console.log('ℹ️ No attendance data found to migrate');
       return;
     }
 
-    console.log('🔄 Starting migration...');
     
     // Clear the new collection first (if running migration again)
     await NewAttendance.deleteMany({});
@@ -122,18 +118,12 @@ async function migrateAttendance() {
     }
 
     console.log('🎉 Migration completed successfully!');
-    console.log(`📈 Statistics:`);
-    console.log(`   - Unique attendance sessions: ${uniqueCombinations.length}`);
-    console.log(`   - Total student records grouped: ${uniqueCombinations.reduce((sum: number, combo: any) => sum + combo.students.length, 0)}`);
     
     // Verify the migration
     const newCount = await NewAttendance.countDocuments();
-    console.log(`   - New collection documents: ${newCount}`);
     
     console.log('⚠️ IMPORTANT: Please verify the migrated data before dropping the old collection');
     console.log('⚠️ To complete migration, rename collections:');
-    console.log('   1. Rename "attendances" to "attendances_backup"');
-    console.log('   2. Rename "attendances_new" to "attendances"');
 
   } catch (error) {
     console.error('❌ Migration failed:', error);
@@ -146,7 +136,6 @@ async function migrateAttendance() {
 // Function to complete migration (rename collections)
 async function completeMigration() {
   try {
-    console.log('🔗 Connecting to MongoDB...');
     await connect(config.mongodb_uri as string);
     
     const db = mongoose.connection.db;
@@ -159,7 +148,6 @@ async function completeMigration() {
       throw new Error('Migration collection "attendances_new" not found. Run migration first.');
     }
     
-    console.log('🔄 Completing migration by renaming collections...');
     
     // Backup old collection
     if (collectionNames.includes('attendances')) {
@@ -172,7 +160,6 @@ async function completeMigration() {
     console.log('✅ Renamed "attendances_new" to "attendances"');
     
     console.log('🎉 Migration completed! New attendance structure is now active.');
-    console.log('💡 You can safely delete "attendances_backup" collection after verifying everything works');
     
   } catch (error) {
     console.error('❌ Failed to complete migration:', error);
@@ -189,7 +176,4 @@ if (command === 'migrate') {
 } else if (command === 'complete') {
   completeMigration();
 } else {
-  console.log('Usage:');
-  console.log('  npm run migrate-attendance migrate   # Migrate data to new structure');
-  console.log('  npm run migrate-attendance complete  # Complete migration by renaming collections');
 }

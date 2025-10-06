@@ -101,7 +101,6 @@ export async function seedSampleSubjects(schoolId?: string): Promise<void> {
 
     console.log('✅ Sample subjects created successfully:');
     subjects.forEach(subject => {
-      console.log(`   - ${subject.name} (${subject.code})`);
     });
 
   } catch (error) {
@@ -143,9 +142,6 @@ export async function seedSuperadmin(): Promise<void> {
     const superadmin = await User.create(superadminData);
 
     console.log('✅ Superadmin created successfully:');
-    console.log(`   Username: ${superadmin.username}`);
-    console.log(`   Email: ${superadmin.email}`);
-    console.log(`   ID: ${superadmin._id}`);
     console.log('⚠️  Please change the default password after first login!');
 
   } catch (error) {

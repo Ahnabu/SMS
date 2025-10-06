@@ -187,11 +187,20 @@ studentFeeRecordSchema.index({ status: 1, "monthlyPayments.status": 1 });
 
 // Pre-save middleware to update totals and status
 studentFeeRecordSchema.pre("save", function (next) {
-  // Calculate total paid amount
-  this.totalPaidAmount = this.monthlyPayments.reduce(
+  // Calculate total paid amount from monthly payments
+  const monthlyPaid = this.monthlyPayments.reduce(
     (sum, payment) => sum + payment.paidAmount,
     0
   );
+  
+  // Calculate total paid amount from one-time fees
+  const oneTimePaid = this.oneTimeFees?.reduce(
+    (sum: number, fee: any) => sum + (fee.paidAmount || 0),
+    0
+  ) || 0;
+  
+  // Total paid = monthly + one-time
+  this.totalPaidAmount = monthlyPaid + oneTimePaid;
 
   // Calculate total due amount
   this.totalDueAmount = this.totalFeeAmount - this.totalPaidAmount;

@@ -297,7 +297,6 @@ const SuperadminHome: React.FC<SuperadminHomeProps> = ({
                           className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors duration-200 font-medium"
                           onClick={() => {
                             // TODO: Implement approve functionality
-                            console.log('Approve school:', school.id);
                           }}
                         >
                           ✓ Approve
@@ -306,7 +305,6 @@ const SuperadminHome: React.FC<SuperadminHomeProps> = ({
                           className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors duration-200 font-medium"
                           onClick={() => {
                             // TODO: Implement reject functionality
-                            console.log('Reject school:', school.id);
                           }}
                         >
                           ✗ Reject

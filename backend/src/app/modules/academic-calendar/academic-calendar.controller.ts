@@ -22,7 +22,6 @@ const createCalendarEvent = catchAsync(async (req: Request, res: Response) => {
     }));
   }
   
-  console.log("Received calendar event data:", JSON.stringify(eventData, null, 2));
   const result = await academicCalendarService.createCalendarEvent(eventData);
 
   sendResponse(res, {

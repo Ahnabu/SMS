@@ -35,7 +35,6 @@ async function runCommand() {
         break;
         
       case 'reset-superadmin':
-        console.log('🗑️ Removing existing superadmin...');
         await User.deleteMany({ role: UserRole.SUPERADMIN });
         console.log('🌱 Creating new superadmin...');
         await seedSuperadmin();
@@ -43,7 +42,6 @@ async function runCommand() {
         
       case 'list-users':
         const users = await User.find({}).select('username role firstName lastName isActive createdAt');
-        console.log('👥 System Users:');
         console.table(users.map(user => ({
           Username: user.username,
           Role: user.role,
@@ -55,24 +53,6 @@ async function runCommand() {
         
       case 'help':
       default:
-        console.log(`
-📚 School Management Seeder CLI
-
-Usage: npm run seed [command]
-
-Commands:
-  seed              - Run complete database seeding
-  seed-superadmin   - Create superadmin user only
-  validate          - Validate seeding results
-  reset-superadmin  - Remove and recreate superadmin
-  list-users        - List all system users
-  help              - Show this help message
-
-Examples:
-  npm run seed seed
-  npm run seed validate
-  npm run seed reset-superadmin
-        `);
         break;
     }
 

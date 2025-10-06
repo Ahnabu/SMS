@@ -6,13 +6,9 @@ async function testAccountantMethods() {
   const hasGenerateId = typeof CredentialGenerator.generateUniqueAccountantId === 'function';
   const hasGenerateCredentials = typeof CredentialGenerator.generateAccountantCredentials === 'function';
   
-  console.log('generateUniqueAccountantId exists:', hasGenerateId);
-  console.log('generateAccountantCredentials exists:', hasGenerateCredentials);
   
   if (hasGenerateId && hasGenerateCredentials) {
-    console.log('✓ Both accountant methods are properly defined');
   } else {
-    console.log('✗ Methods are missing');
   }
 }
 

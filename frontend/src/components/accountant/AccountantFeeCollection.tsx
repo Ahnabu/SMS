@@ -532,22 +532,30 @@ const AccountantFeeCollection: React.FC = () => {
                   </div>
 
                   {/* PROMINENT DUE AMOUNT DISPLAY */}
-                  {feeStatus && detailedFeeStatus && detailedFeeStatus.totalDueAmount > 0 && (
-                    <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm text-orange-600 font-medium mb-1">TOTAL DUE AMOUNT</p>
-                          <p className="text-3xl font-bold text-orange-700">
-                            ₹{formatCurrency(detailedFeeStatus.totalDueAmount)}
-                          </p>
-                          <p className="text-xs text-orange-600 mt-1">
-                            {detailedFeeStatus.pendingMonths || 0} month(s) pending
-                          </p>
+                  {feeStatus && detailedFeeStatus && (() => {
+                    const calculatedTotalDue = 
+                      (detailedFeeStatus.monthlyDues || 0) + 
+                      (detailedFeeStatus.oneTimeDues || 0) + 
+                      (detailedFeeStatus.admissionPending 
+                        ? (detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0)) 
+                        : 0);
+                    return calculatedTotalDue > 0 ? (
+                      <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm text-orange-600 font-medium mb-1">TOTAL DUE AMOUNT</p>
+                            <p className="text-3xl font-bold text-orange-700">
+                              ₹{formatCurrency(calculatedTotalDue)}
+                            </p>
+                            <p className="text-xs text-orange-600 mt-1">
+                              {detailedFeeStatus.pendingMonths || 0} month(s) pending
+                            </p>
+                          </div>
+                          <AlertCircle className="h-12 w-12 text-orange-400" />
                         </div>
-                        <AlertCircle className="h-12 w-12 text-orange-400" />
                       </div>
-                    </div>
-                  )}
+                    ) : null;
+                  })()}
 
                   {detailedFeeStatus && detailedFeeStatus.admissionPending && (
                     <Alert className="bg-orange-50 border-orange-200">
@@ -558,30 +566,46 @@ const AccountantFeeCollection: React.FC = () => {
                     </Alert>
                   )}
 
-                  {feeStatus && detailedFeeStatus && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Total Fee:</span>
-                        <span className="font-semibold">₹{formatCurrency(detailedFeeStatus.totalFeeAmount)}</span>
+                  {feeStatus && detailedFeeStatus && (() => {
+                    const calculatedTotalDue = 
+                      (detailedFeeStatus.monthlyDues || 0) + 
+                      (detailedFeeStatus.oneTimeDues || 0) + 
+                      (detailedFeeStatus.admissionPending 
+                        ? (detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0)) 
+                        : 0);
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Total Fee:</span>
+                          <span className="font-semibold">₹{formatCurrency(detailedFeeStatus.totalFeeAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Paid:</span>
+                          <span className="font-semibold text-green-600">₹{formatCurrency(detailedFeeStatus.totalPaidAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Due:</span>
+                          <span className="font-semibold text-orange-600">₹{formatCurrency(calculatedTotalDue)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm pt-2 border-t">
+                          <span className="text-gray-600">Monthly Dues:</span>
+                          <span className="font-semibold text-blue-600">₹{formatCurrency(detailedFeeStatus.monthlyDues)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">One-Time Dues:</span>
+                          <span className="font-semibold text-orange-600">₹{formatCurrency(detailedFeeStatus.oneTimeDues)}</span>
+                        </div>
+                        {detailedFeeStatus.admissionPending && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Admission Due:</span>
+                            <span className="font-semibold text-red-600">
+                              ₹{formatCurrency(detailedFeeStatus.admissionFeeAmount - (detailedFeeStatus.admissionFeePaid || 0))}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Paid:</span>
-                        <span className="font-semibold text-green-600">₹{formatCurrency(detailedFeeStatus.totalPaidAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Due:</span>
-                        <span className="font-semibold text-orange-600">₹{formatCurrency(detailedFeeStatus.totalDueAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm pt-2 border-t">
-                        <span className="text-gray-600">Monthly Dues:</span>
-                        <span className="font-semibold text-blue-600">₹{formatCurrency(detailedFeeStatus.monthlyDues)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">One-Time Dues:</span>
-                        <span className="font-semibold text-orange-600">₹{formatCurrency(detailedFeeStatus.oneTimeDues)}</span>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Unified Fee Collection Form */}
                   <div className="border-t pt-4">

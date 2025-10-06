@@ -1,0 +1,168 @@
+{
+  "timestamp": "2025-10-06T09:56:27.345Z",
+  "summary": {
+    "total": 22,
+    "passed": 6,
+    "failed": 16,
+    "warnings": 0,
+    "successRate": "27.27%",
+    "duration": "3.43s"
+  },
+  "results": [
+    {
+      "category": "Database",
+      "testName": "Backend API Health Check",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 71
+    },
+    {
+      "category": "Database",
+      "testName": "API Endpoints Available",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 96
+    },
+    {
+      "category": "Superadmin",
+      "testName": "Login with Credentials",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 695
+    },
+    {
+      "category": "Superadmin",
+      "testName": "Access Protected Route",
+      "status": "❌ FAIL",
+      "message": "Failed to access protected route",
+      "duration": 99
+    },
+    {
+      "category": "School",
+      "testName": "Create New School",
+      "status": "❌ FAIL",
+      "message": "Failed to create school: {\"success\":false,\"message\":\"Validation Error\",\"errorSources\":[{\"path\":\"contact\",\"message\":\"Required\"},{\"path\":\"username\",\"message\":\"Required\"},{\"path\":\"password\",\"message\":\"Required\"}],\"err\":{\"issues\":[{\"code\":\"invalid_type\",\"expected\":\"object\",\"received\":\"undefined\",\"path\":[\"body\",\"contact\"],\"message\":\"Required\"},{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"undefined\",\"path\":[\"body\",\"adminDetails\",\"username\"],\"message\":\"Required\"},{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"undefined\",\"path\":[\"body\",\"adminDetails\",\"password\"],\"message\":\"Required\"}],\"name\":\"ZodError\"},\"stack\":\"ZodError: [\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      \\\"body\\\",\\n      \\\"contact\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      \\\"body\\\",\\n      \\\"adminDetails\\\",\\n      \\\"username\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  },\\n  {\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"received\\\": \\\"undefined\\\",\\n    \\\"path\\\": [\\n      \\\"body\\\",\\n      \\\"adminDetails\\\",\\n      \\\"password\\\"\\n    ],\\n    \\\"message\\\": \\\"Required\\\"\\n  }\\n]\\n    at Object.get error [as error] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\zod\\\\v3\\\\types.cjs:45:31)\\n    at ZodObject.parseAsync (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\zod\\\\v3\\\\types.cjs:183:22)\\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\middlewares\\\\validateRequest.ts:7:24\"}",
+      "duration": 104
+    },
+    {
+      "category": "School",
+      "testName": "Get School Details",
+      "status": "❌ FAIL",
+      "message": "Failed to get school details",
+      "duration": 144
+    },
+    {
+      "category": "Users",
+      "testName": "Create Teacher",
+      "status": "❌ FAIL",
+      "message": "Failed to create teacher: {\"success\":false,\"message\":\"Invalid token\",\"errorSources\":[{\"path\":\"\",\"message\":\"Invalid token\"}],\"err\":{\"statusCode\":401,\"status\":\"fail\",\"isOperational\":true},\"stack\":\"Error: Invalid token\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\middlewares\\\\auth.ts:86:21\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\utils\\\\catchAsync.ts:5:21\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\\n    at trim_prefix (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:328:13)\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:286:9\\n    at Function.process_params (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:346:12)\\n    at next (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:280:10)\\n    at Function.handle (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:175:3)\\n    at router (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:47:12)\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\"}",
+      "duration": 22
+    },
+    {
+      "category": "Users",
+      "testName": "Create Student",
+      "status": "❌ FAIL",
+      "message": "Failed to create student: {\"success\":false,\"message\":\"Invalid token\",\"errorSources\":[{\"path\":\"\",\"message\":\"Invalid token\"}],\"err\":{\"statusCode\":401,\"status\":\"fail\",\"isOperational\":true},\"stack\":\"Error: Invalid token\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\middlewares\\\\auth.ts:86:21\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\utils\\\\catchAsync.ts:5:21\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\\n    at trim_prefix (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:328:13)\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:286:9\\n    at Function.process_params (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:346:12)\\n    at next (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:280:10)\\n    at Function.handle (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:175:3)\\n    at router (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:47:12)\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\"}",
+      "duration": 18
+    },
+    {
+      "category": "Users",
+      "testName": "Create Accountant",
+      "status": "❌ FAIL",
+      "message": "Failed to create accountant: {\"success\":false,\"message\":\"Invalid token\",\"errorSources\":[{\"path\":\"\",\"message\":\"Invalid token\"}],\"err\":{\"statusCode\":401,\"status\":\"fail\",\"isOperational\":true},\"stack\":\"Error: Invalid token\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\middlewares\\\\auth.ts:86:21\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\utils\\\\catchAsync.ts:5:21\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\\n    at trim_prefix (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:328:13)\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:286:9\\n    at Function.process_params (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:346:12)\\n    at next (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:280:10)\\n    at Function.handle (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:175:3)\\n    at router (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:47:12)\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\"}",
+      "duration": 16
+    },
+    {
+      "category": "Fee",
+      "testName": "Create Fee Structure",
+      "status": "❌ FAIL",
+      "message": "Failed to create fee structure: {\"success\":false,\"message\":\"Invalid token\",\"errorSources\":[{\"path\":\"\",\"message\":\"Invalid token\"}],\"err\":{\"statusCode\":401,\"status\":\"fail\",\"isOperational\":true},\"stack\":\"Error: Invalid token\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\middlewares\\\\auth.ts:86:21\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\src\\\\app\\\\utils\\\\catchAsync.ts:5:21\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\\n    at trim_prefix (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:328:13)\\n    at D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:286:9\\n    at Function.process_params (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:346:12)\\n    at next (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:280:10)\\n    at Function.handle (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:175:3)\\n    at router (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\index.js:47:12)\\n    at Layer.handle [as handle_request] (D:\\\\Programming\\\\Level 2\\\\learning-projects\\\\SMS\\\\backend\\\\node_modules\\\\express\\\\lib\\\\router\\\\layer.js:95:5)\"}",
+      "duration": 13
+    },
+    {
+      "category": "Fee",
+      "testName": "Get Student Fee Status",
+      "status": "❌ FAIL",
+      "message": "Failed to get fee status",
+      "duration": 2013
+    },
+    {
+      "category": "Fee Collection",
+      "testName": "Validate Fee Collection",
+      "status": "❌ FAIL",
+      "message": "Validation failed",
+      "duration": 4
+    },
+    {
+      "category": "Fee Collection",
+      "testName": "Collect Fee",
+      "status": "❌ FAIL",
+      "message": "Fee collection failed: {\"success\":false,\"message\":\"API endpoint not found: POST /api/accountant/collect-fee\",\"error\":{\"statusCode\":404,\"path\":\"/api/accountant/collect-fee\",\"method\":\"POST\",\"timestamp\":\"2025-10-06T09:56:27.218Z\"}}",
+      "duration": 6
+    },
+    {
+      "category": "Fee Collection",
+      "testName": "Verify Total Paid Amount",
+      "status": "❌ FAIL",
+      "message": "Failed to get detailed fee status",
+      "duration": 4
+    },
+    {
+      "category": "Subjects",
+      "testName": "Create Subject",
+      "status": "❌ FAIL",
+      "message": "Failed to create subject",
+      "duration": 17
+    },
+    {
+      "category": "Subjects",
+      "testName": "Get All Subjects",
+      "status": "❌ FAIL",
+      "message": "Failed to get subjects",
+      "duration": 11
+    },
+    {
+      "category": "Integrity",
+      "testName": "Fee Calculation Accuracy",
+      "status": "❌ FAIL",
+      "message": "Student ID not available for integrity check",
+      "duration": 0
+    },
+    {
+      "category": "Integrity",
+      "testName": "Student Data Consistency",
+      "status": "❌ FAIL",
+      "message": "Student ID not available",
+      "duration": 0
+    },
+    {
+      "category": "Integrity",
+      "testName": "School Relationship Validation",
+      "status": "❌ FAIL",
+      "message": "School ID not available",
+      "duration": 0
+    },
+    {
+      "category": "Performance",
+      "testName": "API Response Time (< 500ms)",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 61
+    },
+    {
+      "category": "Performance",
+      "testName": "List Query Response Time",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 23
+    },
+    {
+      "category": "Cleanup",
+      "testName": "Remove Test Data",
+      "status": "✅ PASS",
+      "message": "Test passed",
+      "duration": 0
+    }
+  ],
+  "testData": {}
+}

@@ -229,7 +229,6 @@ const SchoolForm: React.FC<SchoolFormProps> = ({
         }
       };
 
-      console.log('Sending school data:', JSON.stringify(cleanedFormData, null, 2));
 
       if (school?.id) {
         // Update existing school

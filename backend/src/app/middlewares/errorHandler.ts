@@ -234,7 +234,6 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   };
 
   if (config.node_env === 'development') {
-    console.log('REQUEST:', JSON.stringify(requestLog, null, 2));
   }
 
   // Log response when finished
@@ -247,7 +246,6 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     };
 
     if (config.node_env === 'development') {
-      console.log('RESPONSE:', JSON.stringify(responseLog, null, 2));
     }
   });
 
@@ -293,16 +291,13 @@ export const handleDatabaseConnectionError = () => {
  */
 export const gracefulShutdown = (server: any) => {
   const shutdown = (signal: string) => {
-    console.log(`${signal} received. Shutting down gracefully...`);
     
     server.close(() => {
-      console.log('Process terminated');
       process.exit(0);
     });
 
     // Force shutdown after 10 seconds
     setTimeout(() => {
-      console.log('Forced shutdown');
       process.exit(1);
     }, 10000);
   };

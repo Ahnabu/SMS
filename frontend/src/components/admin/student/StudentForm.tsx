@@ -149,8 +149,6 @@ const StudentForm: React.FC<StudentFormProps> = ({
   // Load school data to get grade configuration
   useEffect(() => {
     const loadSchoolData = async () => {
-      console.log('Loading school data, user:', user);
-      console.log('User schoolId:', user?.schoolId);
       
       if (!user?.schoolId) {
         console.error('No schoolId found in user context');
@@ -161,7 +159,6 @@ const StudentForm: React.FC<StudentFormProps> = ({
       setLoadingSchool(true);
       try {
         const response = await adminApi.getSchoolSettings();
-        console.log('School settings loaded:', response.data);
         if (response.data.success && response.data) {
           setSchoolData(response.data.data);
         }

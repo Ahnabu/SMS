@@ -422,7 +422,7 @@ const AccountantDashboardNew: React.FC = () => {
                           {student.feeStatus && (
                             <div className="flex items-center gap-4 mt-2 text-xs">
                               <span className="text-green-300">Paid: {formatCurrency(student.feeStatus.totalPaidAmount)}</span>
-                              <span className="text-orange-300">Due: {formatCurrency(student.feeStatus.totalDueAmount)}</span>
+                              {/* <span className="text-orange-300">Due: {formatCurrency(student.feeStatus.totalDueAmount)}</span> */}
                               <span className="text-red-300">Pending: {student.feeStatus.pendingMonths} months</span>
                             </div>
                           )}

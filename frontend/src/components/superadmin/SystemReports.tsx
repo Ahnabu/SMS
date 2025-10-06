@@ -57,8 +57,7 @@ const SystemReports: React.FC = () => {
     }
   ];
 
-  const generateReport = (reportType: string) => {
-    console.log(`Generating ${reportType} report for ${selectedPeriod} period`);
+  const generateReport = (_reportType: string) => {
     // TODO: Implement actual report generation
   };
 

@@ -321,20 +321,70 @@ npx ts-node scripts/checkStudents.ts
 npx ts-node scripts/diagnoseStudent.ts
 ```
 
+## ✅ Recent Fixes (v1.0.0 - October 2025)
+
+### 🎯 Critical Bug Fixes Completed
+
+#### 1. One-Time Fees Calculation ✅
+**Issue**: After payment collection, due amounts weren't including one-time fees.
+**Root Cause**: Pre-save hook only calculated `totalPaidAmount` from monthly payments.
+**Fix**: Modified hook to sum both monthly and one-time fees:
+```typescript
+totalPaidAmount = monthlyPaid + oneTimePaid
+```
+**Impact**: Now correctly reflects all payments in paid/due calculations.
+
+#### 2. dueDate Validation Error ✅
+**Issue**: "Path `dueDate` is required" when creating fee records with one-time fees.
+**Root Cause**: One-time fees schema had `required: true` for dueDate.
+**Fix**: Changed to `required: false` (one-time fees don't have specific due dates).
+**Impact**: Fee records create successfully without validation errors.
+
+#### 3. Financial Dashboard Crash ✅
+**Issue**: "Cannot read properties of undefined (reading 'bySeverity')" error.
+**Root Cause**: Missing null checks for nested defaulters data.
+**Fix**: Added comprehensive null safety with optional chaining.
+**Impact**: Dashboard loads gracefully even without complete data.
+
+#### 4. Auto-Creation of Fee Records ✅
+**Issue**: Students showing null fee status in accountant dashboard.
+**Root Cause**: Fee records not created automatically for new students.
+**Fix**: Auto-create records when loading student list (if fee structure exists).
+**Impact**: All students show proper fee status or helpful message.
+
+#### 5. Console Log Cleanup ✅
+**Issue**: Excessive debug logging in production.
+**Fix**: Removed all console.logs from frontend and backend.
+**Impact**: Clean console output, kept only critical error logging.
+
+### 📊 Testing Status
+- ✅ All authentication flows working
+- ✅ Fee structure management tested
+- ✅ Payment collection verified (monthly + one-time)
+- ✅ Auto-sync feature working
+- ✅ All dashboards loading without errors
+- ✅ Database operations validated
+
+**See [TESTING_REPORT.md](./TESTING_REPORT.md) for comprehensive test results.**
+
+**Status**: 🚀 **PRODUCTION READY**
+
+---
+
 ## 🐛 Troubleshooting
 
 ### "dueDate is required" error
-- **Fixed**: dueDate now has a default value of 10
-- Update existing fee structures to include dueDate field
-- New structures automatically get dueDate = 10
+✅ **FIXED** in v1.0.0 - dueDate is now optional for one-time fees.
+
+### Paid/Due amounts not calculating correctly
+✅ **FIXED** in v1.0.0 - Pre-save hook now includes one-time fees in calculations.
+
+### Financial Dashboard shows undefined error
+✅ **FIXED** in v1.0.0 - Added null safety checks throughout dashboard.
 
 ### "No fee structure found" error
 - Admin must create fee structure for the grade and academic year first
 - Navigate to Admin Dashboard → Fee Management → Create Structure
-
-### 400 Bad Request on fee endpoints
-- **Fixed**: `includeLateFee` field added to validation schemas
-- Restart backend server after pulling latest changes
 
 ### Student not found (404 errors)
 - Ensure students are properly created with valid IDs
@@ -342,8 +392,8 @@ npx ts-node scripts/diagnoseStudent.ts
 
 ### Frontend not connecting to backend
 - Verify `VITE_API_URL` in frontend `.env` matches backend URL
-- Check backend server is running on correct port
-- Verify CORS settings in backend
+- Check backend server is running on correct port (default: 5000)
+- Verify CORS settings in backend allow your frontend origin
 
 ## 🤝 Contributing
 

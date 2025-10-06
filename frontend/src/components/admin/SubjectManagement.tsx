@@ -43,7 +43,7 @@ interface Teacher {
 const SubjectManagement: React.FC = () => {
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
@@ -58,15 +58,11 @@ const SubjectManagement: React.FC = () => {
     teachers: [] as string[],
   });
 
-  console.log('📚 Subject Management - subjects:', subjects);
-  console.log('👥 Subject Management - teachers:', teachers);
 
   const fetchSubjects = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('📚 Fetching subjects for management...');
       const response = await adminApi.getSubjects();
-      console.log('📚 Subjects API Response:', response);
       setSubjects(response.data.data || []);
     } catch (error: any) {
       console.error("❌ Error fetching subjects:", error);
@@ -78,9 +74,7 @@ const SubjectManagement: React.FC = () => {
 
   const fetchTeachers = useCallback(async () => {
     try {
-      console.log('👥 Fetching teachers for subject assignment...');
       const response = await adminApi.getTeachers();
-      console.log('👥 Teachers API Response:', response);
       setTeachers(response.data.data || []);
     } catch (error) {
       console.error("❌ Error fetching teachers:", error);
@@ -98,9 +92,7 @@ const SubjectManagement: React.FC = () => {
 
   const fetchSchoolData = async () => {
     try {
-      console.log('Loading school data in SubjectManagement');
       const response = await adminApi.getSchoolSettings();
-      console.log('School settings response:', response.data);
       if (response.data.success) {
         setSchoolData(response.data.data);
       }
@@ -120,7 +112,6 @@ const SubjectManagement: React.FC = () => {
         teachers: formData.teachers, // Send teacher IDs
       };
 
-      console.log('📚 Submitting subject data:', subjectData);
 
       if (editingSubject) {
         await adminApi.updateSubject(editingSubject._id, subjectData);
@@ -412,7 +403,6 @@ const SubjectManagement: React.FC = () => {
                       <p className="text-sm text-gray-500">No teachers available</p>
                     ) : (
                       teachers.map((teacher, index) => {
-                        console.log(`Teacher ${index}:`, teacher._id, teacher.user.firstName, teacher.user.lastName);
                         return (
                           <label key={teacher._id} className="flex items-center">
                             <input

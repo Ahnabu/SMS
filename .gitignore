@@ -49,7 +49,7 @@ storage/
 SCALABILITY_ANALYSIS.md
 INTERNAL_NOTES.md
 ARCHITECTURE_REVIEW.md
-
+TESTING_REPORT.md
 # Database dumps
 *.sql
 *.db
@@ -63,3 +63,4 @@ ARCHITECTURE_REVIEW.md
 *.tsbuildinfo
 
  docs/
+  

@@ -141,9 +141,7 @@ export const seedEvents = async () => {
     const createdEvents = await Event.insertMany(sampleEvents);
     
     console.log(`✅ Successfully seeded ${createdEvents.length} events for school: ${school.name}`);
-    console.log('📅 Events created:');
     createdEvents.forEach(event => {
-      console.log(`   - ${event.title} (${event.type}) - ${event.date.toDateString()}`);
     });
 
   } catch (error) {

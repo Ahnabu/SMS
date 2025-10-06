@@ -567,7 +567,7 @@ const FinancialDashboard: React.FC = () => {
       </Card>
 
       {/* Defaulters Summary */}
-      {defaultersData && (
+      {defaultersData && defaultersData.summary && defaultersData.summary.bySeverity && (
         <Card>
           <CardHeader>
             <CardTitle>Fee Defaulters</CardTitle>
@@ -577,25 +577,25 @@ const FinancialDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="text-center p-3 bg-yellow-50 rounded-lg">
                 <p className="text-2xl font-bold text-yellow-700">
-                  {defaultersData.summary.bySeverity.low}
+                  {defaultersData.summary.bySeverity.low || 0}
                 </p>
                 <p className="text-sm text-gray-600">Low</p>
               </div>
               <div className="text-center p-3 bg-orange-50 rounded-lg">
                 <p className="text-2xl font-bold text-orange-700">
-                  {defaultersData.summary.bySeverity.medium}
+                  {defaultersData.summary.bySeverity.medium || 0}
                 </p>
                 <p className="text-sm text-gray-600">Medium</p>
               </div>
               <div className="text-center p-3 bg-red-50 rounded-lg">
                 <p className="text-2xl font-bold text-red-700">
-                  {defaultersData.summary.bySeverity.high}
+                  {defaultersData.summary.bySeverity.high || 0}
                 </p>
                 <p className="text-sm text-gray-600">High</p>
               </div>
               <div className="text-center p-3 bg-red-100 rounded-lg">
                 <p className="text-2xl font-bold text-red-900">
-                  {defaultersData.summary.bySeverity.critical}
+                  {defaultersData.summary.bySeverity.critical || 0}
                 </p>
                 <p className="text-sm text-gray-600">Critical</p>
               </div>

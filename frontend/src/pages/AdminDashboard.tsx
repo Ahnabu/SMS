@@ -526,7 +526,6 @@ const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChan
   };
 
   const handleStudentUpdated = (student: any) => {
-    console.log("Student updated optimistically:", student);
     // Update the student optimistically in the list
     if (studentListRef.current) {
       studentListRef.current.updateStudentOptimistically(student);
@@ -537,12 +536,11 @@ const StudentManagement: React.FC<{ onDataChange?: () => void }> = ({ onDataChan
     }
   };
 
-  const handleStudentDeleted = (studentId: string) => {
-    console.log("Student deleted optimistically:", studentId);
+  const handleStudentDeleted = (_studentId: string) => {
     // Remove the student optimistically from the list
     // Note: removeStudentOptimistically is not implemented yet
     // if (studentListRef.current) {
-    //   studentListRef.current.removeStudentOptimistically(studentId);
+    //   studentListRef.current.removeStudentOptimistically(_studentId);
     // }
     // Refresh dashboard data to update stats
     if (onDataChange) {
@@ -617,16 +615,13 @@ const TeacherManagement: React.FC = () => {
     }
   };
 
-  const handleTeacherCreated = (teacher: any) => {
-    console.log("Teacher created optimistically:", teacher);
+  const handleTeacherCreated = (_teacher: any) => {
   };
 
-  const handleTeacherUpdated = (teacher: any) => {
-    console.log("Teacher updated optimistically:", teacher);
+  const handleTeacherUpdated = (_teacher: any) => {
   };
 
-  const handleTeacherDeleted = (teacherId: string) => {
-    console.log("Teacher deleted optimistically:", teacherId);
+  const handleTeacherDeleted = (_teacherId: string) => {
   };
 
   return (

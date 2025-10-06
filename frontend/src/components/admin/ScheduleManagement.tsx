@@ -127,13 +127,6 @@ const ScheduleManagement: React.FC = () => {
     try {
       const response = await adminApi.getSchedules();
       const schedulesData = response.data.data || [];
-      console.log('🔍 Schedules fetched:', schedulesData);
-      console.log('🔍 First schedule periods:', schedulesData[0]?.periods);
-      console.log('🔍 Subject data in periods:', schedulesData[0]?.periods?.map((p:any) => ({ 
-        periodNumber: p.periodNumber,
-        subject: getSubjectName(p),
-        isBreak: p.isBreak
-      })));
       setSchedules(schedulesData);
     } catch (error) {
       toast.error("Error fetching schedules");
@@ -222,12 +215,10 @@ const ScheduleManagement: React.FC = () => {
             isBreak: false,
           };
           
-          console.log('🔍 Period data being sent:', periodData);
           return periodData;
         }),
       };
 
-      console.log('🚀 Full request data being sent:', JSON.stringify(transformedFormData, null, 2));
 
       if (editingSchedule) {
         const scheduleId = editingSchedule._id || editingSchedule.id;
@@ -303,14 +294,11 @@ const ScheduleManagement: React.FC = () => {
   };
 
   const updatePeriod = (index: number, updatedPeriod: Partial<Period>) => {
-    console.log(`🔍 Updating period ${index} with:`, updatedPeriod);
-    console.log(`🔍 Current period before update:`, formData.periods[index]);
     
     const updatedPeriods = formData.periods.map((period, i) =>
       i === index ? { ...period, ...updatedPeriod } : period
     );
     
-    console.log(`🔍 Updated period after merge:`, updatedPeriods[index]);
     setFormData({ ...formData, periods: updatedPeriods });
   };
 
@@ -322,8 +310,6 @@ const ScheduleManagement: React.FC = () => {
   };
 
   const openEditForm = (schedule: Schedule) => {
-    console.log('🔍 Schedule data for editing:', schedule);
-    console.log('🔍 Schedule periods:', schedule.periods);
     
     setEditingSchedule(schedule);
     setFormData({
@@ -331,8 +317,7 @@ const ScheduleManagement: React.FC = () => {
       grade: schedule.grade,
       section: schedule.section,
       academicYear: schedule.academicYear,
-      periods: schedule.periods.map((period, index) => {
-        console.log(`🔍 Period ${index + 1} raw data:`, period);
+      periods: schedule.periods.map((period) => {
         
         // Handle subject mapping
         let mappedSubject;
@@ -385,7 +370,6 @@ const ScheduleManagement: React.FC = () => {
           breakType: period.breakType,
         };
 
-        console.log(`🔍 Period ${index + 1} mapped data:`, mappedPeriod);
         return mappedPeriod;
       }),
     });
@@ -729,12 +713,9 @@ const ScheduleManagement: React.FC = () => {
                                   <Select
                                     value={period.subject?._id || ""}
                                     onValueChange={(value) => {
-                                      console.log('🔍 Subject selection - value:', value);
-                                      console.log('🔍 Available subjects:', subjects);
                                       const subject = subjects.find(
                                         (s: any) => s._id === value
                                       );
-                                      console.log('🔍 Selected subject:', subject);
                                       updatePeriod(index, { subject });
                                     }}
                                   >
@@ -798,13 +779,9 @@ const ScheduleManagement: React.FC = () => {
                               <Select
                                 value={period.teacher?.id || ""}
                                 onValueChange={(value) => {
-                                  console.log('🔍 Teacher selection - value:', value);
-                                  console.log('🔍 Available teachers:', teachers);
-                                  console.log('🔍 Current period teacher:', period.teacher);
                                   const teacher = teachers.find(
                                     (t: any) => t.id === value
                                   );
-                                  console.log('🔍 Selected teacher:', teacher);
                                   updatePeriod(index, { teacher });
                                 }}
                               >

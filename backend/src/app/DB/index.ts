@@ -28,7 +28,6 @@ class Database {
 
       // Connection event handlers
       mongoose.connection.on('connected', async () => {
-        console.log('✅ Mongoose connected to MongoDB');
         
         // Run database seeding after successful connection
         try {
@@ -48,7 +47,6 @@ class Database {
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('⚠️ Mongoose disconnected from MongoDB');
       });
 
       // Handle application termination
@@ -66,7 +64,6 @@ class Database {
   public async disconnect(): Promise<void> {
     try {
       await mongoose.connection.close();
-      console.log('✅ MongoDB connection closed successfully');
     } catch (error) {
       console.error('❌ Error while disconnecting from MongoDB:', error);
     }
@@ -79,7 +76,6 @@ class Database {
   public async dropDatabase(): Promise<void> {
     if (config.node_env === 'test') {
       await mongoose.connection.dropDatabase();
-      console.log('🗑️ Test database dropped');
     } else {
       throw new Error('Database drop is only allowed in test environment');
     }
@@ -93,7 +89,6 @@ class Database {
         const collection = collections[key];
         await collection.deleteMany({});
       }
-      console.log('🧹 Test collections cleared');
     } else {
       throw new Error('Collection clearing is only allowed in test environment');
     }

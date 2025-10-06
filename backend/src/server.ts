@@ -16,7 +16,6 @@ async function main() {
 
     // Graceful shutdown
     const gracefulShutdown = (signal: string) => {
-      console.log(`\n📤 Received ${signal}. Shutting down gracefully...`);
       server.close(async () => {
         try {
           await database.disconnect();

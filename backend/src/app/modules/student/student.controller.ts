@@ -330,14 +330,12 @@ const getStudentSchedule = catchAsync(async (req: Request, res: Response) => {
 
 const getStudentCalendar = catchAsync(async (req: Request, res: Response) => {
   const studentId = (req as any).user?.id;
-  console.log("getStudentCalendar called with studentId:", studentId);
 
   if (!studentId) {
     throw new AppError(httpStatus.UNAUTHORIZED, "Student not found");
   }
 
   const calendarData = await studentService.getStudentCalendar(studentId);
-  console.log("Calendar data retrieved:", calendarData);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

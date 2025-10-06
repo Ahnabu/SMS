@@ -18,7 +18,6 @@ async function runEventSeeding() {
     // Run event seeding
     await seedEvents();
 
-    console.log('🎉 Event seeding completed successfully!');
     
   } catch (error) {
     console.error('❌ Error during event seeding:', error);

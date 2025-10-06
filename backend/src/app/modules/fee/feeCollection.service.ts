@@ -881,13 +881,34 @@ class FeeCollectionService {
               });
             }
           } catch (error) {
-            console.error(`Failed to create fee record for student ${student.studentId}:`, error);
+            // Silent fail - student will show null fee status
           }
         }
 
         const userId = student.userId as any;
         const fullName = userId ? `${userId.firstName || ''} ${userId.lastName || ''}`.trim() : 'Unknown';
 
+        // Calculate correct paid and due amounts on-the-fly
+        let calculatedTotalPaid = 0;
+        let calculatedTotalDue = 0;
+        
+        if (feeRecord) {
+          // Calculate monthly paid
+          const monthlyPaid = feeRecord.monthlyPayments.reduce(
+            (sum: number, payment: any) => sum + (payment.paidAmount || 0),
+            0
+          );
+          
+          // Calculate one-time paid
+          const oneTimePaid = (feeRecord.oneTimeFees || []).reduce(
+            (sum: number, fee: any) => sum + (fee.paidAmount || 0),
+            0
+          );
+          
+          calculatedTotalPaid = monthlyPaid + oneTimePaid;
+          calculatedTotalDue = feeRecord.totalFeeAmount - calculatedTotalPaid;
+        }
+        
         return {
           _id: student._id,
           studentId: student.studentId,
@@ -898,8 +919,8 @@ class FeeCollectionService {
           parentContact: userId?.phone || '',
           feeStatus: feeRecord ? {
             totalFeeAmount: feeRecord.totalFeeAmount,
-            totalPaidAmount: feeRecord.totalPaidAmount,
-            totalDueAmount: feeRecord.totalDueAmount,
+            totalPaidAmount: calculatedTotalPaid,
+            totalDueAmount: calculatedTotalDue,
             status: feeRecord.status,
             pendingMonths: feeRecord.monthlyPayments.filter(
               (p: any) => p.status === "pending" || p.status === "overdue"
@@ -1404,6 +1425,18 @@ class FeeCollectionService {
       (f: any) => f.feeType === 'admission'
     );
 
+    // Calculate correct total paid amount (monthly + one-time)
+    const monthlyPaid = feeRecord.monthlyPayments.reduce(
+      (sum: number, p: any) => sum + (p.paidAmount || 0),
+      0
+    );
+    const oneTimePaid = (feeRecord.oneTimeFees || []).reduce(
+      (sum: number, f: any) => sum + (f.paidAmount || 0),
+      0
+    );
+    const calculatedTotalPaid = monthlyPaid + oneTimePaid;
+    const calculatedTotalDue = feeRecord.totalFeeAmount - calculatedTotalPaid;
+
     // Find next due payment
     const now = new Date();
     const upcomingPayments = feeRecord.monthlyPayments
@@ -1434,8 +1467,8 @@ class FeeCollectionService {
       },
       hasFeeRecord: true,
       totalFeeAmount: feeRecord.totalFeeAmount,
-      totalPaidAmount: feeRecord.totalPaidAmount,
-      totalDueAmount: feeRecord.totalDueAmount,
+      totalPaidAmount: calculatedTotalPaid,
+      totalDueAmount: calculatedTotalDue,
       monthlyDues,
       oneTimeDues,
       pendingMonths: pendingMonthlyPayments.length,

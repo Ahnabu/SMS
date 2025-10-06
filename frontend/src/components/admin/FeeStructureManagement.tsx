@@ -206,10 +206,6 @@ const FeeStructureManagement: React.FC = () => {
     }
 
     // DEBUG: Log what we're sending
-    console.log("🔍 Form Data Before Submit:", JSON.stringify(formData, null, 2));
-    console.log("📊 Fee Components:", formData.feeComponents.map((c, i) => 
-      `${i+1}. ${c.feeType}: ₹${c.amount} - isOneTime: ${c.isOneTime}`
-    ));
 
     try {
       if (editingStructure) {
@@ -245,11 +241,9 @@ const FeeStructureManagement: React.FC = () => {
 
   // Update fee component
   const updateFeeComponent = (index: number, field: string, value: any) => {
-    console.log(`🔄 Updating component ${index}, field: ${field}, value: ${value}`);
     const updated = formData.feeComponents.map((comp, i) => 
       i === index ? { ...comp, [field]: value } : comp
     );
-    console.log(`✅ Updated component:`, updated[index]);
     setFormData(prev => ({ ...prev, feeComponents: updated }));
   };
 

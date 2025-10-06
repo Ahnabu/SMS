@@ -384,8 +384,7 @@ const TeacherForm: React.FC<TeacherFormProps> = ({
 
       // Handle validation errors
       if (error.response?.status === 400 && error.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-        console.log("Validation errors:", validationErrors);
+        // const validationErrors = error.response.data.errors;
         errorMessage = "Please check the form for validation errors.";
       }
 

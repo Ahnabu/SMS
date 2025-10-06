@@ -1201,7 +1201,6 @@ class ParentService {
         .sort({ createdAt: -1 })
         .limit(50);
 
-      console.log("Found notices:", notices.length);
 
       return {
         notices: notices.map((notice) => ({

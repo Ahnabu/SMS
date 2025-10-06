@@ -155,8 +155,7 @@ const ParentDashboard: React.FC = () => {
                 <div className="p-6">
                   <h1 className="text-2xl font-bold text-gray-900 mb-6">School Calendar</h1>
                   <EventCalendar
-                    onEventClick={(event) => {
-                      console.log('Event clicked:', event);
+                    onEventClick={(_event) => {
                       // Handle event click - could show a modal with event details
                     }}
                   />

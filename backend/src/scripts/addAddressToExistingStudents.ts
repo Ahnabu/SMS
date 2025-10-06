@@ -6,7 +6,6 @@ const addAddressToExistingStudents = async () => {
   try {
     // Connect to database
     await mongoose.connect(config.mongodb_uri as string);
-    console.log("Connected to database");
 
     // Find all students without address or with empty address fields
     const studentsWithoutAddress = await Student.find({
@@ -22,9 +21,6 @@ const addAddressToExistingStudents = async () => {
       ],
     });
 
-    console.log(
-      `Found ${studentsWithoutAddress.length} students without complete address`
-    );
 
     // Always update students with default address data
     const result = await Student.updateMany(
@@ -53,21 +49,15 @@ const addAddressToExistingStudents = async () => {
       }
     );
 
-    console.log(
-      `Updated ${result.modifiedCount} students with default address structure`
-    );
 
     // Verify the update
     const allStudents = await Student.find({}, { studentId: 1, address: 1 });
-    console.log("Sample of students after update:");
     allStudents.slice(0, 3).forEach((student) => {
-      console.log(`Student ${student.studentId}:`, student.address);
     });
   } catch (error) {
     console.error("Error updating students:", error);
   } finally {
     await mongoose.connection.close();
-    console.log("Database connection closed");
   }
 };
 

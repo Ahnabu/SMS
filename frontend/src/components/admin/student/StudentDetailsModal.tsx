@@ -130,7 +130,6 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
   // Example mapping for CredentialsModal
   const studentCred = credentials?.find((c: Credential) => c.role === "student");
-console.log(studentCred);
   const parentCred: Credential | undefined = (credentials as Credential[])?.find((c) => c.role === "parent");
 
   const credentialsData = {
