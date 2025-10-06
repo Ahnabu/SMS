@@ -62,11 +62,13 @@ const feeStructureSchema = new Schema<IFeeStructure>(
     totalAmount: {
       type: Number,
       required: true,
+      default: 0,
       min: [0, "Total amount must be non-negative"],
     },
     dueDate: {
       type: Number,
       required: [true, "Due date is required"],
+      default: 10,
       min: [1, "Due date must be between 1 and 31"],
       max: [31, "Due date must be between 1 and 31"],
     },

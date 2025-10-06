@@ -205,6 +205,12 @@ const FeeStructureManagement: React.FC = () => {
       return;
     }
 
+    // DEBUG: Log what we're sending
+    console.log("🔍 Form Data Before Submit:", JSON.stringify(formData, null, 2));
+    console.log("📊 Fee Components:", formData.feeComponents.map((c, i) => 
+      `${i+1}. ${c.feeType}: ₹${c.amount} - isOneTime: ${c.isOneTime}`
+    ));
+
     try {
       if (editingStructure) {
         await updateFeeStructure(editingStructure._id, {
@@ -239,9 +245,12 @@ const FeeStructureManagement: React.FC = () => {
 
   // Update fee component
   const updateFeeComponent = (index: number, field: string, value: any) => {
-    const updated = [...formData.feeComponents];
-    (updated[index] as any)[field] = value;
-    setFormData({ ...formData, feeComponents: updated });
+    console.log(`🔄 Updating component ${index}, field: ${field}, value: ${value}`);
+    const updated = formData.feeComponents.map((comp, i) => 
+      i === index ? { ...comp, [field]: value } : comp
+    );
+    console.log(`✅ Updated component:`, updated[index]);
+    setFormData(prev => ({ ...prev, feeComponents: updated }));
   };
 
   // Remove fee component
@@ -284,7 +293,8 @@ const FeeStructureManagement: React.FC = () => {
           Create Fee Structure
         </Button>
       </div>
-
+ 
+ cd backend && npm run dev
       {/* Alerts */}
       {error && (
         <Alert variant="destructive">
@@ -371,23 +381,28 @@ const FeeStructureManagement: React.FC = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Monthly Components:</p>
-                    <div className="space-y-1">
-                      {structure.feeComponents
-                        .filter(c => !c.isOneTime)
-                        .map((component, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span className="text-gray-600 capitalize">
-                            {component.feeType.replace("_", " ")}
-                          </span>
-                          <span className="font-medium">
-                            ₹{formatCurrency(component.amount)}
-                          </span>
-                        </div>
-                      ))}
+                  {structure.feeComponents.some(c => !c.isOneTime) && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                        <span className="text-blue-600">📅</span>
+                        Monthly Components:
+                      </p>
+                      <div className="space-y-1">
+                        {structure.feeComponents
+                          .filter(c => !c.isOneTime)
+                          .map((component, idx) => (
+                          <div key={idx} className="flex justify-between text-sm">
+                            <span className="text-gray-600 capitalize">
+                              {component.feeType.replace("_", " ")}
+                            </span>
+                            <span className="font-medium">
+                              ₹{formatCurrency(component.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {structure.feeComponents.some(c => c.isOneTime) && (
                     <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
@@ -641,7 +656,8 @@ const FeeStructureManagement: React.FC = () => {
                           />
 
                           <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
+                              {/* Mandatory Checkbox */}
                               <label className="flex items-center text-xs">
                                 <input
                                   type="checkbox"
@@ -653,22 +669,42 @@ const FeeStructureManagement: React.FC = () => {
                                 />
                                 Mandatory
                               </label>
-                              <label className="flex items-center text-xs">
-                                <input
-                                  type="checkbox"
-                                  checked={component.isOneTime}
-                                  onChange={(e) =>
-                                    updateFeeComponent(index, "isOneTime", e.target.checked)
-                                  }
-                                  className="mr-2"
-                                />
-                                <span className={isOneTimeFee ? "text-orange-600 font-medium" : ""}>
-                                  One-Time Fee
-                                </span>
-                              </label>
+
+                              {/* Fee Type Radio Buttons */}
+                              <div className="flex items-center gap-3 px-3 py-1 border rounded-md bg-gray-50">
+                                <label className="flex items-center text-xs cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`feeType-${index}`}
+                                    checked={!component.isOneTime}
+                                    onChange={() => updateFeeComponent(index, "isOneTime", false)}
+                                    className="mr-1.5 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="font-medium text-blue-700">Monthly</span>
+                                </label>
+                                <label className="flex items-center text-xs cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`feeType-${index}`}
+                                    checked={component.isOneTime}
+                                    onChange={() => updateFeeComponent(index, "isOneTime", true)}
+                                    className="mr-1.5 text-orange-600 focus:ring-orange-500"
+                                  />
+                                  <span className={`font-medium ${isOneTimeFee ? 'text-orange-600' : 'text-gray-600'}`}>
+                                    One-Time
+                                  </span>
+                                </label>
+                              </div>
+
+                              {/* Visual Badge */}
                               {isOneTimeFee && (
                                 <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded font-medium">
-                                  ⚡ One-Time
+                                  ⚡ ONE-TIME
+                                </span>
+                              )}
+                              {!isOneTimeFee && (
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium">
+                                  📅 MONTHLY
                                 </span>
                               )}
                             </div>

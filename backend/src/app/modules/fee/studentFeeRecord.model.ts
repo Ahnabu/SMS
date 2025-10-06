@@ -78,7 +78,7 @@ const oneTimeFeeSchema = new Schema(
     },
     dueDate: {
       type: Date,
-      required: true,
+      required: false, // Optional - one-time fees are paid with first payment
     },
     paidDate: {
       type: Date,
@@ -224,11 +224,14 @@ studentFeeRecordSchema.statics.createForStudent = async function (
   academicYear: string,
   feeStructureId: string,
   totalFeeAmount: number,
-  dueDate: number,
+  dueDate: number = 10, // Default to 10th of month
   startMonth: Month = Month.APRIL
 ) {
   const monthlyAmount = Math.round(totalFeeAmount / 12);
   const monthlyPayments = [];
+  
+  // Ensure dueDate is valid (1-31), default to 10 if invalid
+  const validDueDate = (dueDate && dueDate >= 1 && dueDate <= 31) ? dueDate : 10;
 
   for (let i = 0; i < 12; i++) {
     const month = ((startMonth + i - 1) % 12) + 1;
@@ -239,7 +242,7 @@ studentFeeRecordSchema.statics.createForStudent = async function (
       dueAmount: monthlyAmount,
       paidAmount: 0,
       status: PaymentStatus.PENDING,
-      dueDate: new Date(year, month - 1, dueDate),
+      dueDate: new Date(year, month - 1, validDueDate),
       lateFee: 0,
       waived: false,
     });

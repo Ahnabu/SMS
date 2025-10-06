@@ -98,7 +98,6 @@ const AccountantFeeCollection: React.FC = () => {
   ];
 
   useEffect(() => {
-    console.log("Component mounted, loading students...");
     loadAllStudents();
   }, []);
 
@@ -144,20 +143,14 @@ const AccountantFeeCollection: React.FC = () => {
   const loadAllStudents = async () => {
     try {
       setStudentsLoading(true);
-      console.log("Fetching all students...");
       const response = await apiService.accountant.getStudentsByGradeSection({});
-      console.log("Students response:", response);
       if (response.success) {
-        console.log("Students loaded:", response.data.length, "students");
         setAllStudents(response.data);
         setFilteredStudents(response.data);
       } else {
-        console.error("Failed to load students - response not successful:", response);
         setError("Failed to load students. Please refresh the page.");
       }
     } catch (err: any) {
-      console.error("Failed to load students - error:", err);
-      console.error("Error response:", err.response?.data);
       setError(err.response?.data?.message || "Failed to load students. Please refresh the page.");
     } finally {
       setStudentsLoading(false);
@@ -466,11 +459,17 @@ const AccountantFeeCollection: React.FC = () => {
                               <span>•</span>
                               <span>Roll #{student.rollNumber}</span>
                             </div>
-                            {student.feeStatus && (
+                            {student.feeStatus ? (
                               <div className="flex items-center gap-4 mt-2 text-xs">
                                 <span className="text-green-600">Paid: ₹{formatCurrency(student.feeStatus.totalPaidAmount)}</span>
                                 <span className="text-orange-600">Due: ₹{formatCurrency(student.feeStatus.totalDueAmount)}</span>
                                 <span className="text-red-600">Pending: {student.feeStatus.pendingMonths} months</span>
+                              </div>
+                            ) : (
+                              <div className="mt-2">
+                                <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                                  No fee structure set for this grade
+                                </span>
                               </div>
                             )}
                           </div>
@@ -531,6 +530,24 @@ const AccountantFeeCollection: React.FC = () => {
                       {selectedStudent.studentId} • Grade {selectedStudent.grade} {selectedStudent.section}
                     </p>
                   </div>
+
+                  {/* PROMINENT DUE AMOUNT DISPLAY */}
+                  {feeStatus && detailedFeeStatus && detailedFeeStatus.totalDueAmount > 0 && (
+                    <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-orange-600 font-medium mb-1">TOTAL DUE AMOUNT</p>
+                          <p className="text-3xl font-bold text-orange-700">
+                            ₹{formatCurrency(detailedFeeStatus.totalDueAmount)}
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            {detailedFeeStatus.pendingMonths || 0} month(s) pending
+                          </p>
+                        </div>
+                        <AlertCircle className="h-12 w-12 text-orange-400" />
+                      </div>
+                    </div>
+                  )}
 
                   {detailedFeeStatus && detailedFeeStatus.admissionPending && (
                     <Alert className="bg-orange-50 border-orange-200">

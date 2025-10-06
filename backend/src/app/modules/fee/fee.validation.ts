@@ -16,6 +16,7 @@ export const feeComponentSchema = z.object({
     .min(0, "Amount must be non-negative"),
   description: z.string().trim().optional(),
   isMandatory: z.boolean().default(true),
+  isOneTime: z.boolean().default(false),
 });
 
 /**

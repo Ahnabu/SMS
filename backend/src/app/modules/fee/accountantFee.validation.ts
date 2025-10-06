@@ -43,6 +43,7 @@ export const collectFeeSchema = z.object({
       errorMap: () => ({ message: "Invalid payment method" }),
     }),
     remarks: z.string().trim().max(500, "Remarks cannot exceed 500 characters").optional(),
+    includeLateFee: z.boolean().optional(),
   }),
 });
 
@@ -60,6 +61,7 @@ export const validateFeeCollectionSchema = z.object({
     amount: z.number({
       required_error: "Amount is required",
     }).positive("Amount must be greater than 0"),
+    includeLateFee: z.boolean().optional(),
   }),
 });
 

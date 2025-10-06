@@ -16,6 +16,7 @@ export const createFeeStructure = async (data: {
     amount: number;
     description?: string;
     isMandatory: boolean;
+    isOneTime: boolean;
   }>;
   dueDate: number;
   lateFeePercentage: number;
@@ -56,6 +57,7 @@ export const updateFeeStructure = async (
       amount: number;
       description?: string;
       isMandatory: boolean;
+      isOneTime: boolean;
     }>;
     dueDate?: number;
     lateFeePercentage?: number;

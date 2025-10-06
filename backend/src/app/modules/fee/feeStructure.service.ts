@@ -35,16 +35,12 @@ class FeeStructureService {
       );
     }
 
-    // Calculate total amount
-    const totalAmount = data.feeComponents.reduce(
-      (sum, component) => sum + component.amount,
-      0
-    );
+    // Don't manually calculate totalAmount - let pre-save hook handle it
+    // The hook will filter out one-time fees and calculate monthly total only
 
     // Create fee structure
     const feeStructure = await FeeStructure.create({
       ...data,
-      totalAmount,
       isActive: true,
     });
 

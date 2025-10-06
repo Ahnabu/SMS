@@ -68,49 +68,50 @@ class FeeCollectionService {
     // Get current academic year if not provided
     const currentYear = academicYear || this.getCurrentAcademicYear();
 
+    // Find the LATEST active fee structure for this grade
+    const latestFeeStructure = await FeeStructure.findOne({
+      school: schoolId,
+      grade: student.grade,
+      academicYear: currentYear,
+      isActive: true,
+    }).sort({ createdAt: -1 }); // Get the most recently created active structure
+
+    if (!latestFeeStructure) {
+      throw new AppError(
+        404,
+        `No fee structure has been set for Grade ${student.grade} in academic year ${currentYear}. Please ask the admin to create a fee structure for this grade first.`
+      );
+    }
+
     // Get or create fee record
     let feeRecord = await StudentFeeRecord.findOne({
       student: student._id,
       academicYear: currentYear,
     }).populate("feeStructure");
 
+    // Check if fee record needs to be created or updated
     if (!feeRecord) {
-      // Create fee record if it doesn't exist
-      const feeStructure = await FeeStructure.findOne({
-        school: schoolId,
-        grade: student.grade,
-        academicYear: currentYear,
-        isActive: true,
-      });
-
-      if (!feeStructure) {
-        throw new AppError(
-          404,
-          `No fee structure found for grade ${student.grade} in ${currentYear}`
-        );
-      }
-
-      // Calculate total fee: monthly fees × 12 + one-time fees
-      const oneTimeFeeTotal = feeStructure.feeComponents
+      // Create new fee record
+      const oneTimeFeeTotal = latestFeeStructure.feeComponents
         .filter((c: any) => c.isOneTime)
         .reduce((sum: number, c: any) => sum + c.amount, 0);
-      const totalYearlyFee = (feeStructure.totalAmount * 12) + oneTimeFeeTotal;
+      const totalYearlyFee = (latestFeeStructure.totalAmount * 12) + oneTimeFeeTotal;
 
       feeRecord = await StudentFeeRecord.create({
         student: student._id,
         school: schoolId,
         grade: student.grade,
         academicYear: currentYear,
-        feeStructure: feeStructure._id,
+        feeStructure: latestFeeStructure._id,
         totalFeeAmount: totalYearlyFee,
         totalPaidAmount: 0,
         totalDueAmount: totalYearlyFee,
         monthlyPayments: this.generateMonthlyPayments(
-          feeStructure.totalAmount,
-          feeStructure.dueDate,
+          latestFeeStructure.totalAmount,
+          latestFeeStructure.dueDate,
           currentYear
         ),
-        oneTimeFees: feeStructure.feeComponents
+        oneTimeFees: latestFeeStructure.feeComponents
           .filter((c: any) => c.isOneTime)
           .map((c: any) => ({
             feeType: c.feeType,
@@ -120,6 +121,82 @@ class FeeCollectionService {
           })),
         status: "pending",
       });
+    } else {
+      // Check if fee structure has been updated
+      const currentStructureId = (feeRecord.feeStructure as any)?._id?.toString();
+      const latestStructureId = latestFeeStructure._id.toString();
+
+      if (currentStructureId !== latestStructureId) {
+        // Fee structure has been updated! Auto-sync the record
+        const oneTimeFeeTotal = latestFeeStructure.feeComponents
+          .filter((c: any) => c.isOneTime)
+          .reduce((sum: number, c: any) => sum + c.amount, 0);
+        const totalYearlyFee = (latestFeeStructure.totalAmount * 12) + oneTimeFeeTotal;
+
+        // Preserve paid amounts
+        const totalPaid = feeRecord.totalPaidAmount;
+        const newTotalDue = Math.max(0, totalYearlyFee - totalPaid);
+
+        // Generate new monthly payments, preserving paid status
+        const newMonthlyPayments = this.generateMonthlyPayments(
+          latestFeeStructure.totalAmount,
+          latestFeeStructure.dueDate,
+          currentYear
+        );
+
+        const paidMonths = feeRecord.monthlyPayments
+          .filter((p: any) => p.status === "paid")
+          .map((p: any) => p.month);
+
+        newMonthlyPayments.forEach((payment: any) => {
+          if (paidMonths.includes(payment.month)) {
+            payment.status = "paid";
+            payment.paidAmount = payment.dueAmount;
+          }
+        });
+
+        // Generate new one-time fees, preserving paid status
+        const newOneTimeFees = latestFeeStructure.feeComponents
+          .filter((c: any) => c.isOneTime)
+          .map((c: any) => {
+            const oldFee = feeRecord?.oneTimeFees?.find((f: any) => f.feeType === c.feeType);
+            if (oldFee && oldFee.status === "paid") {
+              return {
+                feeType: c.feeType,
+                dueAmount: c.amount,
+                paidAmount: c.amount,
+                status: "paid",
+              };
+            }
+            return {
+              feeType: c.feeType,
+              dueAmount: c.amount,
+              paidAmount: 0,
+              status: "pending",
+            };
+          });
+
+        // Update the record with new structure
+        await StudentFeeRecord.updateOne(
+          { _id: feeRecord._id },
+          {
+            $set: {
+              feeStructure: latestFeeStructure._id,
+              totalFeeAmount: totalYearlyFee,
+              totalDueAmount: newTotalDue,
+              monthlyPayments: newMonthlyPayments,
+              oneTimeFees: newOneTimeFees,
+            },
+          }
+        );
+
+        // Reload the updated record
+        feeRecord = await StudentFeeRecord.findById(feeRecord._id).populate("feeStructure");
+        
+        if (!feeRecord) {
+          throw new AppError(500, "Failed to reload updated fee record");
+        }
+      }
     }
 
     // Get upcoming due (first unpaid month)
@@ -756,10 +833,57 @@ class FeeCollectionService {
     // Get fee status for each student
     const studentsWithFees = await Promise.all(
       students.map(async (student: any) => {
-        const feeRecord = await StudentFeeRecord.findOne({
+        const currentYear = this.getCurrentAcademicYear();
+        let feeRecord = await StudentFeeRecord.findOne({
           student: student._id,
-          academicYear: this.getCurrentAcademicYear(),
+          academicYear: currentYear,
         });
+
+        // If no fee record exists, try to create one if fee structure exists
+        if (!feeRecord) {
+          try {
+            const latestFeeStructure = await FeeStructure.findOne({
+              school: schoolId,
+              grade: student.grade,
+              academicYear: currentYear,
+              isActive: true,
+            }).sort({ createdAt: -1 });
+
+            if (latestFeeStructure) {
+              const oneTimeFeeTotal = latestFeeStructure.feeComponents
+                .filter((c: any) => c.isOneTime)
+                .reduce((sum: number, c: any) => sum + c.amount, 0);
+              const totalYearlyFee = (latestFeeStructure.totalAmount * 12) + oneTimeFeeTotal;
+
+              feeRecord = await StudentFeeRecord.create({
+                student: student._id,
+                school: schoolId,
+                grade: student.grade,
+                academicYear: currentYear,
+                feeStructure: latestFeeStructure._id,
+                totalFeeAmount: totalYearlyFee,
+                totalPaidAmount: 0,
+                totalDueAmount: totalYearlyFee,
+                monthlyPayments: this.generateMonthlyPayments(
+                  latestFeeStructure.totalAmount,
+                  latestFeeStructure.dueDate,
+                  currentYear
+                ),
+                oneTimeFees: latestFeeStructure.feeComponents
+                  .filter((c: any) => c.isOneTime)
+                  .map((c: any) => ({
+                    feeType: c.feeType,
+                    dueAmount: c.amount,
+                    paidAmount: 0,
+                    status: "pending",
+                  })),
+                status: "pending",
+              });
+            }
+          } catch (error) {
+            console.error(`Failed to create fee record for student ${student.studentId}:`, error);
+          }
+        }
 
         const userId = student.userId as any;
         const fullName = userId ? `${userId.firstName || ''} ${userId.lastName || ''}`.trim() : 'Unknown';
@@ -1070,11 +1194,14 @@ class FeeCollectionService {
    */
   private generateMonthlyPayments(
     monthlyAmount: number,
-    dueDate: number,
+    dueDate: number = 10, // Default to 10th of month if not provided
     academicYear: string
   ) {
     const payments = [];
     const startYear = parseInt(academicYear.split("-")[0]);
+    
+    // Ensure dueDate is valid (1-31), default to 10 if invalid
+    const validDueDate = (dueDate && dueDate >= 1 && dueDate <= 31) ? dueDate : 10;
 
     for (let i = 0; i < 12; i++) {
       const month = ((Month.APRIL + i - 1) % 12) + 1;
@@ -1085,7 +1212,7 @@ class FeeCollectionService {
         dueAmount: monthlyAmount,
         paidAmount: 0,
         status: "pending",
-        dueDate: new Date(year, month - 1, dueDate),
+        dueDate: new Date(year, month - 1, validDueDate),
         lateFee: 0,
         waived: false,
       });

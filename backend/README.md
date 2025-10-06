@@ -1,428 +1,853 @@
-# School Management System - Backend
+# Backend - School Management System# School Management System - Backend
 
-A comprehensive school management system backend built with Node.js, Express.js, TypeScript, and MongoDB. This system supports multi-school management with role-based access control and face recognition integration capabilities.
 
-## 📋 Table of Contents
 
-- [Features](#-features)
+## 🏗️ ArchitectureA comprehensive school management system backend built with Node.js, Express.js, TypeScript, and MongoDB. This system supports multi-school management with role-based access control and face recognition integration capabilities.
+
+
+
+This is the backend API server for the School Management System, built with **Node.js**, **Express**, **TypeScript**, and **MongoDB**.## 📋 Table of Contents
+
+
+
+## 📁 Directory Structure- [Features](#-features)
+
 - [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Environment Configuration](#-environment-configuration)
-- [Database Setup](#-database-setup)
-- [Running the Application](#-running-the-application)
-- [API Documentation](#-api-documentation)
-- [Authentication & Authorization](#-authentication--authorization)
-- [Database Models](#-database-models)
-- [API Endpoints](#-api-endpoints)
-- [Error Handling](#-error-handling)
-- [Validation](#-validation)
-- [File Upload](#-file-upload)
-- [Face Recognition Integration](#-face-recognition-integration)
-- [Development Guidelines](#-development-guidelines)
-- [Testing](#-testing)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
 
-## 🚀 Features
+```- [Project Structure](#-project-structure)
 
-### Core Functionality
-- **Multi-school Management**: Support for multiple schools in a single system
-- **Role-based Access Control**: Superadmin, Admin, Teacher, Student, Parent, Accountant roles
-- **Student Management**: Comprehensive student profiles, enrollment, academic records
-- **Teacher Management**: Teacher profiles, subjects assignment, schedules
-- **Attendance System**: Real-time attendance tracking with multiple status options
-- **Academic Calendar**: Events, holidays, exam schedules
-- **Grade Management**: Grade recording and reporting system
-- **Subject & Schedule Management**: Subject creation and timetable management
-- **Parent Portal**: Parent-student association and monitoring
-- **Financial Management**: Fee collection, transactions, defaulter tracking
+backend/- [Installation](#-installation)
 
-### Advanced Features
-- **Automatic Credential Generation**: Secure credential creation for students and parents with bcrypt hashing
-- **Student ID Management**: 10-digit student ID format (YYYYGGRRR) with automatic generation
-- **Face Recognition Integration**: API endpoints for external face recognition systems
-- **Real-time Updates**: WebSocket support for live updates
-- **File Management**: Support for documents, images, and media files with organized folder structure
-- **Reporting System**: Comprehensive reports and analytics
-- **API Key Management**: Secure API access for external integrations
-- **Audit Logging**: Complete activity tracking
+├── src/- [Environment Configuration](#-environment-configuration)
+
+│   ├── app/- [Database Setup](#-database-setup)
+
+│   │   ├── modules/              # Feature modules- [Running the Application](#-running-the-application)
+
+│   │   │   ├── fee/              # Fee Management System- [API Documentation](#-api-documentation)
+
+│   │   │   │   ├── fee.interface.ts              # TypeScript interfaces & enums- [Authentication & Authorization](#-authentication--authorization)
+
+│   │   │   │   ├── fee.validation.ts             # Zod validation schemas- [Database Models](#-database-models)
+
+│   │   │   │   ├── feeStructure.model.ts         # Fee structure schema- [API Endpoints](#-api-endpoints)
+
+│   │   │   │   ├── feeStructure.service.ts       # Fee structure business logic- [Error Handling](#-error-handling)
+
+│   │   │   │   ├── feeStructure.controller.ts    # Fee structure endpoints- [Validation](#-validation)
+
+│   │   │   │   ├── feeStructure.routes.ts        # Fee structure routes- [File Upload](#-file-upload)
+
+│   │   │   │   ├── studentFeeRecord.model.ts     # Student fee records schema- [Face Recognition Integration](#-face-recognition-integration)
+
+│   │   │   │   ├── feeTransaction.model.ts       # Transaction history schema- [Development Guidelines](#-development-guidelines)
+
+│   │   │   │   ├── feeCollection.service.ts      # Accountant fee collection logic- [Testing](#-testing)
+
+│   │   │   │   ├── accountantFee.controller.ts   # Accountant endpoints- [Deployment](#-deployment)
+
+│   │   │   │   ├── accountantFee.validation.ts   # Accountant validation- [Contributing](#-contributing)
+
+│   │   │   │   └── accountantFee.routes.ts       # Accountant routes
+
+│   │   │   ├── user/             # User management## 🚀 Features
+
+│   │   │   ├── student/          # Student management
+
+│   │   │   ├── attendance/       # Attendance tracking### Core Functionality
+
+│   │   │   ├── homework/         # Homework management- **Multi-school Management**: Support for multiple schools in a single system
+
+│   │   │   └── ...- **Role-based Access Control**: Superadmin, Admin, Teacher, Student, Parent, Accountant roles
+
+│   │   ├── middlewares/- **Student Management**: Comprehensive student profiles, enrollment, academic records
+
+│   │   │   ├── auth.ts           # JWT authentication- **Teacher Management**: Teacher profiles, subjects assignment, schedules
+
+│   │   │   ├── validateRequest.ts # Zod validation middleware- **Attendance System**: Real-time attendance tracking with multiple status options
+
+│   │   │   └── errorHandler.ts   # Global error handler- **Academic Calendar**: Events, holidays, exam schedules
+
+│   │   └── errors/- **Grade Management**: Grade recording and reporting system
+
+│   │       └── AppError.ts       # Custom error class- **Subject & Schedule Management**: Subject creation and timetable management
+
+│   ├── config/- **Parent Portal**: Parent-student association and monitoring
+
+│   │   └── database.ts           # MongoDB connection- **Financial Management**: Fee collection, transactions, defaulter tracking
+
+│   └── server.ts                 # Express app setup
+
+├── scripts/                      # Utility scripts### Advanced Features
+
+│   ├── seedFeeStructures.ts      # Seed fee structures- **Automatic Credential Generation**: Secure credential creation for students and parents with bcrypt hashing
+
+│   ├── listActualData.ts         # List database contents- **Student ID Management**: 10-digit student ID format (YYYYGGRRR) with automatic generation
+
+│   ├── checkStudents.ts          # Check student data- **Face Recognition Integration**: API endpoints for external face recognition systems
+
+│   └── diagnoseStudent.ts        # Debug specific student- **Real-time Updates**: WebSocket support for live updates
+
+├── .env.example                  # Environment variables template- **File Management**: Support for documents, images, and media files with organized folder structure
+
+├── tsconfig.json                 # TypeScript configuration- **Reporting System**: Comprehensive reports and analytics
+
+└── package.json                  # Dependencies- **API Key Management**: Secure API access for external integrations
+
+```- **Audit Logging**: Complete activity tracking
+
 - **Data Seeding**: Sample data generation for development
-- **Photo Management**: Student photo upload with numbered organization system
 
-### Security Features
-- **JWT Authentication**: Secure token-based authentication
-- **HTTP-only Cookies**: Secure token storage
-- **Role-based Authorization**: Granular permission system
+## 🚀 Getting Started- **Photo Management**: Student photo upload with numbered organization system
+
+
+
+### Prerequisites### Security Features
+
+- Node.js v18+- **JWT Authentication**: Secure token-based authentication
+
+- MongoDB v6+ (local or Atlas)- **HTTP-only Cookies**: Secure token storage
+
+- npm or yarn- **Role-based Authorization**: Granular permission system
+
 - **Input Validation**: Comprehensive request validation using Zod
-- **Error Handling**: Structured error responses
-- **Rate Limiting**: API endpoint protection
-- **CORS Configuration**: Cross-origin request management
 
-## 🛠 Tech Stack
+### Installation- **Error Handling**: Structured error responses
+
+- **Rate Limiting**: API endpoint protection
+
+1. **Install dependencies**- **CORS Configuration**: Cross-origin request management
+
+   ```bash
+
+   npm install## 🛠 Tech Stack
+
+   ```
 
 - **Runtime**: Node.js 18+
-- **Framework**: Express.js
-- **Language**: TypeScript
-- **Database**: MongoDB with Mongoose ODM
-- **Authentication**: JWT (JSON Web Tokens)
-- **Validation**: Zod schema validation
-- **File Upload**: Multer
-- **Environment**: dotenv
-- **Development**: ts-node, nodemon
-- **Testing**: Jest (planned)
-- **Documentation**: TypeDoc (planned)
 
-## 📁 Project Structure
+2. **Environment Setup**- **Framework**: Express.js
 
-```
-backend/
-├── src/
-│   ├── app/
+   - **Language**: TypeScript
+
+   Create `.env` file:- **Database**: MongoDB with Mongoose ODM
+
+   ```env- **Authentication**: JWT (JSON Web Tokens)
+
+   NODE_ENV=development- **Validation**: Zod schema validation
+
+   PORT=5000- **File Upload**: Multer
+
+   - **Environment**: dotenv
+
+   # Database- **Development**: ts-node, nodemon
+
+   DATABASE_URL=mongodb://localhost:27017/school-management- **Testing**: Jest (planned)
+
+   - **Documentation**: TypeDoc (planned)
+
+   # JWT
+
+   JWT_SECRET=your-super-secret-jwt-key-change-this## 📁 Project Structure
+
+   JWT_EXPIRES_IN=7d
+
+   ```
+
+   # CORSbackend/
+
+   CLIENT_URL=http://localhost:3000├── src/
+
+   ```│   ├── app/
+
 │   │   ├── config/                 # Configuration files
-│   │   │   └── index.ts           # Environment variables and app config
-│   │   ├── DB/                    # Database connection
-│   │   │   └── index.ts           # MongoDB connection setup
-│   │   ├── errors/                # Error handling
-│   │   │   ├── AppError.ts        # Custom error class
-│   │   │   ├── handleCastError.ts # MongoDB cast error handler
+
+3. **Start Development Server**│   │   │   └── index.ts           # Environment variables and app config
+
+   ```bash│   │   ├── DB/                    # Database connection
+
+   npm run dev│   │   │   └── index.ts           # MongoDB connection setup
+
+   ```│   │   ├── errors/                # Error handling
+
+   │   │   │   ├── AppError.ts        # Custom error class
+
+   Server will run on `http://localhost:5000`│   │   │   ├── handleCastError.ts # MongoDB cast error handler
+
 │   │   │   ├── handleDuplicateError.ts # Duplicate key error handler
-│   │   │   ├── handleValidationError.ts # Validation error handler
+
+## 📡 API Endpoints│   │   │   ├── handleValidationError.ts # Validation error handler
+
 │   │   │   └── handleZodErrors.ts # Zod validation error handler
-│   │   ├── interface/             # Global interfaces
-│   │   │   └── error.ts           # Error response interfaces
-│   │   ├── middlewares/           # Express middlewares
-│   │   │   ├── auth.ts            # Authentication middleware
+
+### Authentication│   │   ├── interface/             # Global interfaces
+
+- `POST /api/auth/login` - User login│   │   │   └── error.ts           # Error response interfaces
+
+- `POST /api/auth/register` - User registration│   │   ├── middlewares/           # Express middlewares
+
+- `GET /api/auth/me` - Get current user│   │   │   ├── auth.ts            # Authentication middleware
+
 │   │   │   ├── errorHandler.ts    # Global error handling
-│   │   │   ├── fileUpload.ts      # File upload handling
-│   │   │   ├── globalErrorHandler.ts # Global error middleware
-│   │   │   ├── notFound.ts        # 404 handler
-│   │   │   └── validateRequest.ts # Request validation
-│   │   ├── modules/               # Feature modules
-│   │   │   ├── academic-calendar/ # Calendar management
+
+### Fee Management (Admin)│   │   │   ├── fileUpload.ts      # File upload handling
+
+- `POST /api/fee-structures` - Create fee structure│   │   │   ├── globalErrorHandler.ts # Global error middleware
+
+- `GET /api/fee-structures` - List fee structures│   │   │   ├── notFound.ts        # 404 handler
+
+- `GET /api/fee-structures/:id` - Get fee structure details│   │   │   └── validateRequest.ts # Request validation
+
+- `PUT /api/fee-structures/:id` - Update fee structure│   │   ├── modules/               # Feature modules
+
+- `DELETE /api/fee-structures/:id` - Delete fee structure│   │   │   ├── academic-calendar/ # Calendar management
+
 │   │   │   ├── attendance/        # Attendance system
-│   │   │   ├── auth/              # Authentication
-│   │   │   ├── exam/              # Examination system
-│   │   │   ├── grade/             # Grade management
-│   │   │   ├── homework/          # Homework system
-│   │   │   ├── organization/      # Organization management
-│   │   │   ├── parent/            # Parent management
+
+### Fee Collection (Accountant)│   │   │   ├── auth/              # Authentication
+
+- `POST /api/accountant-fees/search-student` - Search student by ID│   │   │   ├── exam/              # Examination system
+
+- `GET /api/accountant-fees/students/:id/fee-status` - Get student fee status│   │   │   ├── grade/             # Grade management
+
+- `POST /api/accountant-fees/validate` - Validate payment amount│   │   │   ├── homework/          # Homework system
+
+- `POST /api/accountant-fees/collect` - Collect fee payment│   │   │   ├── organization/      # Organization management
+
+- `GET /api/accountant-fees/transactions` - Get transaction history│   │   │   ├── parent/            # Parent management
+
 │   │   │   ├── schedule/          # Schedule management
-│   │   │   ├── school/            # School management
-│   │   │   ├── student/           # Student management
-│   │   │   ├── subject/           # Subject management
+
+### Student & Parent Fee API│   │   │   ├── school/            # School management
+
+- `GET /api/students/:id/fee-status` - Student's own fee status│   │   │   ├── student/           # Student management
+
+- `GET /api/parents/children-fees` - Parent's all children fees│   │   │   ├── subject/           # Subject management
+
 │   │   │   ├── teacher/           # Teacher management
-│   │   │   └── user/              # User management
-│   │   ├── routes/                # API routes
-│   │   │   └── index.ts           # Main route configuration
-│   │   ├── scripts/               # Utility scripts
+
+### Attendance│   │   │   └── user/              # User management
+
+- `POST /api/attendance/mark` - Mark attendance│   │   ├── routes/                # API routes
+
+- `GET /api/attendance/class/:classId` - Get class attendance│   │   │   └── index.ts           # Main route configuration
+
+- `GET /api/attendance/student/:studentId` - Get student attendance│   │   ├── scripts/               # Utility scripts
+
 │   │   │   └── seeder-cli.ts      # Database seeding script
-│   │   └── utils/                 # Utility functions
-│   │       ├── catchAsync.ts      # Async error wrapper
-│   │       ├── fileUtils.ts       # File handling utilities
-│   │       ├── jwtUtils.ts        # JWT utilities
+
+### Homework│   │   └── utils/                 # Utility functions
+
+- `POST /api/homework` - Create homework│   │       ├── catchAsync.ts      # Async error wrapper
+
+- `GET /api/homework/class/:classId` - Get class homework│   │       ├── fileUtils.ts       # File handling utilities
+
+- `POST /api/homework/:id/submit` - Submit homework│   │       ├── jwtUtils.ts        # JWT utilities
+
 │   │       ├── seeder.ts          # Data seeding utilities
-│   │       └── sendResponse.ts    # Response formatting
+
+## 🔐 Authentication & Authorization│   │       └── sendResponse.ts    # Response formatting
+
 │   ├── app.ts                     # Express app configuration
-│   └── server.ts                  # Server startup
-├── docs/                          # Documentation
-│   ├── PROGRESS_REPORT.md         # Development progress
-│   └── SEEDING.md                 # Database seeding guide
-├── package.json                   # Dependencies and scripts
+
+### JWT Authentication│   └── server.ts                  # Server startup
+
+All protected routes require JWT token in header:├── docs/                          # Documentation
+
+```│   ├── PROGRESS_REPORT.md         # Development progress
+
+Authorization: Bearer <token>│   └── SEEDING.md                 # Database seeding guide
+
+```├── package.json                   # Dependencies and scripts
+
 ├── tsconfig.json                  # TypeScript configuration
-└── README.md                      # This file
+
+### Role-Based Access Control (RBAC)└── README.md                      # This file
+
 ```
 
-## 📦 Installation
+Roles hierarchy:
 
-### Prerequisites
-- Node.js 18.0 or higher
-- MongoDB 5.0 or higher
+1. **Admin** - Full system access## 📦 Installation
+
+2. **Accountant** - Fee collection only
+
+3. **Teacher** - Class management### Prerequisites
+
+4. **Parent** - View children's data- Node.js 18.0 or higher
+
+5. **Student** - View own data- MongoDB 5.0 or higher
+
 - npm or yarn package manager
 
-### Step-by-step Installation
+Example middleware usage:
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd SMS/backend
+```typescript### Step-by-step Installation
+
+router.post('/fee-structures', 
+
+  authenticate, 1. **Clone the repository**
+
+  authorize(['admin']),    ```bash
+
+  createFeeStructure   git clone <repository-url>
+
+);   cd SMS/backend
+
    ```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+router.post('/accountant-fees/collect', 
+
+  authenticate, 2. **Install dependencies**
+
+  authorize(['accountant', 'admin']),    ```bash
+
+  collectFee   npm install
+
+);   ```
+
+```
 
 3. **Set up environment variables**
-   ```bash
+
+## 💰 Fee Management System Details   ```bash
+
    cp .env.example .env
-   # Edit .env with your configuration
+
+### Database Schema   # Edit .env with your configuration
+
    ```
 
-4. **Start MongoDB**
-   ```bash
-   # Local MongoDB
-   mongod --dbpath /your/mongodb/data/path
-   
-   # Or use Docker
-   docker run -d -p 27017:27017 --name mongodb mongo:latest
-   ```
+#### FeeStructure
 
-5. **Run the application**
-   ```bash
-   # Development mode
-   npm run dev
-   
-   # Production build
-   npm run build
-   npm start
-   ```
+```typescript4. **Start MongoDB**
 
-## ⚙️ Environment Configuration
+{   ```bash
+
+  school: ObjectId,   # Local MongoDB
+
+  grade: string,   mongod --dbpath /your/mongodb/data/path
+
+  academicYear: string,  // "2024-2025"   
+
+  feeComponents: [   # Or use Docker
+
+    {   docker run -d -p 27017:27017 --name mongodb mongo:latest
+
+      feeType: string,     // "Tuition Fee", "Transport", etc.   ```
+
+      amount: number,
+
+      isOneTime: boolean,  // true for admission, books, etc.5. **Run the application**
+
+    }   ```bash
+
+  ],   # Development mode
+
+  totalAmount: number,   // Monthly total (auto-calculated)   npm run dev
+
+  dueDate: number,       // Day of month (1-31), default: 10   
+
+  lateFeePercentage: number,   # Production build
+
+  isActive: boolean,   npm run build
+
+  createdBy: ObjectId,   npm start
+
+  createdAt: Date,   ```
+
+  updatedAt: Date
+
+}## ⚙️ Environment Configuration
+
+```
 
 Create a `.env` file in the backend root directory:
 
-```env
-# Server Configuration
-NODE_ENV=development
-PORT=5000
-FRONTEND_URL=http://localhost:3000
+#### StudentFeeRecord
 
-# Database Configuration
-MONGODB_URI=mongodb://localhost:27017/school_management
-DB_NAME=school_management
+```typescript```env
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-JWT_EXPIRES_IN=8h
+{# Server Configuration
 
-# File Upload Configuration
-MAX_FILE_SIZE=5242880
-UPLOAD_PATH=../storage
-TEMP_UPLOAD_PATH=./temp
+  student: ObjectId,NODE_ENV=development
 
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
+  school: ObjectId,PORT=5000
 
-# Email Configuration (Optional)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-email-password
+  grade: string,FRONTEND_URL=http://localhost:3000
 
-# Cloudinary Configuration (Optional)
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+  academicYear: string,
 
-# Default Superadmin
-SUPERADMIN_USERNAME=superadmin
-SUPERADMIN_PASSWORD=super123
-SUPERADMIN_EMAIL=superadmin@schoolmanagement.com
+  feeStructure: ObjectId,# Database Configuration
 
-# API Configuration
-API_KEY=school-management-api-key-2025
-ALLOWED_ORIGINS=http://localhost:3000
+  totalFeeAmount: number,      // (Monthly × 12) + One-Time FeesMONGODB_URI=mongodb://localhost:27017/school_management
 
-# Application Settings
-MAX_PHOTOS_PER_TEACHER=20
-MAX_PERIODS_PER_DAY=8
-ATTENDANCE_LOCK_AFTER_DAYS=7
-DEFAULT_TIMEZONE=Asia/Kolkata
+  totalPaidAmount: number,DB_NAME=school_management
+
+  totalDueAmount: number,
+
+  monthlyPayments: [# JWT Configuration
+
+    {JWT_SECRET=your-super-secret-jwt-key-change-in-production
+
+      month: enum Month,JWT_EXPIRES_IN=8h
+
+      dueDate: Date,
+
+      dueAmount: number,# File Upload Configuration
+
+      paidAmount: number,MAX_FILE_SIZE=5242880
+
+      status: enum PaymentStatus,UPLOAD_PATH=../storage
+
+      paidDate: DateTEMP_UPLOAD_PATH=./temp
+
+    }
+
+  ],# Rate Limiting
+
+  oneTimeFees: [RATE_LIMIT_WINDOW_MS=900000
+
+    {RATE_LIMIT_MAX_REQUESTS=100
+
+      feeType: string,
+
+      dueAmount: number,# Email Configuration (Optional)
+
+      paidAmount: number,EMAIL_HOST=smtp.gmail.com
+
+      status: enum PaymentStatus,EMAIL_PORT=587
+
+      paidDate: DateEMAIL_USER=your-email@gmail.com
+
+    }EMAIL_PASS=your-email-password
+
+  ],
+
+  status: enum PaymentStatus,# Cloudinary Configuration (Optional)
+
+  lastPaymentDate: DateCLOUDINARY_CLOUD_NAME=your-cloud-name
+
+}CLOUDINARY_API_KEY=your-api-key
+
+```CLOUDINARY_API_SECRET=your-api-secret
+
+
+
+#### FeeTransaction# Default Superadmin
+
+```typescriptSUPERADMIN_USERNAME=superadmin
+
+{SUPERADMIN_PASSWORD=super123
+
+  transactionId: string,       // Unique: TXN-timestamp-randomSUPERADMIN_EMAIL=superadmin@schoolmanagement.com
+
+  student: ObjectId,
+
+  studentFeeRecord: ObjectId,# API Configuration
+
+  school: ObjectId,API_KEY=school-management-api-key-2025
+
+  transactionType: "payment" | "refund",ALLOWED_ORIGINS=http://localhost:3000
+
+  amount: number,
+
+  paymentMethod: "cash" | "upi" | "card" | "cheque",# Application Settings
+
+  month: enum Month,           // For monthly paymentsMAX_PHOTOS_PER_TEACHER=20
+
+  feeType: string,            // For one-time feesMAX_PERIODS_PER_DAY=8
+
+  collectedBy: ObjectId,ATTENDANCE_LOCK_AFTER_DAYS=7
+
+  remarks: string,DEFAULT_TIMEZONE=Asia/Kolkata
+
+  status: "completed" | "pending" | "failed",```
+
+  auditLog: {
+
+    ipAddress: string,## 🗄️ Database Setup
+
+    deviceInfo: string,
+
+    timestamp: Date### MongoDB Connection
+
+  }
+
+}The application uses MongoDB with Mongoose ODM. The database connection is configured in `src/app/DB/index.ts`.
+
 ```
-
-## 🗄️ Database Setup
-
-### MongoDB Connection
-
-The application uses MongoDB with Mongoose ODM. The database connection is configured in `src/app/DB/index.ts`.
 
 ### Database Seeding
 
+### Key Features
+
 To populate your database with sample data for development:
 
-```bash
+#### 1. **Auto-Sync Technology**
+
+When a new fee structure is created, student records automatically update:```bash
+
 # Seed all data
-npm run seed
 
-# Seed specific collections
-npm run seed:schools
-npm run seed:users
-npm run seed:students
-npm run seed:teachers
-```
+```typescriptnpm run seed
 
-For detailed seeding information, see [SEEDING.md](docs/SEEDING.md).
+// In feeCollection.service.ts - getStudentFeeStatus()
 
-### Collections Overview
+const latestFeeStructure = await FeeStructure.findOne({# Seed specific collections
 
-The system creates the following main collections:
-- `users` - All system users (superadmin, admin, teacher, student, parent, accountant)
+  school: schoolId,npm run seed:schools
+
+  grade: student.grade,npm run seed:users
+
+  academicYear: currentYear,npm run seed:students
+
+  isActive: true,npm run seed:teachers
+
+}).sort({ createdAt: -1 }); // Get most recent```
+
+
+
+if (currentStructureId !== latestStructureId) {For detailed seeding information, see [SEEDING.md](docs/SEEDING.md).
+
+  // Auto-sync: Update record with new structure
+
+  // Preserve all paid amounts### Collections Overview
+
+  // Recalculate totals and dues
+
+}The system creates the following main collections:
+
+```- `users` - All system users (superadmin, admin, teacher, student, parent, accountant)
+
 - `schools` - School information and configuration
-- `students` - Student profiles and academic data
-- `teachers` - Teacher profiles and assignments
+
+#### 2. **One-Time Fee Auto-Collection**- `students` - Student profiles and academic data
+
+First payment automatically includes all one-time fees:- `teachers` - Teacher profiles and assignments
+
 - `subjects` - Academic subjects
-- `attendance` - Attendance records
-- `grades` - Student grades and assessments
-- `schedules` - Class schedules and timetables
-- `academic-calendars` - Academic events and holidays
 
-## 🚀 Running the Application
+```typescript- `attendance` - Attendance records
 
-### Development Mode
-```bash
-npm run dev
+// In feeCollection.service.ts - collectFee()- `grades` - Student grades and assessments
+
+const isFirstPayment = status.feeRecord.totalPaidAmount === 0;- `schedules` - Class schedules and timetables
+
+const pendingOneTimeFees = status.feeRecord.oneTimeFees?.filter(- `academic-calendars` - Academic events and holidays
+
+  (f) => f.status === "pending"
+
+);## 🚀 Running the Application
+
+
+
+if (isFirstPayment && pendingOneTimeFees.length > 0) {### Development Mode
+
+  // Add one-time fees to payment```bash
+
+  // Create separate transactionsnpm run dev
+
+  // Mark one-time fees as paid```
+
+}This starts the server with hot reloading using nodemon and ts-node.
+
 ```
-This starts the server with hot reloading using nodemon and ts-node.
 
 ### Production Mode
-```bash
-npm run build
+
+#### 3. **Validation & Error Handling**```bash
+
+All requests validated with Zod schemas:npm run build
+
 npm start
+
+```typescript```
+
+// accountantFee.validation.ts
+
+export const collectFeeSchema = z.object({### Available Scripts
+
+  body: z.object({- `npm run dev` - Start development server
+
+    studentId: z.string().regex(/^[0-9a-fA-F]{24}$/),- `npm run build` - Build TypeScript to JavaScript
+
+    month: z.nativeEnum(Month),- `npm start` - Start production server
+
+    amount: z.number().positive(),- `npm run seed` - Seed database with sample data
+
+    paymentMethod: z.nativeEnum(PaymentMethod),- `npm run lint` - Run ESLint (if configured)
+
+    includeLateFee: z.boolean().optional(),- `npm test` - Run tests (when implemented)
+
+    remarks: z.string().optional(),
+
+  }),## 📚 API Documentation
+
+});
+
+```### Base URL
+
 ```
 
-### Available Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build TypeScript to JavaScript
-- `npm start` - Start production server
-- `npm run seed` - Seed database with sample data
-- `npm run lint` - Run ESLint (if configured)
-- `npm test` - Run tests (when implemented)
+#### 4. **Pre-Save Hooks**Local Development: http://localhost:5000/api
 
-## 📚 API Documentation
+Automatic calculations on save:```
 
-### Base URL
-```
-Local Development: http://localhost:5000/api
-```
 
-### Response Format
-All API responses follow a consistent format:
 
-```typescript
-{
-  success: boolean;
-  message: string;
-  data?: any;
-  error?: string;
-  timestamp: string;
+```typescript### Response Format
+
+// feeStructure.model.tsAll API responses follow a consistent format:
+
+feeStructureSchema.pre("save", function (next) {
+
+  // Calculate monthly total (exclude one-time fees)```typescript
+
+  this.totalAmount = this.feeComponents{
+
+    .filter((c) => !c.isOneTime)  success: boolean;
+
+    .reduce((sum, c) => sum + c.amount, 0);  message: string;
+
+  next();  data?: any;
+
+});  error?: string;
+
+```  timestamp: string;
+
 }
-```
 
-### Error Response Format
-```typescript
-{
-  success: false;
+## 🧪 Utility Scripts```
+
+
+
+### List Database Contents### Error Response Format
+
+```bash```typescript
+
+npx ts-node scripts/listActualData.ts{
+
+```  success: false;
+
   message: string;
-  errorSources: Array<{
-    path: string | number;
-    message: string;
-  }>;
+
+### Seed Fee Structures  errorSources: Array<{
+
+```bash    path: string | number;
+
+npx ts-node scripts/seedFeeStructures.ts    message: string;
+
+```  }>;
+
   stack?: string; // Only in development
-}
-```
 
-## 🔐 Authentication & Authorization
+### Check Students}
 
-### Authentication Flow
+```bash```
 
-1. **Login**: POST `/api/auth/login` with username/password
-2. **JWT Token**: Stored in HTTP-only cookie for security
+npx ts-node scripts/checkStudents.ts
+
+```## 🔐 Authentication & Authorization
+
+
+
+### Diagnose Student### Authentication Flow
+
+```bash
+
+npx ts-node scripts/diagnoseStudent.ts1. **Login**: POST `/api/auth/login` with username/password
+
+```2. **JWT Token**: Stored in HTTP-only cookie for security
+
 3. **Token Verification**: Automatic with middleware on protected routes
-4. **Logout**: POST `/api/auth/logout` clears the cookie
 
-### User Roles
+## 🔧 Development4. **Logout**: POST `/api/auth/logout` clears the cookie
 
-1. **Superadmin**
-   - System-wide management
+
+
+### Build TypeScript### User Roles
+
+```bash
+
+npm run build1. **Superadmin**
+
+```   - System-wide management
+
    - School creation and management
-   - User role assignments
-   - System configuration
 
-2. **Admin**
+### Run Production   - User role assignments
+
+```bash   - System configuration
+
+npm start
+
+```2. **Admin**
+
    - School-specific management
-   - Student and teacher management
-   - Academic calendar management
-   - Report generation
+
+### Code Style   - Student and teacher management
+
+- TypeScript strict mode enabled   - Academic calendar management
+
+- ESLint configured   - Report generation
+
+- Prettier for formatting
 
 3. **Teacher**
-   - Class management
-   - Attendance marking
-   - Grade recording
-   - Homework assignment
 
-4. **Student**
+## 🐛 Common Issues   - Class management
+
+   - Attendance marking
+
+### MongoDB Connection Failed   - Grade recording
+
+- Check `DATABASE_URL` in `.env`   - Homework assignment
+
+- Ensure MongoDB is running: `mongod`
+
+- Check firewall/network settings4. **Student**
+
    - View attendance and grades
-   - Access assignments
-   - View schedule
+
+### "dueDate is required" Error   - Access assignments
+
+- **Fixed**: Default value added to schema   - View schedule
+
+- Update existing records: Set `dueDate: 10`
 
 5. **Parent**
-   - Monitor child's progress
-   - View attendance and grades
-   - Communication with school
+
+### JWT Authentication Failed   - Monitor child's progress
+
+- Check `JWT_SECRET` is set in `.env`   - View attendance and grades
+
+- Verify token format: `Bearer <token>`   - Communication with school
+
+- Check token expiration
 
 6. **Accountant**
-   - Fee management
-   - Financial transactions
-   - Payment tracking
 
-### Protected Routes
+### CORS Errors   - Fee management
 
-All API routes except `/auth/login` require authentication. Role-based authorization is enforced using middleware:
+- Verify `CLIENT_URL` matches frontend URL   - Financial transactions
 
-```typescript
-// Example middleware usage
+- Check CORS middleware configuration   - Payment tracking
+
+
+
+## 📊 Database Indexes### Protected Routes
+
+
+
+Optimized queries with indexes:All API routes except `/auth/login` require authentication. Role-based authorization is enforced using middleware:
+
+- `studentFeeRecord`: `student + academicYear` (unique)
+
+- `feeStructure`: `school + grade + academicYear + isActive````typescript
+
+- `feeTransaction`: `student`, `collectedBy`, `createdAt`// Example middleware usage
+
 router.use(authenticate); // Check JWT token
-router.use(requireSuperadmin); // Check superadmin role
+
+## 🔒 Securityrouter.use(requireSuperadmin); // Check superadmin role
+
 ```
 
-## 🗃️ Database Models
+- ✅ Password hashing with bcrypt (salt rounds: 10)
 
-### User Model
-```typescript
-interface IUser {
-  username: string;
+- ✅ JWT token authentication## 🗃️ Database Models
+
+- ✅ Input validation with Zod
+
+- ✅ XSS protection### User Model
+
+- ✅ CORS configuration```typescript
+
+- ✅ Rate limiting (recommended for production)interface IUser {
+
+- ✅ Helmet.js (recommended for production)  username: string;
+
   email: string;
-  password: string;
+
+## 📈 Performance  password: string;
+
   role: 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent' | 'accountant';
-  isActive: boolean;
-  lastLogin?: Date;
-  mustChangePassword: boolean;
-  // Additional fields...
-}
-```
 
-### School Model
-```typescript
-interface ISchool {
-  name: string;
-  slug: string;
-  schoolId: string;
-  establishedYear?: number;
-  address: IAddress;
-  contact: IContact;
+- MongoDB indexes for fast queries  isActive: boolean;
+
+- Lean queries where possible  lastLogin?: Date;
+
+- Pagination for large datasets  mustChangePassword: boolean;
+
+- Connection pooling  // Additional fields...
+
+}
+
+## 🚀 Deployment```
+
+
+
+### Environment Variables (Production)### School Model
+
+```env```typescript
+
+NODE_ENV=productioninterface ISchool {
+
+PORT=5000  name: string;
+
+DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/dbname  slug: string;
+
+JWT_SECRET=very-secure-random-string  schoolId: string;
+
+JWT_EXPIRES_IN=7d  establishedYear?: number;
+
+CLIENT_URL=https://your-frontend-domain.com  address: IAddress;
+
+```  contact: IContact;
+
   status: SchoolStatus;
-  settings: ISchoolSettings;
-  apiEndpoint: string; // For face recognition integration
-  apiKey: string; // Unique API key for external systems
-  // Additional fields...
-}
+
+### Build & Start  settings: ISchoolSettings;
+
+```bash  apiEndpoint: string; // For face recognition integration
+
+npm run build  apiKey: string; // Unique API key for external systems
+
+npm start  // Additional fields...
+
+```}
+
 ```
 
-### Student Model
-```typescript
-interface IStudent {
+### Recommended Hosting
+
+- **Backend**: Railway, Render, Heroku, AWS EC2### Student Model
+
+- **Database**: MongoDB Atlas```typescript
+
+- **Process Manager**: PM2 for Node.jsinterface IStudent {
+
   userId: Types.ObjectId; // Reference to User
-  schoolId: Types.ObjectId; // Reference to School
+
+## 📝 API Documentation  schoolId: Types.ObjectId; // Reference to School
+
   studentId: string;
-  rollNumber?: number;
-  grade: number;
-  section: string;
+
+For detailed API documentation with request/response examples, refer to:  rollNumber?: number;
+
+- Postman Collection (if available)  grade: number;
+
+- Swagger/OpenAPI docs (can be added)  section: string;
+
   admissionDate: Date;
-  personalInfo: IPersonalInfo;
+
+---  personalInfo: IPersonalInfo;
+
   parentId?: Types.ObjectId; // Reference to Parent
-  // Additional fields...
+
+**Backend Team** - SMS Project  // Additional fields...
+
 }
 ```
 
