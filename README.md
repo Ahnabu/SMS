@@ -370,31 +370,6 @@ totalPaidAmount = monthlyPaid + oneTimePaid
 **Status**: 🚀 **PRODUCTION READY**
 
 ---
-
-## 🐛 Troubleshooting
-
-### "dueDate is required" error
-✅ **FIXED** in v1.0.0 - dueDate is now optional for one-time fees.
-
-### Paid/Due amounts not calculating correctly
-✅ **FIXED** in v1.0.0 - Pre-save hook now includes one-time fees in calculations.
-
-### Financial Dashboard shows undefined error
-✅ **FIXED** in v1.0.0 - Added null safety checks throughout dashboard.
-
-### "No fee structure found" error
-- Admin must create fee structure for the grade and academic year first
-- Navigate to Admin Dashboard → Fee Management → Create Structure
-
-### Student not found (404 errors)
-- Ensure students are properly created with valid IDs
-- Check database has students: `npx ts-node scripts/listActualData.ts`
-
-### Frontend not connecting to backend
-- Verify `VITE_API_URL` in frontend `.env` matches backend URL
-- Check backend server is running on correct port (default: 5000)
-- Verify CORS settings in backend allow your frontend origin
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -413,4 +388,4 @@ For questions or support, please contact the development team.
 
 ---
 
-**Built with ❤️ by the SMS Development Team**
+**Built with ❤️ by Abu Horaira(https://github.com/Ahnabu) & Habibur Rahman(https://github.com/habib-153)**

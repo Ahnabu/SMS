@@ -61,6 +61,6 @@ TESTING_REPORT.md
 
 # TypeScript
 *.tsbuildinfo
-
+ run-all-tests.sh
  docs/
   
