@@ -279,6 +279,7 @@ export const requireSchoolAdmin = (
   res: Response,
   next: NextFunction
 ) => {
+  
   if (!req.user) {
     return next(new AppError(401, "Authentication required"));
   }

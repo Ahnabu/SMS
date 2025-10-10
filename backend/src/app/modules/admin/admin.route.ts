@@ -240,6 +240,7 @@ import {
   resolveDisciplinaryActionValidationSchema,
   addDisciplinaryActionCommentValidationSchema,
 } from "../teacher/teacher.validation";
+import { getAttendanceApiInfo } from "../school/school.controller";
 
 router.get("/disciplinary/actions", getAllDisciplinaryActions);
 router.patch(
@@ -258,5 +259,6 @@ router.get("/school/settings", getSchoolSettings);
 router.put("/school/settings", updateSchoolSettings);
 router.put("/school/section-capacity", updateSectionCapacity);
 router.get("/school/capacity-report", getSectionCapacityReport);
+router.get('/school/attendance-api', getAttendanceApiInfo)
 
 export const adminRoutes = router;

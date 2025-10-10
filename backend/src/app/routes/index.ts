@@ -2,7 +2,6 @@ import { Router } from "express";
 
 const router = Router();
 
-// Import route modules (will be added as we create them)
 import { organizationRoutes } from "../modules/organization/organization.route";
 import { schoolRoutes } from "../modules/school/school.route";
 import { userRoutes } from "../modules/user/user.route";
@@ -22,9 +21,13 @@ import { EventRoutes } from "../modules/event/event.route";
 import { AccountantRoutes } from "../modules/accountant/accountant.route";
 import feeRoutes from "../modules/fee/fee.route";
 import accountantFeeRoutes from "../modules/fee/accountantFee.route";
+import { autoAttendRoutes } from "../modules/attendance/autoattend.route";
 
-// Define module routes (will be uncommented as we create them)
 const moduleRoutes = [
+  {
+    path: "/attendance",
+    route: autoAttendRoutes, 
+  },
   {
     path: "/auth",
     route: authRoutes,

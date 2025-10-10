@@ -93,7 +93,15 @@ export const adminApi = {
   createCalendarEvent: (data: {
     title: string;
     description?: string;
-    type: "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other";
+    type:
+      | "academic"
+      | "extracurricular"
+      | "administrative"
+      | "holiday"
+      | "exam"
+      | "meeting"
+      | "announcement"
+      | "other";
     date: string;
     time?: string;
     location?: string;
@@ -117,7 +125,15 @@ export const adminApi = {
     data: {
       title?: string;
       description?: string;
-      type?: "academic" | "extracurricular" | "administrative" | "holiday" | "exam" | "meeting" | "announcement" | "other";
+      type?:
+        | "academic"
+        | "extracurricular"
+        | "administrative"
+        | "holiday"
+        | "exam"
+        | "meeting"
+        | "announcement"
+        | "other";
       date?: string;
       time?: string;
       location?: string;
@@ -130,8 +146,7 @@ export const adminApi = {
     }
   ) => api.put<ApiResponse>(`/events/${id}`, data),
 
-  deleteCalendarEvent: (id: string) =>
-    api.delete<ApiResponse>(`/events/${id}`),
+  deleteCalendarEvent: (id: string) => api.delete<ApiResponse>(`/events/${id}`),
 
   // Teacher management (needed by schedule component)
   getTeachers: (params?: {
@@ -171,12 +186,14 @@ export const adminApi = {
     section?: string;
     search?: string;
   }) => api.get<ApiResponse>("/students", { params }),
-  updateStudent: (id: string, data: any) => api.put<ApiResponse>(`/students/${id}`, data),
+  updateStudent: (id: string, data: any) =>
+    api.put<ApiResponse>(`/students/${id}`, data),
   deleteStudent: (id: string) => api.delete<ApiResponse>(`/students/${id}`),
 
   // Teacher management - Enhanced
   createTeacher: (data: any) => api.post<ApiResponse>("/teachers", data),
-  updateTeacher: (id: string, data: any) => api.put<ApiResponse>(`/teachers/${id}`, data),
+  updateTeacher: (id: string, data: any) =>
+    api.put<ApiResponse>(`/teachers/${id}`, data),
   deleteTeacher: (id: string) => api.delete<ApiResponse>(`/teachers/${id}`),
 
   // Accountant management
@@ -190,11 +207,16 @@ export const adminApi = {
     isActive?: boolean;
   }) => api.get<ApiResponse>("/accountants", { params }),
   getAccountantById: (id: string) => api.get<ApiResponse>(`/accountants/${id}`),
-  updateAccountant: (id: string, data: any) => api.put<ApiResponse>(`/accountants/${id}`, data),
-  deleteAccountant: (id: string) => api.delete<ApiResponse>(`/accountants/${id}`),
-  getAccountantStats: (schoolId: string) => api.get<ApiResponse>(`/accountants/stats/${schoolId}`),
-  getAccountantCredentials: (accountantId: string) => api.get<ApiResponse>(`/accountants/${accountantId}/credentials`),
-  resetAccountantPassword: (accountantId: string) => api.post<ApiResponse>(`/accountants/${accountantId}/credentials/reset`),
+  updateAccountant: (id: string, data: any) =>
+    api.put<ApiResponse>(`/accountants/${id}`, data),
+  deleteAccountant: (id: string) =>
+    api.delete<ApiResponse>(`/accountants/${id}`),
+  getAccountantStats: (schoolId: string) =>
+    api.get<ApiResponse>(`/accountants/stats/${schoolId}`),
+  getAccountantCredentials: (accountantId: string) =>
+    api.get<ApiResponse>(`/accountants/${accountantId}/credentials`),
+  resetAccountantPassword: (accountantId: string) =>
+    api.post<ApiResponse>(`/accountants/${accountantId}/credentials/reset`),
 
   // Reports and analytics
   getStudentStats: () => api.get<ApiResponse>("/admin/stats/students"),
@@ -217,17 +239,27 @@ export const adminApi = {
     severity?: string;
     status?: string;
     isRedWarrant?: boolean;
-  }) => api.get<ApiResponse>("/admin/disciplinary/actions", { params: filters }),
-  
-  resolveDisciplinaryAction: (actionId: string, data: { resolutionNotes: string }) =>
-    api.patch<ApiResponse>(`/admin/disciplinary/actions/resolve/${actionId}`, data),
-  
+  }) =>
+    api.get<ApiResponse>("/admin/disciplinary/actions", { params: filters }),
+
+  resolveDisciplinaryAction: (
+    actionId: string,
+    data: { resolutionNotes: string }
+  ) =>
+    api.patch<ApiResponse>(
+      `/admin/disciplinary/actions/resolve/${actionId}`,
+      data
+    ),
+
   addDisciplinaryActionComment: (actionId: string, data: { comment: string }) =>
-    api.post<ApiResponse>(`/admin/disciplinary/actions/comment/${actionId}`, data),
+    api.post<ApiResponse>(
+      `/admin/disciplinary/actions/comment/${actionId}`,
+      data
+    ),
 
   // School Settings management
   getSchoolSettings: () => api.get<ApiResponse>("/admin/school/settings"),
-  
+
   updateSchoolSettings: (data: {
     name?: string;
     establishedYear?: number;
@@ -273,11 +305,21 @@ export const adminApi = {
     maxStudents: number;
   }) => api.put<ApiResponse>("/admin/school/section-capacity", data),
 
-  getSectionCapacityReport: () => api.get<ApiResponse>("/admin/school/capacity-report"),
+  getSectionCapacityReport: () =>
+    api.get<ApiResponse>("/admin/school/capacity-report"),
+
+  // Attendance / Auto-Attend API helpers
+  // Returns masked API info for the logged-in school admin
+  getAttendanceApiInfo: () => api.get<ApiResponse>("/admin/school/attendance-api"),
+
+  // Regenerate API key for a given school (superadmin or school admin depending on backend rules)
+  regenerateAttendanceApiKey: (schoolId: string) =>
+    api.post<ApiResponse>(`/schools/${schoolId}/regenerate-api-key`),
 
   // Events
   getEvents: () => api.get<ApiResponse>("/admin/events"),
   createEvent: (data: any) => api.post<ApiResponse>("/admin/events", data),
-  updateEvent: (id: string, data: any) => api.put<ApiResponse>(`/admin/events/${id}`, data),
+  updateEvent: (id: string, data: any) =>
+    api.put<ApiResponse>(`/admin/events/${id}`, data),
   deleteEvent: (id: string) => api.delete<ApiResponse>(`/admin/events/${id}`),
 };
