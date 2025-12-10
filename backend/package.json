@@ -5,8 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
+    "vercel-build": "tsc",
     "lint": "eslint src --ignore-path .eslintignore --ext .ts",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "node ./dist/server.js",
     "start:prod": "node ./dist/server.js",
     "lint:fix": "eslint src --ignore-path .eslintignore --ext .ts --fix",
     "prettier": "prettier --write \"./src/**/*.+(ts|js|json)\"",
