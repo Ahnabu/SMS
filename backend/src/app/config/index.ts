@@ -52,7 +52,7 @@ export default {
 
   // API Configuration
   api_key: process.env.API_KEY || 'school-management-api-key-2025',
-  allowed_origins: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+  allowed_origins: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'],
   temp_upload_path: process.env.TEMP_UPLOAD_PATH || './temp',
   max_periods_per_day: parseInt(process.env.MAX_PERIODS_PER_DAY || '8'),
   attendance_lock_after_days: parseInt(process.env.ATTENDANCE_LOCK_AFTER_DAYS || '7'),

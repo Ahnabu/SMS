@@ -53,12 +53,11 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
+      config.allowed_origins,
       'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      config.frontend_url
-    ];
+      
+      
+    ].filter(Boolean); // Remove any undefined values
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
