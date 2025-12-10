@@ -10,6 +10,9 @@ import router from './app/routes';
 
 const app: Application = express();
 
+// Trust proxy - Required for Vercel and other reverse proxies
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
@@ -39,21 +42,25 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// CORS configuration - more permissive in development
+// CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or curl)
+    if (!origin) return callback(null, true);
+    
     // In development, allow all localhost origins
     if (config.node_env === 'development') {
-      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
         return callback(null, true);
       }
     }
     
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
     // Parse allowed origins from config
-    let allowedOrigins: string[] = ['http://localhost:3000', 'http://localhost:3001'];
+    let allowedOrigins: string[] = [
+      'http://localhost:3000', 
+      'http://localhost:3001',
+      'https://sms-frontend-chi.vercel.app' // Add your frontend domain
+    ];
     
     if (config.allowed_origins) {
       if (Array.isArray(config.allowed_origins)) {
@@ -63,15 +70,15 @@ app.use(cors({
       }
     }
     
-    // Add frontend_url if defined
-    if (config.frontend_url) {
+    // Add frontend_url from env if defined
+    if (config.frontend_url && !allowedOrigins.includes(config.frontend_url)) {
       allowedOrigins.push(config.frontend_url);
     }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`CORS blocked origin: ${origin}`, `Allowed: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
