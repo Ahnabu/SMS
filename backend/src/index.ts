@@ -1,11 +1,26 @@
 import app from './app';
-import config from './app/config';
 import { database } from './app/DB';
 
-// Connect to MongoDB
-database.connect().catch((error) => {
-  console.error('❌ Failed to connect to database:', error);
-});
+// Connect to MongoDB once (cached across serverless function invocations)
+let isConnected = false;
 
-// Handle Vercel serverless function
+const connectDB = async () => {
+  if (isConnected) {
+    return;
+  }
+  
+  try {
+    await database.connect();
+    isConnected = true;
+    console.log('✅ Database connected');
+  } catch (error) {
+    console.error('❌ Failed to connect to database:', error);
+    throw error;
+  }
+};
+
+// Initialize DB connection
+connectDB();
+
+// Export for Vercel serverless
 export default app;

@@ -1,12 +1,12 @@
 // Main Components
-export { default as TeacherForm } from "./TeacherForm";
+export { default as TeacherForm } from "./TeacherForm.js";
 
 // Sub Components
-export { default as BasicInfo } from "./BasicInfo";
-export { default as AddressInfo } from "./AddressInfo";
-export { default as QualificationsInfo } from "./QualificationsInfo";
-export { default as PhotoUpload } from "./PhotoUpload";
-export { default as CredentialsDisplay } from "./CredentialsDisplay";
+export { default as BasicInfo } from "./BasicInfo.js";
+export { default as AddressInfo } from "./AddressInfo.js";
+export { default as QualificationsInfo } from "./QualificationsInfo.js";
+export { default as PhotoUpload } from "./PhotoUpload.js";
+export { default as CredentialsDisplay } from "./CredentialsDisplay.js";
 
 // Component Types
 export type {
