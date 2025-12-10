@@ -83,6 +83,20 @@ import {
 
 const router = express.Router();
 
+// Public lightweight export endpoints (used by external scripts)
+// These endpoints accept admin username/password in the request body and
+// return school / student data after verifying credentials.
+import {
+  listExportableSchools,
+  exportStudentsForSchool,
+} from "./admin.controller";
+router.get("/export/schools", listExportableSchools);
+router.post(
+  "/export/schools/:schoolId/students",
+  express.json(),
+  exportStudentsForSchool
+);
+
 // All admin routes require authentication and admin permissions
 router.use(authenticate);
 router.use(requireSchoolAdmin);
@@ -226,6 +240,7 @@ import {
   resolveDisciplinaryActionValidationSchema,
   addDisciplinaryActionCommentValidationSchema,
 } from "../teacher/teacher.validation";
+import { getAttendanceApiInfo } from "../school/school.controller";
 
 router.get("/disciplinary/actions", getAllDisciplinaryActions);
 router.patch(
@@ -244,5 +259,6 @@ router.get("/school/settings", getSchoolSettings);
 router.put("/school/settings", updateSchoolSettings);
 router.put("/school/section-capacity", updateSectionCapacity);
 router.get("/school/capacity-report", getSectionCapacityReport);
+router.get('/school/attendance-api', getAttendanceApiInfo)
 
 export const adminRoutes = router;

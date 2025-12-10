@@ -193,6 +193,7 @@ export interface IUpdateSchoolRequest {
 
 export interface ISchoolResponse {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   schoolId: string;

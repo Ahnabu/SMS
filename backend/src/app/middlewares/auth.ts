@@ -1,9 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import { User } from '../modules/user/user.model';
-import { AppError } from '../errors/AppError';
-import { catchAsync } from '../utils/catchAsync';
-import config from '../config';
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { User } from "../modules/user/user.model";
+import { AppError } from "../errors/AppError";
+import { catchAsync } from "../utils/catchAsync";
+import config from "../config";
 
 // Extended Request interface to include user data
 export interface AuthenticatedRequest extends Request {
@@ -26,42 +26,58 @@ export const authenticate = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // 1) Get token from cookies first, then headers as fallback
     let token: string | undefined;
-    
+
     // Check for token in cookies (more secure)
     if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
-    
+
     // Fallback to Authorization header for API clients
     if (!token) {
       const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
       }
     }
 
     if (!token) {
-      return next(new AppError(401, 'Access denied. No token provided.'));
+      // // Temporary debug log to see which client/route is triggering this
+      // console.warn(
+      //   `[AUTH] Missing token - ${req.method} ${req.originalUrl} from ${
+      //     req.ip
+      //   } referer=${req.get("referer")} user-agent=${req.get("user-agent")}`
+      // );
+      return next(new AppError(401, "Access denied. No token provided."));
     }
 
     try {
       // 2) Verify token
-      const decoded = jwt.verify(token, config.jwt_secret as string) as jwt.JwtPayload;
+      const decoded = jwt.verify(
+        token,
+        config.jwt_secret as string
+      ) as jwt.JwtPayload;
 
       if (!decoded || !decoded.id) {
-        return next(new AppError(401, 'Invalid token structure'));
+        return next(new AppError(401, "Invalid token structure"));
       }
 
       // 3) Check if user still exists
-      const user = await User.findById(decoded.id).select('+isActive');
-      
+      const user = await User.findById(decoded.id).select("+isActive");
+
       if (!user) {
-        return next(new AppError(401, 'The user belonging to this token no longer exists'));
+        return next(
+          new AppError(401, "The user belonging to this token no longer exists")
+        );
       }
 
       // 4) Check if user is active
       if (!user.isActive) {
-        return next(new AppError(401, 'Your account has been deactivated. Please contact support.'));
+        return next(
+          new AppError(
+            401,
+            "Your account has been deactivated. Please contact support."
+          )
+        );
       }
 
       // 5) Check if password was changed after token was issued
@@ -83,12 +99,12 @@ export const authenticate = catchAsync(
       next();
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
-        return next(new AppError(401, 'Invalid token'));
+        return next(new AppError(401, "Invalid token"));
       }
       if (error instanceof jwt.TokenExpiredError) {
-        return next(new AppError(401, 'Token expired. Please login again.'));
+        return next(new AppError(401, "Token expired. Please login again."));
       }
-      return next(new AppError(401, 'Authentication failed'));
+      return next(new AppError(401, "Authentication failed"));
     }
   }
 );
@@ -100,16 +116,16 @@ export const authenticate = catchAsync(
 export const optionalAuth = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     let token: string | undefined;
-    
+
     // Check for token in cookies first, then headers as fallback
     if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
-    
+
     if (!token) {
       const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
       }
     }
 
@@ -118,11 +134,14 @@ export const optionalAuth = catchAsync(
     }
 
     try {
-      const decoded = jwt.verify(token, config.jwt_secret as string) as jwt.JwtPayload;
+      const decoded = jwt.verify(
+        token,
+        config.jwt_secret as string
+      ) as jwt.JwtPayload;
 
       if (decoded && decoded.id) {
-        const user = await User.findById(decoded.id).select('+isActive');
-        
+        const user = await User.findById(decoded.id).select("+isActive");
+
         if (user && user.isActive) {
           req.user = {
             id: user._id.toString(),
@@ -149,11 +168,15 @@ export const optionalAuth = catchAsync(
 export const authorize = (...allowedRoles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new AppError(401, 'Authentication required to access this resource'));
+      return next(
+        new AppError(401, "Authentication required to access this resource")
+      );
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return next(new AppError(403, 'Access denied. Insufficient permissions.'));
+      return next(
+        new AppError(403, "Access denied. Insufficient permissions.")
+      );
     }
 
     next();
@@ -167,17 +190,19 @@ export const authorize = (...allowedRoles: string[]) => {
 export const enforceSchoolIsolation = catchAsync(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new AppError(401, 'Authentication required'));
+      return next(new AppError(401, "Authentication required"));
     }
 
     // Superadmin can access all schools
-    if (req.user.role === 'superadmin') {
+    if (req.user.role === "superadmin") {
       return next();
     }
 
     // All other users must have a schoolId
     if (!req.user.schoolId) {
-      return next(new AppError(403, 'No school association found for this user'));
+      return next(
+        new AppError(403, "No school association found for this user")
+      );
     }
 
     // Add schoolId to request for queries to use
@@ -193,9 +218,12 @@ export const enforceSchoolIsolation = catchAsync(
  */
 const loginAttempts = new Map<string, { count: number; lastAttempt: Date }>();
 
-export const rateLimitLogin = (maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000) => {
+export const rateLimitLogin = (
+  maxAttempts: number = 5,
+  windowMs: number = 15 * 60 * 1000
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const clientId = req.ip || req.connection.remoteAddress || 'unknown';
+    const clientId = req.ip || req.connection.remoteAddress || "unknown";
     const now = new Date();
 
     const attempts = loginAttempts.get(clientId);
@@ -205,10 +233,14 @@ export const rateLimitLogin = (maxAttempts: number = 5, windowMs: number = 15 * 
       if (now.getTime() - attempts.lastAttempt.getTime() > windowMs) {
         loginAttempts.delete(clientId);
       } else if (attempts.count >= maxAttempts) {
-        return next(new AppError(
-          429,
-          `Too many login attempts. Please try again in ${Math.ceil(windowMs / 60000)} minutes.`
-        ));
+        return next(
+          new AppError(
+            429,
+            `Too many login attempts. Please try again in ${Math.ceil(
+              windowMs / 60000
+            )} minutes.`
+          )
+        );
       }
     }
 
@@ -220,7 +252,7 @@ export const rateLimitLogin = (maxAttempts: number = 5, windowMs: number = 15 * 
  * Update login attempts counter
  */
 export const updateLoginAttempts = (req: Request, success: boolean) => {
-  const clientId = req.ip || req.connection.remoteAddress || 'unknown';
+  const clientId = req.ip || req.connection.remoteAddress || "unknown";
   const now = new Date();
 
   if (success) {
@@ -242,13 +274,18 @@ export const updateLoginAttempts = (req: Request, success: boolean) => {
  * School Admin Authorization
  * Ensures only school admins can access admin resources
  */
-export const requireSchoolAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireSchoolAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  
   if (!req.user) {
-    return next(new AppError(401, 'Authentication required'));
+    return next(new AppError(401, "Authentication required"));
   }
 
-  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-    return next(new AppError(403, 'Admin access required'));
+  if (req.user.role !== "admin" && req.user.role !== "superadmin") {
+    return next(new AppError(403, "Admin access required"));
   }
 
   next();
@@ -258,14 +295,18 @@ export const requireSchoolAdmin = (req: AuthenticatedRequest, res: Response, nex
  * Teacher Authorization
  * Ensures only teachers can access teacher resources
  */
-export const requireTeacher = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireTeacher = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return next(new AppError(401, 'Authentication required'));
+    return next(new AppError(401, "Authentication required"));
   }
 
-  const allowedRoles = ['teacher', 'admin', 'superadmin'];
+  const allowedRoles = ["teacher", "admin", "superadmin"];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError(403, 'Teacher access required'));
+    return next(new AppError(403, "Teacher access required"));
   }
 
   next();
@@ -275,14 +316,18 @@ export const requireTeacher = (req: AuthenticatedRequest, res: Response, next: N
  * Student Authorization
  * Ensures only students (or their parents/teachers) can access student resources
  */
-export const requireStudentAccess = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireStudentAccess = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return next(new AppError(401, 'Authentication required'));
+    return next(new AppError(401, "Authentication required"));
   }
 
-  const allowedRoles = ['student', 'parent', 'teacher', 'admin', 'superadmin'];
+  const allowedRoles = ["student", "parent", "teacher", "admin", "superadmin"];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError(403, 'Student access required'));
+    return next(new AppError(403, "Student access required"));
   }
 
   next();
@@ -292,14 +337,18 @@ export const requireStudentAccess = (req: AuthenticatedRequest, res: Response, n
  * Parent Authorization
  * Ensures only parents can access parent resources
  */
-export const requireParent = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireParent = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return next(new AppError(401, 'Authentication required'));
+    return next(new AppError(401, "Authentication required"));
   }
 
-  const allowedRoles = ['parent', 'admin', 'superadmin'];
+  const allowedRoles = ["parent", "admin", "superadmin"];
   if (!allowedRoles.includes(req.user.role)) {
-    return next(new AppError(403, 'Parent access required'));
+    return next(new AppError(403, "Parent access required"));
   }
 
   next();
@@ -309,13 +358,17 @@ export const requireParent = (req: AuthenticatedRequest, res: Response, next: Ne
  * Superadmin Authorization
  * Ensures only superadmins can access superadmin resources
  */
-export const requireSuperadmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireSuperadmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return next(new AppError(401, 'Authentication required'));
+    return next(new AppError(401, "Authentication required"));
   }
 
-  if (req.user.role !== 'superadmin') {
-    return next(new AppError(403, 'Superadmin access required'));
+  if (req.user.role !== "superadmin") {
+    return next(new AppError(403, "Superadmin access required"));
   }
 
   next();
@@ -325,15 +378,15 @@ export const requireSuperadmin = (req: AuthenticatedRequest, res: Response, next
  * Validate User Ownership
  * Ensures users can only access their own data (except admins/superadmins)
  */
-export const validateOwnership = (userIdField: string = 'userId') => {
+export const validateOwnership = (userIdField: string = "userId") => {
   return catchAsync(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       if (!req.user) {
-        return next(new AppError(401, 'Authentication required'));
+        return next(new AppError(401, "Authentication required"));
       }
 
       // Admins and superadmins can access any data
-      if (['admin', 'superadmin'].includes(req.user.role)) {
+      if (["admin", "superadmin"].includes(req.user.role)) {
         return next();
       }
 
@@ -344,7 +397,9 @@ export const validateOwnership = (userIdField: string = 'userId') => {
       }
 
       if (resourceUserId !== req.user.id) {
-        return next(new AppError(403, 'Access denied. You can only access your own data.'));
+        return next(
+          new AppError(403, "Access denied. You can only access your own data.")
+        );
       }
 
       next();
@@ -357,16 +412,16 @@ export const validateOwnership = (userIdField: string = 'userId') => {
  */
 export const authenticateApiKey = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const apiKey = req.headers['x-api-key'] as string;
+    const apiKey = req.headers["x-api-key"] as string;
 
     if (!apiKey) {
-      return next(new AppError(401, 'API key required'));
+      return next(new AppError(401, "API key required"));
     }
 
     // In a real application, you'd validate this against a database
     // For now, using a simple environment variable
     if (apiKey !== config.api_key) {
-      return next(new AppError(401, 'Invalid API key'));
+      return next(new AppError(401, "Invalid API key"));
     }
 
     next();

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { catchAsync } from "../../utils/catchAsync";
 import { schoolService } from "./school.service";
+import { School } from "./school.model";
 import { sendResponse } from "../../utils/sendResponse";
 import { AuthenticatedRequest } from "../../middlewares/auth";
 
@@ -146,6 +147,64 @@ const resetAdminPassword = catchAsync(
   }
 );
 
+const getAttendanceApiInfo = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Determine target school id/slug from authenticated user or params
+    const requestedSchoolIdentifier = req.user?.schoolId || req.params.id;
+
+    // Get formatted response for the UI (this hides sensitive fields)
+    const school = await schoolService.getSchoolById(requestedSchoolIdentifier);
+
+    // Also fetch the raw school document so we can read apiKey when authorized
+    const rawSchool = await School.findOne({
+      $or: [
+        { slug: requestedSchoolIdentifier },
+        { schoolId: requestedSchoolIdentifier },
+        { _id: requestedSchoolIdentifier },
+      ],
+    })
+      .select("apiKey schoolId slug apiEndpoint")
+      .lean();
+
+    console.log(rawSchool);
+    let apiKeyToReturn: string | undefined = undefined;
+    try {
+      const requesterIsSuperadmin = req.user?.role === "superadmin";
+      const requesterSchoolId = req.user?.schoolId;
+      //-- @ts-ignore
+      const schoolMatchesRequester =
+        !!requesterSchoolId &&
+        (requesterSchoolId === school.schoolId ||
+          requesterSchoolId === (school as any).id ||
+          requesterSchoolId === (school as any)._id?.toString());
+
+      if (requesterIsSuperadmin || schoolMatchesRequester) {
+        apiKeyToReturn = (rawSchool as any)?.apiKey;
+      }
+    } catch (e) {
+      // In case of unexpected shape, don't expose the key
+      apiKeyToReturn = undefined;
+    }
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Attendance API information retrieved successfully",
+      data: {
+        schoolId: school.schoolId,
+        schoolSlug: school.slug,
+        apiEndpoint: school.apiEndpoint,
+        apiKey: apiKeyToReturn,
+        instructions: {
+          endpoint: `POST ${school.apiEndpoint}/events`,
+          authentication: "Include X-Attendance-Key header with your API key",
+          documentation: "/api/docs/attendance-integration",
+        },
+      },
+    });
+  }
+);
+
 export {
   createSchool,
   getAllSchools,
@@ -159,4 +218,5 @@ export {
   getSystemStats,
   getAdminCredentials,
   resetAdminPassword,
+  getAttendanceApiInfo,
 };

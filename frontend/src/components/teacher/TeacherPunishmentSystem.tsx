@@ -299,7 +299,7 @@ const TeacherPunishmentSystem: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Grade *
                   </label>
-                  <select
+                  <select aria-label='Select Grade'
                     value={selectedGrade}
                     onChange={(e) => setSelectedGrade(e.target.value)}
                     className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -315,7 +315,7 @@ const TeacherPunishmentSystem: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Section
                   </label>
-                  <select 
+                  <select  aria-label='Select Section'
                     value={selectedSection}
                     onChange={(e) => setSelectedSection(e.target.value)}
                     className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -368,7 +368,7 @@ const TeacherPunishmentSystem: React.FC = () => {
                             )}
                           </div>
                         )}
-                        <input
+                        <input aria-label='Select Student'
                           type="checkbox"
                           checked={selectedStudents.includes(student.id)}
                           onChange={() => handleStudentSelect(student.id)}
