@@ -52,14 +52,23 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = [
-      config.allowed_origins,
-      'http://localhost:3000',
-      
-      
-    ].filter(Boolean); // Remove any undefined values
+    // Parse allowed origins from config
+    let allowedOrigins: string[] = ['http://localhost:3000', 'http://localhost:3001'];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (config.allowed_origins) {
+      if (Array.isArray(config.allowed_origins)) {
+        allowedOrigins = [...allowedOrigins, ...config.allowed_origins];
+      } else if (typeof config.allowed_origins === 'string') {
+        allowedOrigins = [...allowedOrigins, ...config.allowed_origins.split(',').map(o => o.trim())];
+      }
+    }
+    
+    // Add frontend_url if defined
+    if (config.frontend_url) {
+      allowedOrigins.push(config.frontend_url);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);

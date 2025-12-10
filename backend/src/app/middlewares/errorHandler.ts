@@ -188,7 +188,9 @@ export const rateLimitHandler = (req: Request, res: Response) => {
  */
 export const corsErrorHandler = (req: Request, res: Response, next: NextFunction) => {
   const origin = req.get('Origin');
-  const allowedOrigins = config.allowed_origins?.split(',') || ['http://localhost:3000'];
+  const allowedOrigins = Array.isArray(config.allowed_origins) 
+    ? config.allowed_origins 
+    : (typeof config.allowed_origins === 'string' ? config.allowed_origins.split(',') : ['http://localhost:3000']);
 
   if (origin && !allowedOrigins.includes(origin)) {
     return next(new AppError(403, `CORS policy: Origin ${origin} is not allowed`));
