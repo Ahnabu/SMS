@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import config from '../config';
-import { seedDatabase, validateSeeding } from '../utils/seeder';
 
 class Database {
   private static instance: Database;
@@ -29,16 +28,19 @@ class Database {
       // Connection event handlers
       mongoose.connection.on('connected', async () => {
         
-        // Run database seeding after successful connection
-        try {
-          await seedDatabase();
-          const isValid = await validateSeeding();
-          if (!isValid) {
-            console.warn('⚠️ Seeding validation failed - some issues detected');
+        // Run database seeding only in development mode
+        if (config.node_env === 'development') {
+          try {
+            const { seedDatabase, validateSeeding } = await import('../utils/seeder');
+            await seedDatabase();
+            const isValid = await validateSeeding();
+            if (!isValid) {
+              console.warn('⚠️ Seeding validation failed - some issues detected');
+            }
+          } catch (error) {
+            console.error('❌ Database seeding error:', error);
+            // Don't exit process, just log the error
           }
-        } catch (error) {
-          console.error('❌ Database seeding error:', error);
-          // Don't exit process, just log the error
         }
       });
 
